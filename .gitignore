@@ -1,0 +1,28 @@
+# Python caches
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Root temporary screenshots (tracked ones are in screenshots/)
+/screenshot_*.png
+
+# Temporary analysis frames & video downloads
+reference_hcr.mp4
+hcr_frame_*.png
+step_debug.js
+diagnose_*.js
+check_*.js
+inspect_*.js
+debug_*.js
+test_backflip.js
+test_swingarm.js
+test_drive.js
+test_eval.js
+verify_downloads.js
+verify_file1.js
+verify_browser.js
+capture_*.js
+
+# OS files
+.DS_Store
+Thumbs.db

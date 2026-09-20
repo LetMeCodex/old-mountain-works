@@ -249,40 +249,43 @@ class R0 {
   drawParallax(cam, w, h, time, biome) {
     const ctx = this.ctx;
     const layers = [
-      { speed: 0.08, yOff: 180, amp: 160, freq: 0.00045, color: biome.far, opacity: 0.60 },
-      { speed: 0.22, yOff: 240, amp: 120, freq: 0.00095, color: biome.mid, opacity: 0.78 },
-      { speed: 0.42, yOff: 300, amp: 85, freq: 0.00180, color: biome.near, opacity: 0.92 },
+      { speed: 0.08, base: 260, amp: 140, freq: 0.0016, color: biome.far, opacity: 0.60, seed: 31 },
+      { speed: 0.22, base: 180, amp: 110, freq: 0.0025, color: biome.mid, opacity: 0.78, seed: 44 },
+      { speed: 0.42, base: 110, amp: 75, freq: 0.0038, color: biome.near, opacity: 0.92, seed: 57 },
     ];
 
-    for (const l of layers) {
+    const spanX = w / cam.zoom;
+    const left = cam.x - spanX * 0.8;
+    const right = cam.x + spanX * 0.8;
+    const bottomY = Math.max(cam.y + (h / cam.zoom) + 600, 4000);
+    const step = 20;
+
+    layers.forEach((l) => {
+      const noise = K0(l.seed);
       ctx.save();
       ctx.fillStyle = l.color;
       ctx.globalAlpha = l.opacity;
       ctx.beginPath();
-
-      const spanX = w / cam.zoom;
-      const left = cam.x - spanX * 0.7;
-      const right = cam.x + spanX * 0.7;
-      const step = 40;
-
-      ctx.moveTo(left - 20, cam.y + h);
+      ctx.moveTo(left - 20, bottomY);
       for (let px = left - 20; px <= right + 20; px += step) {
-        const py = cam.y + l.yOff + Math.sin(px * l.freq + l.speed) * l.amp + Math.cos(px * l.freq * 2.3) * (l.amp * 0.35);
+        const z = (px - cam.x) * l.speed + cam.x;
+        const ridge = noise(z * l.freq) * l.amp + noise(z * l.freq * 3.8) * (l.amp * 0.28);
+        const py = x.world.groundBase - l.base - ridge;
         ctx.lineTo(px, py);
       }
-      ctx.lineTo(right + 20, cam.y + h);
+      ctx.lineTo(right + 20, bottomY);
       ctx.closePath();
       ctx.fill();
       ctx.restore();
-    }
+    });
   }
 
   drawTerrain(cam, w, h, biome) {
     const ctx = this.ctx;
     const terrain = this.terrain;
     const spanX = w / cam.zoom;
-    const left = cam.x - spanX * 0.65;
-    const right = cam.x + spanX * 0.65;
+    const left = cam.x - spanX * 0.75;
+    const right = cam.x + spanX * 0.75;
 
     const firstX = terrain.samples[0]?.x ?? 0;
     const step = terrain.step;
@@ -293,17 +296,18 @@ class R0 {
     if (startIdx >= endIdx || !terrain.samples[startIdx] || !terrain.samples[endIdx]) return;
 
     // 1. Terrain Bedrock Fill
+    const bottomY = Math.max(cam.y + (h / cam.zoom) + 600, 4000);
     ctx.save();
     ctx.fillStyle = biome.groundFill;
     ctx.beginPath();
-    ctx.moveTo(terrain.samples[startIdx].x, cam.y + h + 200);
+    ctx.moveTo(terrain.samples[startIdx].x, bottomY);
 
     for (let i = startIdx; i <= endIdx; i++) {
       const p = terrain.samples[i];
       if (p) ctx.lineTo(p.x, p.y);
     }
 
-    ctx.lineTo(terrain.samples[endIdx].x, cam.y + h + 200);
+    ctx.lineTo(terrain.samples[endIdx].x, bottomY);
     ctx.closePath();
     ctx.fill();
 
@@ -401,35 +405,68 @@ class R0 {
       ctx.translate(lm.x, ly);
 
       if (lm.type === "shelter") {
-        // Base Camp Outpost Cabin
+        // Base Camp Outpost Cabin - Elevated to scenic background ridge off the road
+        ctx.save();
+        ctx.translate(0, -95);
+        ctx.scale(0.68, 0.68);
+        ctx.globalAlpha = 0.65;
+
+        // Timber foundation stilts on the background cliff
+        ctx.strokeStyle = "#5a4d41";
+        ctx.lineWidth = 2.8;
+        ctx.beginPath();
+        ctx.moveTo(-24, 0); ctx.lineTo(-24, 95);
+        ctx.moveTo(0, 0); ctx.lineTo(0, 95);
+        ctx.moveTo(24, 0); ctx.lineTo(24, 95);
+        ctx.moveTo(-24, 45); ctx.lineTo(24, 75);
+        ctx.moveTo(24, 45); ctx.lineTo(-24, 75);
+        ctx.stroke();
+
+        // Cabin body
         ctx.strokeStyle = "#1b1f1d";
         ctx.lineWidth = 2.4;
         ctx.fillStyle = "#d9cfb8";
-        ctx.fillRect(-28, -32, 56, 32);
-        ctx.strokeRect(-28, -32, 56, 32);
+        ctx.fillRect(-32, -34, 64, 34);
+        ctx.strokeRect(-32, -34, 64, 34);
+
+        // Window with warm lantern light
+        ctx.fillStyle = "#efd07b";
+        ctx.fillRect(-16, -24, 12, 12);
+        ctx.strokeRect(-16, -24, 12, 12);
+        ctx.beginPath();
+        ctx.moveTo(-10, -24); ctx.lineTo(-10, -12);
+        ctx.moveTo(-16, -18); ctx.lineTo(-4, -18);
+        ctx.stroke();
+
+        // Door
+        ctx.fillStyle = "#8a533c";
+        ctx.fillRect(8, -26, 14, 26);
+        ctx.strokeRect(8, -26, 14, 26);
 
         // Gable roof
-        ctx.fillStyle = "#8a533c";
+        ctx.fillStyle = "#733f2b";
         ctx.beginPath();
-        ctx.moveTo(-34, -32);
-        ctx.lineTo(0, -52);
-        ctx.lineTo(34, -32);
+        ctx.moveTo(-38, -34);
+        ctx.lineTo(0, -56);
+        ctx.lineTo(38, -34);
         ctx.closePath();
         ctx.fill();
         ctx.stroke();
 
         // Radio mast & windsock
         ctx.beginPath();
-        ctx.moveTo(22, -52);
-        ctx.lineTo(22, -88);
-        ctx.moveTo(16, -72);
-        ctx.lineTo(28, -72);
+        ctx.moveTo(22, -56);
+        ctx.lineTo(22, -92);
+        ctx.moveTo(16, -76);
+        ctx.lineTo(28, -76);
         ctx.stroke();
 
         ctx.fillStyle = "#d4622a";
         ctx.beginPath();
-        ctx.arc(22, -88, 4, 0, Math.PI * 2);
+        ctx.arc(22, -92, 4, 0, Math.PI * 2);
         ctx.fill();
+
+        ctx.restore();
       } else if (lm.type === "cairn") {
         // High Crag Cairn & Prayer Flag String
         ctx.fillStyle = "#565e61";
@@ -593,6 +630,27 @@ class R0 {
     ctx.fill();
     ctx.stroke();
 
+    // Windscreen / Aero deflector
+    ctx.save();
+    ctx.fillStyle = "rgba(180, 225, 235, 0.45)";
+    ctx.strokeStyle = "#1b1f1d";
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(-w / 2 + 42, -h / 2 - 28);
+    ctx.lineTo(-w / 2 + 58, -h / 2 - 10);
+    ctx.lineTo(-w / 2 + 50, -h / 2 - 10);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    // Windscreen specular flash
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.75)";
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(-w / 2 + 44, -h / 2 - 25);
+    ctx.lineTo(-w / 2 + 54, -h / 2 - 12);
+    ctx.stroke();
+    ctx.restore();
+
     // Articulated Driver
     this.drawArticulatedDriver(vehicle.driver, vehicle);
 
@@ -604,6 +662,92 @@ class R0 {
     ctx.lineWidth = 4.5;
     ctx.strokeStyle = "#1b1f1d";
     ctx.stroke();
+
+    // Whip Antenna & Expedition Pennant Flag
+    const antX = -w / 2 + 16;
+    const antBaseY = -h / 2 - 28;
+    const antTopY = antBaseY - 24;
+    const antBend = Math.sin(Date.now() * 0.006) * 3 - (vehicle.forwardSpeed || 0) * 0.6;
+    ctx.strokeStyle = "#1b1f1d";
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(antX, antBaseY);
+    ctx.quadraticCurveTo(antX + antBend * 0.5, antBaseY - 12, antX + antBend, antTopY);
+    ctx.stroke();
+    // Triangular pennant flag
+    ctx.fillStyle = vCfg.accentColor;
+    ctx.strokeStyle = "#1b1f1d";
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(antX + antBend, antTopY);
+    ctx.lineTo(antX + antBend - 14, antTopY + 4);
+    ctx.lineTo(antX + antBend, antTopY + 8);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Front Rally Auxiliary Spot Lamps
+    const lampX = w / 2 - 8;
+    const lampY = -h / 2 + 2;
+    ctx.save();
+    ctx.strokeStyle = "#1b1f1d";
+    ctx.lineWidth = 2.0;
+    ctx.beginPath();
+    ctx.moveTo(lampX - 4, lampY + 2);
+    ctx.lineTo(lampX + 3, lampY);
+    ctx.stroke();
+    ctx.fillStyle = "#2a302e";
+    ctx.beginPath();
+    ctx.arc(lampX + 5, lampY - 2, 4.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = "#fadb6a";
+    ctx.beginPath();
+    ctx.ellipse(lampX + 6.5, lampY - 2, 2.2, 3.8, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Warm halogen beam forward
+    ctx.fillStyle = "rgba(255, 235, 150, 0.14)";
+    ctx.beginPath();
+    ctx.moveTo(lampX + 7, lampY - 4);
+    ctx.lineTo(lampX + 48, lampY - 14);
+    ctx.lineTo(lampX + 48, lampY + 8);
+    ctx.lineTo(lampX + 7, lampY);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+
+    // Rear Dual Exhaust Pipe
+    ctx.save();
+    ctx.fillStyle = "#8a9692";
+    ctx.strokeStyle = "#1b1f1d";
+    ctx.lineWidth = 1.6;
+    ctx.fillRect(-w / 2 - 4, h / 2 - 5, 6, 4);
+    ctx.strokeRect(-w / 2 - 4, h / 2 - 5, 6, 4);
+    ctx.fillStyle = "#1b1f1d";
+    ctx.beginPath();
+    ctx.ellipse(-w / 2 - 4, h / 2 - 3, 1.2, 1.8, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // Analog Dashboard Gauge Dial in front of steering wheel
+    ctx.save();
+    const gaugeX = -w / 2 + 50;
+    const gaugeY = -h / 2 - 12;
+    ctx.fillStyle = "#efe7d6";
+    ctx.strokeStyle = "#1b1f1d";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(gaugeX, gaugeY, 4.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    const needleAngle = -Math.PI * 0.75 + (vehicle.rpm || 0.3) * Math.PI * 1.5;
+    ctx.strokeStyle = "#d4622a";
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(gaugeX, gaugeY);
+    ctx.lineTo(gaugeX + Math.cos(needleAngle) * 3.2, gaugeY + Math.sin(needleAngle) * 3.2);
+    ctx.stroke();
+    ctx.restore();
 
     // Accent Block
     ctx.fillStyle = vCfg.accentColor;
@@ -712,121 +856,292 @@ class R0 {
 
   drawArticulatedDriver(driver, vehicle) {
     const ctx = this.ctx;
-    const hipX = -12;
-    const hipY = -6 + driver.jolt;
+    // Driver seated naturally inside the cockpit
+    const hipX = -26;
+    const hipY = -12 + (driver.jolt || 0);
 
-    const spineAngle = driver.lean * 0.82;
-    const torsoLen = 18;
+    const spineAngle = (driver.lean || 0) * 0.72;
+    const torsoLen = 17;
     const shoulderX = hipX + Math.sin(spineAngle) * torsoLen;
     const shoulderY = hipY - Math.cos(spineAngle) * torsoLen;
 
     const headX = shoulderX + Math.sin(spineAngle) * 9;
     const headY = shoulderY - Math.cos(spineAngle) * 9;
 
-    const wheelHubX = 14;
-    const wheelHubY = -14;
+    const wheelHubX = -9;
+    const wheelHubY = -23;
 
     const handX = wheelHubX;
-    const handY = driver.victory > 0.1 ? wheelHubY - 26 : wheelHubY - 2;
+    const handY = (driver.victory || 0) > 0.1 ? wheelHubY - 18 : wheelHubY - 2;
 
-    const footX = 16;
-    const footY = 4;
+    const footX = -3;
+    const footY = -6;
 
     ctx.save();
     ctx.lineCap = "round";
+    ctx.lineJoin = "round";
 
-    // Torso (Expedition jacket with harness)
-    ctx.lineWidth = 6.2;
-    ctx.strokeStyle = "#c46b38";
+    // 1. Dynamic Wind-Blown Expedition Scarf (Trailing silk ribbon)
+    const spd = vehicle ? Math.abs(vehicle.forwardSpeed || 0) : 0;
+    const time = Date.now() * 0.008;
+    const scarfDir = (vehicle && vehicle.forwardSpeed < -0.5) ? 1 : -1;
+    const scarfWave1 = Math.sin(time * 3.5) * (3 + spd * 0.4);
+    const scarfWave2 = Math.cos(time * 4.2 + 1.2) * (4 + spd * 0.5);
+    const scarfLen = 18 + Math.min(spd * 2.2, 22);
+
+    ctx.save();
     ctx.beginPath();
-    ctx.moveTo(hipX, hipY);
-    ctx.lineTo(shoulderX, shoulderY);
+    ctx.moveTo(shoulderX - 3, shoulderY + 2);
+    ctx.quadraticCurveTo(
+      shoulderX + scarfDir * (scarfLen * 0.5), shoulderY + 1 + scarfWave1,
+      shoulderX + scarfDir * scarfLen, shoulderY + 3 + scarfWave2
+    );
+    ctx.lineWidth = 4.4;
+    ctx.strokeStyle = "#efd07b"; // Silk mustard gold
     ctx.stroke();
 
-    // Torso outline
-    ctx.lineWidth = 2.0;
+    ctx.beginPath();
+    ctx.moveTo(shoulderX - 3, shoulderY + 2);
+    ctx.quadraticCurveTo(
+      shoulderX + scarfDir * (scarfLen * 0.5), shoulderY + 1 + scarfWave1,
+      shoulderX + scarfDir * scarfLen, shoulderY + 3 + scarfWave2
+    );
+    ctx.lineWidth = 1.4;
     ctx.strokeStyle = "#1b1f1d";
     ctx.stroke();
 
-    // Harness straps
-    ctx.lineWidth = 1.6;
-    ctx.strokeStyle = "#1b1f1d";
+    // Fringe tassel at scarf tip
+    ctx.fillStyle = "#d4622a";
     ctx.beginPath();
-    ctx.moveTo(shoulderX - 2, shoulderY + 3);
-    ctx.lineTo(hipX + 2, hipY - 2);
-    ctx.stroke();
+    ctx.arc(shoulderX + scarfDir * scarfLen, shoulderY + 3 + scarfWave2, 2.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
 
-    // Leg IK (Hip -> Knee -> Foot Boot)
+    // 2. Accelerator / Brake Pedal Bracket under boot
+    ctx.strokeStyle = "#24282a";
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.moveTo(footX + 4, footY + 4);
+    ctx.lineTo(footX - 3, footY + 2);
+    ctx.stroke();
+    ctx.fillStyle = "#8a9692";
+    ctx.fillRect(footX - 1, footY - 1, 6, 3);
+    ctx.strokeRect(footX - 1, footY - 1, 6, 3);
+
+    // 3. Leg IK (Hip -> Knee -> Foot Boot)
     const legIK = this.solve2BoneIK(hipX, hipY, footX, footY, 14, 14, 1);
-    ctx.lineWidth = 5.0;
-    ctx.strokeStyle = "#3d4642";
+    ctx.lineWidth = 6.4;
+    ctx.strokeStyle = "#38423e"; // Rugged mountain slate trousers
     ctx.beginPath();
     ctx.moveTo(hipX, hipY);
     ctx.lineTo(legIK.x, legIK.y);
     ctx.lineTo(footX, footY);
     ctx.stroke();
-    ctx.lineWidth = 1.6;
+
+    ctx.lineWidth = 2.0;
     ctx.strokeStyle = "#1b1f1d";
     ctx.stroke();
 
-    // Mountaineer Boot
-    ctx.fillStyle = "#1b1f1d";
-    ctx.fillRect(footX - 2, footY - 1, 8, 4);
+    // Reinforced Knee Patch
+    ctx.fillStyle = "#262e2b";
+    ctx.beginPath();
+    ctx.ellipse(legIK.x, legIK.y, 4, 3, 0.4, 0, Math.PI * 2);
+    ctx.fill();
 
-    // Arm IK (Shoulder -> Elbow -> Hand on Steering Wheel)
+    // Heavy Mountaineer Lug Boot
+    ctx.fillStyle = "#1b1f1d";
+    ctx.fillRect(footX - 3, footY - 2, 9, 6);
+    ctx.strokeRect(footX - 3, footY - 2, 9, 6);
+    // Lug sole
+    ctx.fillStyle = "#8a533c";
+    ctx.fillRect(footX - 3, footY + 3, 9, 2);
+    // Boot lace accents
+    ctx.strokeStyle = "#efe7d6";
+    ctx.lineWidth = 1.0;
+    ctx.beginPath();
+    ctx.moveTo(footX - 1, footY); ctx.lineTo(footX + 2, footY);
+    ctx.moveTo(footX, footY + 2); ctx.lineTo(footX + 3, footY + 2);
+    ctx.stroke();
+
+    // 4. Torso (Expedition Flight/Bomber Jacket)
+    ctx.lineWidth = 8.6;
+    ctx.strokeStyle = "#b55a28"; // Heavy rust leather
+    ctx.beginPath();
+    ctx.moveTo(hipX, hipY);
+    ctx.lineTo(shoulderX, shoulderY);
+    ctx.stroke();
+
+    ctx.lineWidth = 2.0;
+    ctx.strokeStyle = "#1b1f1d";
+    ctx.stroke();
+
+    // Jacket Zipper Line
+    ctx.lineWidth = 1.2;
+    ctx.strokeStyle = "#efe7d6";
+    ctx.beginPath();
+    ctx.moveTo(hipX + 1, hipY);
+    ctx.lineTo(shoulderX + 1, shoulderY);
+    ctx.stroke();
+
+    // 4-Point Racing Harness
+    ctx.lineWidth = 2.0;
+    ctx.strokeStyle = "#1b1f1d";
+    ctx.beginPath();
+    ctx.moveTo(shoulderX - 2, shoulderY + 3);
+    ctx.lineTo(hipX + 2, hipY - 2);
+    ctx.stroke();
+    // Harness Center Latch Buckle
+    ctx.fillStyle = "#d9cfb8";
+    ctx.strokeStyle = "#1b1f1d";
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.arc(hipX * 0.5 + shoulderX * 0.5, hipY * 0.5 + shoulderY * 0.5, 2.6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // Shearling / Fleece Jacket Collar
+    ctx.fillStyle = "#f4eedb";
+    ctx.strokeStyle = "#1b1f1d";
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.ellipse(shoulderX - 1, shoulderY + 2, 4.5, 2.8, -0.4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // 5. Arm IK (Shoulder -> Elbow -> Leather Driving Glove)
     const armIK = this.solve2BoneIK(shoulderX, shoulderY, handX, handY, 12, 12, -1);
-    ctx.lineWidth = 4.2;
-    ctx.strokeStyle = "#c46b38";
+    ctx.lineWidth = 5.2;
+    ctx.strokeStyle = "#b55a28";
     ctx.beginPath();
     ctx.moveTo(shoulderX, shoulderY);
     ctx.lineTo(armIK.x, armIK.y);
     ctx.lineTo(handX, handY);
     ctx.stroke();
-    ctx.lineWidth = 1.6;
+    ctx.lineWidth = 1.8;
     ctx.strokeStyle = "#1b1f1d";
     ctx.stroke();
 
-    // Hand grip on steering wheel
-    ctx.fillStyle = "#d9cfb8";
+    // Wrist cuff
+    ctx.strokeStyle = "#f4eedb";
+    ctx.lineWidth = 2.0;
     ctx.beginPath();
-    ctx.arc(handX, handY, 2.5, 0, Math.PI * 2);
+    ctx.moveTo(handX - 2, handY - 1);
+    ctx.lineTo(handX - 1, handY + 2);
+    ctx.stroke();
+
+    // Leather Driving Glove
+    ctx.fillStyle = "#3a2a20";
+    ctx.strokeStyle = "#1b1f1d";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(handX, handY, 3.2, 0, Math.PI * 2);
     ctx.fill();
-
-    // Steering Wheel rim
-    ctx.strokeStyle = "#1b1f1d";
-    ctx.lineWidth = 2.4;
-    ctx.beginPath();
-    ctx.arc(wheelHubX, wheelHubY, 7, 0, Math.PI * 2);
     ctx.stroke();
 
-    // Helmet & Visor
+    // 6. Steering Column & Wheel Rim
+    ctx.save();
+    ctx.strokeStyle = "#3d4642";
+    ctx.lineWidth = 3.0;
+    ctx.beginPath();
+    ctx.moveTo(wheelHubX + 6, wheelHubY + 12);
+    ctx.lineTo(wheelHubX, wheelHubY);
+    ctx.stroke();
+
+    ctx.strokeStyle = "#1b1f1d";
+    ctx.lineWidth = 2.6;
+    ctx.beginPath();
+    ctx.arc(wheelHubX, wheelHubY, 7.5, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.fillStyle = "#c46b38";
+    ctx.beginPath();
+    ctx.arc(wheelHubX, wheelHubY, 2.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#1b1f1d";
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(wheelHubX, wheelHubY); ctx.lineTo(wheelHubX - 6, wheelHubY);
+    ctx.moveTo(wheelHubX, wheelHubY); ctx.lineTo(wheelHubX + 4, wheelHubY - 5);
+    ctx.moveTo(wheelHubX, wheelHubY); ctx.lineTo(wheelHubX + 4, wheelHubY + 5);
+    ctx.stroke();
+    ctx.restore();
+
+    // 7. Aviator Helmet & Brass Goggles
     ctx.save();
     ctx.translate(headX, headY);
     ctx.rotate(driver.helmetAngle);
 
-    // Helmet shell
+    // Visible Face / Chin under helmet
+    ctx.fillStyle = "#e0ad84";
+    ctx.beginPath();
+    ctx.arc(2, 2.5, 4.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Helmet dome shell
     ctx.fillStyle = "#efe7d6";
     ctx.strokeStyle = "#1b1f1d";
-    ctx.lineWidth = 2.0;
+    ctx.lineWidth = 2.2;
     ctx.beginPath();
-    ctx.arc(0, 0, 7.8, 0, Math.PI * 2);
+    ctx.arc(0, -0.5, 8.2, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
 
-    // Expedition orange center stripe
+    // Contrast Racing Center Stripe
     ctx.fillStyle = "#d4622a";
-    ctx.fillRect(-2.5, -7.8, 5, 15.6);
+    ctx.fillRect(-2.5, -8.6, 5, 16.5);
+    ctx.strokeStyle = "#1b1f1d";
+    ctx.lineWidth = 0.8;
+    ctx.strokeRect(-2.5, -8.6, 5, 16.5);
 
-    // Visor with reflection
-    ctx.fillStyle = "#1b1f1d";
+    // Helmet Ear Cushion flap
+    ctx.fillStyle = "#5a4232";
+    ctx.strokeStyle = "#1b1f1d";
+    ctx.lineWidth = 1.4;
+    ctx.fillRect(-5.5, 1, 4.5, 6.5);
+    ctx.strokeRect(-5.5, 1, 4.5, 6.5);
+    ctx.fillStyle = "#d9b35b";
     ctx.beginPath();
-    ctx.ellipse(3, 0, 3.8, 2.4, 0, 0, Math.PI * 2);
+    ctx.arc(-3.2, 4.2, 1.2, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.strokeStyle = "rgba(255,255,255,0.7)";
-    ctx.lineWidth = 1.0;
+    // Chin strap
+    ctx.strokeStyle = "#1b1f1d";
+    ctx.lineWidth = 1.4;
     ctx.beginPath();
-    ctx.arc(3, -0.6, 2.0, -0.6, 0.6);
+    ctx.moveTo(-3, 6);
+    ctx.lineTo(1, 6.8);
+    ctx.stroke();
+
+    // Goggles Leather Strap wrapping around helmet
+    ctx.strokeStyle = "#2b221a";
+    ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    ctx.arc(0, -0.5, 8.4, Math.PI * 0.75, Math.PI * 1.4);
+    ctx.stroke();
+
+    // Brass Aviator Goggles Rim
+    ctx.fillStyle = "#b88628";
+    ctx.strokeStyle = "#1b1f1d";
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.ellipse(3.8, -0.5, 4.6, 3.4, 0.08, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // Dark tinted lens glass
+    ctx.fillStyle = "#1e272b";
+    ctx.beginPath();
+    ctx.ellipse(4.0, -0.5, 3.4, 2.3, 0.08, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Specular Reflection Flash
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.85)";
+    ctx.lineWidth = 1.3;
+    ctx.beginPath();
+    ctx.moveTo(3.2, -2.0);
+    ctx.lineTo(5.2, -0.5);
     ctx.stroke();
 
     ctx.restore();

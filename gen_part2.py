@@ -667,32 +667,53 @@ class X0 {
     this.zoomPulse = Math.min(this.zoomPulse + amount, 0.08);
   }
 
-  update(targetPos, targetVel, airborne, dt) {
-    const camCfg = x.camera;
-    const dtSeconds = dt / 1000;
-    const speed = Math.hypot(targetVel.x, targetVel.y);
+  update(arg1, arg2, arg3, arg4) {
+    let targetPos, targetVel, airborne, dt;
+    if (arg1 && arg1.chassis) {
+      targetPos = arg1.chassis.position;
+      targetVel = arg1.chassis.velocity;
+      airborne = Boolean(arg1.airborne);
+      dt = typeof arg3 === "number" ? arg3 : (typeof arg2 === "number" ? arg2 : 16.66);
+    } else {
+      targetPos = arg1;
+      targetVel = arg2;
+      airborne = Boolean(arg3);
+      dt = typeof arg4 === "number" ? arg4 : 16.66;
+    }
 
-    const lookAheadX = b(targetVel.x * 12, -camCfg.lookAhead, camCfg.lookAhead);
-    
-    // When airborne, slightly drop the target Y to keep the ground / landing zone in view!
+    const camCfg = x.camera;
+    const safeDt = Number.isFinite(dt) && dt > 0 ? dt : 16.66;
+    const dtSeconds = safeDt / 1000;
+    const vx = Number.isFinite(targetVel?.x) ? targetVel.x : 0;
+    const vy = Number.isFinite(targetVel?.y) ? targetVel.y : 0;
+    const speed = Math.hypot(vx, vy);
+
+    const lookAheadX = b(vx * 12, -camCfg.lookAhead, camCfg.lookAhead);
     const airOffsetY = airborne ? 48.0 : 0.0;
 
-    const targetX = targetPos.x + lookAheadX;
-    const targetY = targetPos.y + airOffsetY - 36;
+    const posX = Number.isFinite(targetPos?.x) ? targetPos.x : (Number.isFinite(this.x) ? this.x : 220);
+    const posY = Number.isFinite(targetPos?.y) ? targetPos.y : (Number.isFinite(this.y) ? this.y : 500);
 
-    this.x = G0(this.x, targetX, camCfg.followSpeed * 65, dt);
-    this.y = G0(this.y, targetY, camCfg.followSpeed * 65, dt);
+    const targetX = posX + lookAheadX;
+    const targetY = posY + airOffsetY - 36;
+
+    if (!Number.isFinite(this.x)) this.x = targetX;
+    if (!Number.isFinite(this.y)) this.y = targetY;
+
+    this.x = G0(this.x, targetX, camCfg.followSpeed * 65, safeDt);
+    this.y = G0(this.y, targetY, camCfg.followSpeed * 65, safeDt);
 
     const speedZoomFactor = b(speed * 0.012, 0, 1) * camCfg.speedZoom;
     const airZoomFactor = airborne ? 0.05 : 0;
     this.targetZoom = camCfg.baseZoom - speedZoomFactor - airZoomFactor + this.zoomPulse;
-    this.zoom = G0(this.zoom, this.targetZoom, 4.5, dt);
+    if (!Number.isFinite(this.zoom)) this.zoom = camCfg.baseZoom;
+    this.zoom = G0(this.zoom, this.targetZoom, 4.5, safeDt);
 
     this.zoomPulse = Math.max(0, this.zoomPulse - dtSeconds * 0.35);
 
     for (let i = this.shakes.length - 1; i >= 0; i--) {
       const s = this.shakes[i];
-      s.elapsed += dt;
+      s.elapsed += safeDt;
       if (s.elapsed >= s.duration) {
         this.shakes.splice(i, 1);
       }

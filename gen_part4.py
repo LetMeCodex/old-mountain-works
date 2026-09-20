@@ -46,6 +46,7 @@ class Driver {
     const joltForce = -this.jolt * 28.0;
     this.joltVel = (this.joltVel + joltForce * dtSec) * Math.pow(0.62, dtSec * 60);
     this.jolt += this.joltVel * dtSec;
+    this.jolt = b(this.jolt, -3.5, 3.5);
 
     const targetHelmet = this.lean * 0.72 + vehicle.chassis.angularVelocity * 0.35 + (this.tuck * 0.4);
     this.helmetAngle = G0(this.helmetAngle, targetHelmet, 14, dt);
@@ -54,8 +55,9 @@ class Driver {
   }
 
   applyShock(energy) {
-    this.jolt += b(energy * 3.8, 0.9, 5.0);
-    this.lean += (Math.random() - 0.5) * 0.30;
+    this.jolt += b(energy * 0.35, 0.4, 2.0);
+    this.jolt = b(this.jolt, -3.5, 3.5);
+    this.lean += (Math.random() - 0.5) * 0.20;
   }
 
   triggerVictory() {
@@ -99,12 +101,19 @@ class f0 {
         label: "chassis",
         collisionFilter: { group: -3 },
         density: vCfg.chassisMass / (vCfg.chassisWidth * vCfg.chassisHeight),
-        friction: 0.4,
-        frictionAir: 0.004,
-        restitution: 0.04,
-        chamfer: { radius: 8 },
+        friction: 0.10,
+        frictionAir: 0.003,
+        restitution: 0.12,
+        chamfer: { radius: [6, 6, 12, 12] },
       }
     );
+
+    // Calculate polar moment of inertia for responsive, agile HCR handling
+    const defInertia = (vCfg.chassisMass * (vCfg.chassisWidth * vCfg.chassisWidth + vCfg.chassisHeight * vCfg.chassisHeight)) / 12;
+    Matter.Body.setInertia(this.chassis, defInertia * 1.6);
+
+    // Lower Center of Mass slightly for natural stability
+    Matter.Body.setCentre(this.chassis, { x: 0, y: 2 }, true);
 
     const wheelOffsets = [
       { x: -vCfg.wheelBase / 2, y: vCfg.wheelOffsetY }, // Rear wheel
@@ -125,28 +134,41 @@ class f0 {
           collisionFilter: { group: -3 },
           density: vCfg.wheelMass / (Math.PI * vCfg.wheelRadius * vCfg.wheelRadius),
           friction: vCfg.tireGrip,
-          frictionStatic: vCfg.tireGrip * 1.35,
-          frictionAir: 0.0035,
-          restitution: 0.10,
+          frictionStatic: vCfg.tireGrip * 1.4,
+          frictionAir: 0.0025,
+          restitution: 0.18, // Bouncy, energetic HCR tires!
           slop: 0.02,
         }
       );
 
-      const armSpread = 18;
-      const restLen = Math.hypot(armSpread, vCfg.wheelOffsetY - 2);
-      const makeLink = (spreadX) =>
-        d.default.Constraint.create({
-          bodyA: this.chassis,
-          pointA: { x: off.x + spreadX, y: 2 },
-          bodyB: wheel,
-          length: restLen,
-          stiffness: vCfg.suspensionStiffness,
-          damping: vCfg.suspensionDamping,
-        });
+      // Authentic Trailing/Leading Swingarm + Strut Architecture:
+      // Radius arm constrains the wheel to a smooth circular travel arc,
+      // while the spring strut provides authentic Hooke compression and rebound.
+      // Geometrically immune to inversion.
+      const isRear = i === 0;
+      const armSpread = isRear ? 28 : -28;
+      const armAnchor = { x: off.x + armSpread, y: 8 };
+      const armLen = Math.hypot(armSpread, vCfg.wheelOffsetY - armAnchor.y);
 
-      const linkA = makeLink(armSpread);
-      const linkB = makeLink(-armSpread);
-      this.constraints.push(linkA, linkB);
+      const swingArm = d.default.Constraint.create({
+        bodyA: this.chassis,
+        pointA: armAnchor,
+        bodyB: wheel,
+        length: armLen,
+        stiffness: 0.90,
+        damping: 0.06,
+      });
+
+      const springStrut = d.default.Constraint.create({
+        bodyA: this.chassis,
+        pointA: { x: off.x, y: 0 },
+        bodyB: wheel,
+        length: vCfg.wheelOffsetY,
+        stiffness: vCfg.suspensionStiffness,
+        damping: vCfg.suspensionDamping,
+      });
+
+      this.constraints.push(swingArm, springStrut);
 
       this.wheels.push({
         body: wheel,
@@ -191,7 +213,7 @@ class f0 {
     return !this.wheels.some((w) => w.contact);
   }
 
-  update(input, dt) {
+  update(input, dt, terrain = null) {
     const vCfg = this.archetype;
     const throttleBrake = input.throttle - input.brake;
     const dtSec = Math.max(0.001, dt / 1000);
@@ -213,7 +235,7 @@ class f0 {
     const L = vCfg.wheelBase;
     const b_dist = L / 2;
     const a_dist = L / 2;
-    const h = vCfg.centerOfMassOffsetY ?? 12.0;
+    const h = vCfg.centerOfMassOffsetY ?? 8.0;
 
     const nFront = Math.max(0.1, (W * (b_dist * Math.cos(theta) - h * Math.sin(theta)) - m * h * ax) / L);
     const nRear = Math.max(0.1, (W * (a_dist * Math.cos(theta) + h * Math.sin(theta)) + m * h * ax) / L);
@@ -222,7 +244,7 @@ class f0 {
     for (let i = 0; i < this.wheels.length; i++) {
       const w = this.wheels[i];
       const isRear = i === 0;
-      const torqueShare = isRear ? 0.70 : 0.30;
+      const torqueShare = isRear ? 0.55 : 0.45;
       const normalLoad = isRear ? nRear : nFront;
       const spin = w.body.angularVelocity;
       const speedRatio = b(1 - Math.abs(spin) / vCfg.maxWheelSpeed, 0, 1);
@@ -248,30 +270,29 @@ class f0 {
           ? vCfg.engineTorque * speedRatio * throttleBrake
           : vCfg.brakeTorque * throttleBrake;
 
-        w.body.torque += torque * torqueShare * w.body.mass * 13;
+        w.body.torque += torque * torqueShare * w.body.mass * 24;
 
-        // Longitudinal traction force evaluated with saturating friction
         if (w.contact) {
           const mat = MATERIALS[w.material] ?? MATERIALS.dirt;
           const forwardDir = {
             x: Math.cos(this.chassis.angle),
             y: Math.sin(this.chassis.angle),
           };
-          const tractiveMag = torque * torqueShare * mat.friction * (0.12 + 0.04 * Math.abs(sKappa));
-          Matter.Body.applyForce(w.body, w.body.position, {
+          const tractiveMag = torque * torqueShare * mat.friction * 0.24;
+          Matter.Body.applyForce(this.chassis, this.chassis.position, {
             x: forwardDir.x * tractiveMag,
             y: forwardDir.y * tractiveMag,
           });
         }
       } else {
-        d.default.Body.setAngularVelocity(w.body, spin * 0.994);
+        d.default.Body.setAngularVelocity(w.body, spin * 0.992);
       }
 
-      // Suspension travel & Hooke spring-damper compression: F_s = -k*x - c*v
+      // Suspension travel & Hooke spring-damper compression
       const mountWorld = d.default.Vector.add(
         this.chassis.position,
         d.default.Vector.rotate(
-          { x: w.restOffset.x, y: 2 },
+          { x: w.restOffset.x, y: 0 },
           this.chassis.angle
         )
       );
@@ -284,45 +305,51 @@ class f0 {
         1
       );
 
-      // Detect rapid suspension compression and play metallic spring creak
       const deltaComp = w.compression - w.lastCompression;
       if (deltaComp > 0.26 && w.compression > 0.35 && this.audio) {
         this.audio.creak(deltaComp);
       }
       w.lastCompression = w.compression;
-
       w.slip = Math.abs(spin * vCfg.wheelRadius - this.forwardSpeed);
     }
 
-    // Subtle Grounded Anti-Jitter Assist (Spec #02, #03):
-    // Apply stabilization torque tau_assist = -k_theta * theta - c_omega * omega
-    // ONLY when both wheels maintain firm ground contact, preventing numerical jitter
-    // while leaving airborne physics completely free!
+    // -------------------------------------------------------------------------
+    // GENUINE HILL CLIMB RACING PITCH CONTROL (GROUND & AIR)
+    // Gas (D) -> Tilts Nose UP (CCW)
+    // Brake (A) -> Tilts Nose DOWN (CW)
+    // -------------------------------------------------------------------------
+    if (throttleBrake !== 0) {
+      const dir = -Math.sign(throttleBrake); // throttle = -1 (CCW / Nose UP), brake = +1 (CW / Nose DOWN)
+      if (this.airborne && this.airborneTimer >= 60) {
+        const angVel = this.chassis.angularVelocity;
+        const spinLimit = b(1 - Math.abs(angVel) / 0.18, 0, 1);
+        const opposing = Math.sign(dir) !== Math.sign(angVel) ? 1.0 : spinLimit;
+        const airTorque = dir * Math.abs(throttleBrake) * vCfg.airControl * opposing * this.chassis.mass * 24;
+        this.chassis.torque += airTorque;
+      } else if (!this.airborne) {
+        // Subtle ground reaction: Gas lifts nose into wheelie, Brake presses nose down
+        const groundPitch = dir * Math.abs(throttleBrake) * 0.003 * this.chassis.mass;
+        this.chassis.torque += groundPitch;
+      }
+    }
+
+    // Dynamic 2-wheel grounded stability (damping ground oscillation)
     if (this.wheels[0].contact && this.wheels[1].contact) {
-      const wR = this.wheels[0].body.position;
-      const wF = this.wheels[1].body.position;
-      const groundAngle = Math.atan2(wF.y - wR.y, wF.x - wR.x);
-      const angleDiff = normalizeAngle(this.chassis.angle - groundAngle);
-      const kTheta = 0.0035 * this.chassis.mass;
-      const cOmega = 0.0020 * this.chassis.mass;
-      const assistTorque = -kTheta * angleDiff - cOmega * this.chassis.angularVelocity;
-      this.chassis.torque += assistTorque;
+      this.chassis.torque += -0.008 * this.chassis.mass * this.chassis.angularVelocity;
     }
 
-    // Mid-air pitch rotation authority:
-    // Only activates when airborne for > 150ms to prevent accidental spin during spawn drops or tiny hops!
-    // Throttle pitches nose UP (counter-clockwise -> BACKFLIP)
-    // Brake pitches nose DOWN (clockwise -> FRONTFLIP)
-    if (this.airborne && this.airborneTimer > 150 && throttleBrake !== 0) {
-      const angVel = this.chassis.angularVelocity;
-      const dir = -Math.sign(throttleBrake); // throttle = -1 (CCW/Backflip), brake = +1 (CW/Frontflip)
-      const spinLimit = b(1 - Math.abs(angVel) / 5.2, 0, 1);
-      const opposing = Math.sign(dir) !== Math.sign(angVel) ? 1.0 : spinLimit;
-      const airTorque = dir * Math.abs(throttleBrake) * vCfg.airControl * opposing * this.chassis.mass * 36;
-      this.chassis.torque += airTorque;
+    // Inverted Self-Righting Roll Recovery (when resting on roof)
+    const isUpsideDown = !this.airborne && (Math.abs(normalizeAngle(this.chassis.angle)) > 1.65 || this.roofContact);
+    if (isUpsideDown && throttleBrake !== 0) {
+      const rollDir = Math.sign(throttleBrake);
+      this.chassis.torque += rollDir * this.chassis.mass * 0.40;
+      Matter.Body.applyForce(this.chassis, this.chassis.position, {
+        x: rollDir * 0.016 * this.chassis.mass,
+        y: -0.028 * this.chassis.mass,
+      });
     }
 
-    const damping = this.airborne ? vCfg.angularDamping : vCfg.angularDamping * 5.0;
+    const damping = this.airborne ? vCfg.angularDamping : vCfg.angularDamping * 2.2;
     const factor = 1 - Math.min(damping * (dt / 16.666), 0.5);
     d.default.Body.setAngularVelocity(this.chassis, this.chassis.angularVelocity * factor);
 
@@ -372,6 +399,7 @@ class StuntDirector {
   audio;
   camera;
   airtime = 0;
+  groundedTime = 200;
   airDistance = 0;
   airApexY = Infinity;
   launchX = 0;
@@ -397,6 +425,7 @@ class StuntDirector {
 
   reset() {
     this.airtime = 0;
+    this.groundedTime = 200;
     this.airDistance = 0;
     this.airApexY = Infinity;
     this.cumulativeAngle = 0;
@@ -425,7 +454,7 @@ class StuntDirector {
     }
 
     if (isAirborne) {
-      if (this.airtime === 0) {
+      if (this.groundedTime >= 150 || (this.airtime === 0 && this.cumulativeAngle === 0)) {
         this.launchX = chassis.position.x;
         this.launchY = chassis.position.y;
         this.prevAngle = chassis.angle;
@@ -434,6 +463,7 @@ class StuntDirector {
         this.backflips = 0;
         this.frontflips = 0;
       }
+      this.groundedTime = 0;
 
       this.airtime += dt;
       this.airDistance = Math.abs(chassis.position.x - this.launchX) / 40;
@@ -461,6 +491,7 @@ class StuntDirector {
         vehicle.driver.triggerVictory();
       }
     } else {
+      this.groundedTime += dt;
       this.checkGroundStunts(vehicle, terrain, dt);
     }
   }
@@ -509,6 +540,7 @@ class StuntDirector {
   onLanding(vehicle, terrain) {
     if (this.airtime < 220) {
       this.airtime = 0;
+      this.groundedTime = 0;
       return;
     }
 
@@ -534,8 +566,8 @@ class StuntDirector {
       // Forward momentum boost for rewarding skillful landing
       const forwardDir = { x: Math.cos(chassis.angle), y: Math.sin(chassis.angle) };
       Matter.Body.applyForce(chassis, chassis.position, {
-        x: forwardDir.x * 0.08 * chassis.mass,
-        y: forwardDir.y * 0.08 * chassis.mass,
+        x: forwardDir.x * 0.03 * chassis.mass,
+        y: forwardDir.y * 0.03 * chassis.mass,
       });
     } else if (angleDiff < 0.40) {
       this.awardStunt("CLEAN LANDING", 60, 1);
@@ -550,6 +582,7 @@ class StuntDirector {
     }
 
     this.airtime = 0;
+    this.groundedTime = 0;
   }
 
   awardStunt(name, score, tier = 1) {

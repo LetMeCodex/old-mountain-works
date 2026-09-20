@@ -336,14 +336,20 @@ class q0 {
   }
 
   step(dt) {
-    if (this.isDead) return;
+    if (this.isDead) {
+      if (this.deathState === "normal") {
+        this.isDead = false;
+      } else {
+        return;
+      }
+    }
 
     const inputState = {
       throttle: this.input.throttle,
       brake: this.input.brake,
     };
 
-    this.vehicle.update(inputState, dt);
+    this.vehicle.update(inputState, dt, this.terrain);
     Matter.Engine.update(this.engine, dt);
 
     const activePairs = this.engine.pairs.list.filter((p) => p.isActive);

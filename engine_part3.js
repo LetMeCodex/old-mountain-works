@@ -22,8 +22,8 @@ class PropManager {
     this.defs = [];
     const noise = K0(seed + 999);
 
-    // 1. Trail signs at scenic spots
-    const signDistances = [750, 2200, 5100, 8500, 13800, 18400, 24200, 31500];
+    // 1. Trail signs at scenic spots (starting after 2800m to keep opening track clear)
+    const signDistances = [2800, 5100, 8500, 13800, 18400, 24200, 31500];
     for (let i = 0; i < signDistances.length; i++) {
       const sx = signDistances[i];
       const sy = terrain.heightAt(sx) - 18;
@@ -53,8 +53,8 @@ class PropManager {
       }
     }
 
-    // 3. Supply crates at outposts and industrial zones
-    const crateStations = [1480, 1540, 14800, 25800, 26300];
+    // 3. Supply crates at outposts and industrial zones (placed on plateaus, away from slopes)
+    const crateStations = [3800, 7800, 14800, 25800, 26300];
     for (let c = 0; c < crateStations.length; c++) {
       const cx = crateStations[c];
       const cy = terrain.heightAt(cx) - 16;
@@ -68,7 +68,7 @@ class PropManager {
     }
 
     // 4. Loose rolling rocks on steep descents
-    const rockStations = [4100, 9300, 15800, 22200, 28800];
+    const rockStations = [5200, 9300, 15800, 22200, 28800];
     for (let r = 0; r < rockStations.length; r++) {
       const rx = rockStations[r];
       const ry = terrain.heightAt(rx) - 16;
@@ -85,15 +85,16 @@ class PropManager {
 
   updateChunking(camX) {
     const minX = camX - 1200;
-    const maxX = camX + 2200;
+    const maxX = camX + 1200;
 
-    for (const def of this.defs) {
+    for (let i = 0; i < this.defs.length; i++) {
+      const def = this.defs[i];
       const inRange = def.x >= minX && def.x <= maxX;
-      const isSpawned = this.activeProps.has(def.id);
 
-      if (inRange && !isSpawned) {
+      if (inRange && !def.spawned) {
         this.spawnProp(def);
-      } else if (!inRange && isSpawned) {
+        def.spawned = true;
+      } else if (!inRange && def.spawned) {
         this.despawnProp(def.id);
       }
     }
@@ -103,9 +104,10 @@ class PropManager {
     if (def.type === "sign") {
       const body = Matter.Bodies.rectangle(def.x, def.y, 14, 26, {
         label: "prop_sign",
-        friction: 0.8,
-        density: 0.001,
-        restitution: 0.1,
+        friction: 0.05,
+        density: 0.00005,
+        restitution: 0.05,
+        collisionFilter: { group: -1 },
       });
       body.propDef = def;
       Matter.Composite.add(this.world, body);
@@ -113,9 +115,10 @@ class PropManager {
     } else if (def.type === "fence") {
       const body = Matter.Bodies.rectangle(def.x, def.y, 8, 22, {
         label: "prop_fence",
-        friction: 0.7,
-        density: 0.0012,
-        restitution: 0.12,
+        friction: 0.05,
+        density: 0.00005,
+        restitution: 0.05,
+        collisionFilter: { group: -1 },
       });
       body.propDef = def;
       Matter.Composite.add(this.world, body);
@@ -123,9 +126,9 @@ class PropManager {
     } else if (def.type === "crate") {
       const body = Matter.Bodies.rectangle(def.x, def.y, 22, 22, {
         label: "prop_crate",
-        friction: 0.85,
-        density: 0.0015,
-        restitution: 0.15,
+        friction: 0.3,
+        density: 0.0002,
+        restitution: 0.10,
         chamfer: { radius: 2 },
       });
       body.propDef = def;
@@ -135,9 +138,9 @@ class PropManager {
       const rad = def.radius || 14;
       const body = Matter.Bodies.polygon(def.x, def.y, 7, rad, {
         label: "prop_rock",
-        friction: 0.88,
-        frictionStatic: 1.1,
-        density: 0.0035,
+        friction: 0.7,
+        frictionStatic: 0.9,
+        density: 0.002,
         restitution: 0.15,
       });
       body.propDef = def;
@@ -166,6 +169,7 @@ class PropManager {
       this.audio.destruct("wood");
       this.particles.spawnSplinters(hitPt.x, hitPt.y, 16);
       this.bus.emit("prop:destroyed", { type: def.type, score: 75 });
+      try { Matter.Composite.remove(this.world, propBody); } catch (e) {}
     } else if (def.type === "rock") {
       this.audio.destruct("rock");
       this.particles.spawnLandingBurst(hitPt.x, hitPt.y, 1.2, MATERIALS.rock);

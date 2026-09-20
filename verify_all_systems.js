@@ -79,7 +79,13 @@ async function run() {
   await send('Page.enable');
 
   console.log('4. Waiting for initial page load and engine build...');
-  await new Promise((r) => setTimeout(r, 1500));
+  for (let i = 0; i < 40; i++) {
+    try {
+      const ready = await evaluate(`typeof game !== 'undefined' && Boolean(game.vehicle)`);
+      if (ready) break;
+    } catch (e) {}
+    await new Promise((r) => setTimeout(r, 200));
+  }
   if (errors.length > 0) {
     console.error('INITIAL PAGE ERRORS:', JSON.stringify(errors, null, 2));
   }
@@ -359,6 +365,11 @@ async function run() {
     
     // Teleport vehicle close to first relic to trigger magnetic pull and collection
     Matter.Body.setPosition(game.vehicle.chassis, { x: firstRelic.x, y: firstRelic.y });
+    Matter.Body.setVelocity(game.vehicle.chassis, { x: 0, y: 0 });
+    game.vehicle.wheels.forEach(w => {
+      Matter.Body.setPosition(w.body, { x: firstRelic.x + w.restOffset.x, y: firstRelic.y + w.restOffset.y });
+      Matter.Body.setVelocity(w.body, { x: 0, y: 0 });
+    });
     for (let i = 0; i < 5; i++) {
       game.echoManager.update(game.vehicle, 16.666);
     }
@@ -415,7 +426,10 @@ async function run() {
   // TEST 14: 6-Stage Death State Machine & 1.8s Inversion Timer & Recovery Window
   console.log('\n--- TEST 14: 6-Stage Death State Machine & Recovery Window ---');
   const deathTest = await evaluate(`(() => {
-    // Initial state
+    // Initial clean state
+    game.isDead = false;
+    game.deathState = "normal";
+    game.upsideDownTimer = 0;
     const initialDeathState = game.deathState;
     
     // Invert vehicle

@@ -1,13 +1,13 @@
-import subprocess
+import sys
 import os
 
 print("Running part generators...")
-subprocess.run(['python', 'gen_part1.py'], check=True)
-subprocess.run(['python', 'gen_part2.py'], check=True)
-subprocess.run(['python', 'gen_part3.py'], check=True)
-subprocess.run(['python', 'gen_part4.py'], check=True)
-subprocess.run(['python', 'gen_part5.py'], check=True)
-subprocess.run(['python', 'gen_part6.py'], check=True)
+import gen_part1
+import gen_part2
+import gen_part3
+import gen_part4
+import gen_part5
+import gen_part6
 
 # Combine all engine parts
 engine_parts = []
