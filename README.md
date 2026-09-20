@@ -2,6 +2,8 @@
 
 > **Authentic physics-driven 2.5D mountain climbing and destruction driving game built with Matter.js & Three.js.**
 
+🎮 **Play Live**: [https://letmecodex.github.io/old-mountain-works/](https://letmecodex.github.io/old-mountain-works/)
+
 ![Alpine Ridge Drive](screenshots/screenshot_driving_level.png)
 
 ---
