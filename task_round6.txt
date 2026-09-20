@@ -1,0 +1,132 @@
+Task: # OLD MOUNTAIN WORKS
+
+## EXTREME MOUNTAIN PHYSICS + 3D WORLD + DEATH SYSTEM + UI/UX + ART DIRECTION
+
+### MASTER IMPLEMENTATION PROMPT
+
+You are taking the existing `old-mountain-works(1).html` prototype and transforming it into a **serious, polished, physics-driven mountain climbing game**.
+
+This is not a reskin.
+
+This is not a generic Hill Climb Racing clone.
+
+This is not a completely new unrelated game.
+
+This is a **deep technical overhaul of the existing prototype**.
+
+The final experience should feel like:
+
+> **A dangerous mountain expedition where the player fights gravity, terrain, momentum, suspension and vehicle balance while climbing increasingly enormous mountains.**
+
+The mountain should feel like an actual mountain.
+
+The vehicle should feel like an actual machine.
+
+Crashes should feel physical.
+
+Death should feel earned.
+
+Jumps should feel terrifying.
+
+Climbing should feel difficult.
+
+Descending should feel dangerous.
+
+And surviving a ridiculous landing should feel incredible.
+
+---
+
+# 01 — FIRST RULE: ANALYZE THE EXISTING HTML BEFORE MODIFYING IT
+
+You have the existing file:
+
+```text
+old-mountain-works(1).html
+```
+
+Read the entire file before implementing anything.
+
+Do not assume the architecture.
+
+Do not blindly replace it.
+
+Understand the existing systems.
+
+The current implementation contains:
+
+* Canvas 2D rendering
+* Matter.js 0.20.0
+* fixed timestep physics
+* procedural terrain
+* vehicle/chassis
+* two wheels
+* suspension constraints
+* wheel contact tracking
+* wheel slip
+* engine torque
+* braking
+* air control
+* camera follow
+* camera zoom
+* screen shake
+* particle pooling
+* audio
+* event bus
+* HUD
+* pause system
+* touch controls
+* gamepad/keyboard input
+* debug mode
+* seeded terrain
+
+Important conceptual classes a
+<truncated 37576 bytes>
+pe.”
+
+Think of it as:
+
+> **Build a believable interactive mountain expedition around this existing physics prototype.**
+
+The mountain must feel enormous.
+
+The valleys must feel dangerous.
+
+The climbs must feel exhausting.
+
+The vehicle must feel heavy.
+
+The suspension must feel alive.
+
+The player must understand why they lost control.
+
+The physics must be difficult but predictable.
+
+The death system must feel earned.
+
+The collectibles must belong to the world.
+
+The UI must look like a real game.
+
+The 3D layer must add scale without destabilizing physics.
+
+The procedural terrain must create memorable routes rather than random noise.
+
+The final summit must feel like an achievement.
+
+Most importantly:
+
+## MAKE THE DRIVING ITSELF SO GOOD THAT EVERYTHING ELSE FEELS LIKE SUPPORTING THE DRIVING.
+
+Do not optimize for feature count.
+
+Optimize for:
+
+**control → momentum → terrain → danger → recovery → mastery.**
+
+That is the game.
+
+Additional Context:
+1. Work directly on `C:\Users\anish jha\.gemini\antigravity\scratch\old-mountain-works\old-mountain-works.html` and `old-mountain-works(1).html` (and synchronize to `C:\Users\anish jha\Downloads\old-mountain-works(1).html`).
+2. Create the offline Python tooling directory at `C:\Users\anish jha\.gemini\antigravity\scratch\old-mountain-works\tools\` containing `terrain_analysis.py`, `physics_tuner.py`, `terrain_validator.py`, `parameter_sweep.py`, and `telemetry_plot.py`.
+3. Implement the full 111-section specification (Spring-damper model, dynamic normal load distribution, slip/traction saturation curves, grounded subtle anti-jitter stability assist, steep elevation & deep valley terrain grammar, Three.js 2.5D visual depth & 3D rotating Mountain Echoes, death state machine with persistent upside-down timer and crash slow motion, expedition instrument HUD with altitude meter, expedition map and garage UI, debug seeds and F3 telemetry, and test with automated headless verification).
+4. Provide the full final developer report specified in Section 110.

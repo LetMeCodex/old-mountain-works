@@ -1,0 +1,863 @@
+var u=L0(z0(),1);
+class T0 {
+  ctx=null;
+  master=null;
+  sfxBus=null;
+  engineBus=null;
+  osc=[];
+  engineFilter=null;
+  engineGain=null;
+  noiseBuffer=null;
+  started=!1;
+  muted=!1;
+  start() {
+    if(this.started)return;
+    let E=window.AudioContext??window.webkitAudioContext;
+    if(!E)return;
+    this.started=!0;
+    let L=new E;
+    this.ctx=L,this.master=L.createGain(),this.master.gain.value=0.85,this.master.connect(L.destination),this.sfxBus=L.createGain(),this.sfxBus.gain.value=0.9,this.sfxBus.connect(this.master),this.engineBus=L.createGain(),this.engineBus.gain.value=0,this.engineFilter=L.createBiquadFilter(),this.engineFilter.type="lowpass",this.engineFilter.frequency.value=500,this.engineFilter.Q.value=3,this.engineFilter.connect(this.engineBus),this.engineBus.connect(this.master);
+    let U=["sawtooth","square","triangle"],K=[0,7,-1200];
+    U.forEach((G,$)=> {
+      let W=L.createOscillator();
+      W.type=G,W.frequency.value=60,W.detune.value=K[$]??0;
+      let N=L.createGain();
+      N.gain.value=$===2?0.5:0.28,W.connect(N).connect(this.engineFilter),W.start(),this.osc.push(W)
+    }
+    );
+    let F=Math.floor(L.sampleRate*1.2),Q=L.createBuffer(1,F,L.sampleRate),J=Q.getChannelData(0);
+    for(let G=0;
+    G<F;
+    G++)J[G]=Math.random()*2-1;
+    this.noiseBuffer=Q
+  }
+  resume() {
+    this.ctx?.resume()
+  }
+  setEngine(E,L) {
+    if(!this.ctx||!this.engineBus||!this.engineFilter)return;
+    let U=this.ctx.currentTime,K=42+E*190;
+    for(let Q of this.osc)Q.frequency.setTargetAtTime(K,U,0.06);
+    this.engineFilter.frequency.setTargetAtTime(280+E*1500+L*400,U,0.08);
+    let F=this.muted?0:0.035+L*0.075+E*0.05;
+    this.engineBus.gain.setTargetAtTime(F,U,0.1)
+  }
+  impact(E,L="hard") {
+    if(!this.ctx||!this.noiseBuffer||!this.sfxBus||this.muted)return;
+    let U=this.ctx,K=U.currentTime,F=Math.min(0.85,0.08+E*0.5),Q=U.createBufferSource();
+    Q.buffer=this.noiseBuffer,Q.playbackRate.value=L==="hard"?1.1:0.7;
+    let J=U.createBiquadFilter();
+    J.type="bandpass",J.frequency.value=L==="hard"?1200+E*1400:520,J.Q.value=0.8;
+    let G=U.createGain();
+    G.gain.setValueAtTime(F,K),G.gain.exponentialRampToValueAtTime(0.0008,K+0.16+E*0.3),Q.connect(J).connect(G).connect(this.sfxBus),Q.start(K),Q.stop(K+0.7);
+    let $=U.createOscillator();
+    $.type="sine",$.frequency.setValueAtTime(110+E*40,K),$.frequency.exponentialRampToValueAtTime(34,K+0.22);
+    let W=U.createGain();
+    W.gain.setValueAtTime(F*0.9,K),W.gain.exponentialRampToValueAtTime(0.0008,K+0.3),$.connect(W).connect(this.sfxBus),$.start(K),$.stop(K+0.35)
+  }
+  setMuted(E) {
+    if(this.muted=E,this.master&&this.ctx)this.master.gain.setTargetAtTime(E?0:0.85,this.ctx.currentTime,0.05)
+  }
+  dispose() {
+    for(let E of this.osc)try {
+      E.stop()
+    }
+    catch {
+      
+    }
+    this.osc=[],this.ctx?.close(),this.ctx=null,this.started=!1
+  }
+  
+}
+var s0= {
+  chassisWidth:118,chassisHeight:28,chassisMass:7.4,wheelRadius:19,wheelMass:1.1,wheelBase:94,wheelOffsetY:40,engineTorque:0.042,brakeTorque:0.06,maxWheelSpeed:1.05,suspensionStiffness:0.12,suspensionDamping:0.06,suspensionTravel:22,tireGrip:0.92,airControl:0.0055,angularDamping:0.02
+}
+,n0= {
+  gravity:1.35,fixedDelta:8.333333333333334,maxSubSteps:5
+}
+,r0= {
+  followSpeed:0.09,lookAhead:120,baseZoom:0.92,speedZoom:0.11,airborneOffset:0.35,impactZoom:0.06,shakeIntensity:1
+}
+,i0= {
+  dustDensity:1,screenShake:!0,reducedMotion:!1
+}
+,x= {
+  vehicle:s0,physics:n0,camera:r0,visual:i0,world: {
+    length:12000,sampleStep:18,groundBase:560,startX:220
+  }
+  
+}
+;
+var b=(E,L,U)=>E<L?L:E>U?U:E,O0=(E,L,U)=>E+(L-E)*U,G0=(E,L,U,K)=>O0(E,L,1-Math.exp(-U*K));
+function K0(E) {
+  let L=(K)=> {
+    let F=Math.sin(K*127.1+E*311.7)*43758.5453;
+    return F-Math.floor(F)
+  }
+  ,U=(K)=>K*K*(3-2*K);
+  return(K)=> {
+    let F=Math.floor(K),Q=K-F;
+    return O0(L(F),L(F+1),U(Q))*2-1
+  }
+  
+}
+var I0=(E)=>Number.isFinite(E.x)&&Number.isFinite(E.y);
+class X0 {
+  x=0;
+  y=0;
+  zoom=x.camera.baseZoom;
+  shakes=[];
+  zoomPulse=0;
+  reset(E,L) {
+    this.x=E,this.y=L,this.zoom=x.camera.baseZoom,this.shakes.length=0,this.zoomPulse=0
+  }
+  shake(E,L,U=0,K=0) {
+    if(!x.visual.screenShake||x.visual.reducedMotion)return;
+    if(this.shakes.push( {
+      intensity:E,duration:L,elapsed:0,dirX:U,dirY:K
+    }
+    ),this.shakes.length>6)this.shakes.shift()
+  }
+  pulseZoom(E) {
+    if(x.visual.reducedMotion)return;
+    this.zoomPulse=Math.min(0.14,this.zoomPulse+E)
+  }
+  update(E,L,U,K) {
+    let F=x.camera,Q=K/1000,J=Math.hypot(L.x,L.y),G=b(L.x*9,-F.lookAhead,F.lookAhead),$=U?L.y*6*F.airborneOffset:-10;
+    this.x=G0(this.x,E.x+G,F.followSpeed*60,Q),this.y=G0(this.y,E.y+$,F.followSpeed*42,Q);
+    let W=F.baseZoom-b(J*0.012,0,1)*F.speedZoom+this.zoomPulse;
+    this.zoom=G0(this.zoom,W,5,Q),this.zoomPulse=O0(this.zoomPulse,0,Math.min(1,Q*7));
+    for(let N of this.shakes)N.elapsed+=K;
+    this.shakes=this.shakes.filter((N)=>N.elapsed<N.duration)
+  }
+  get shakeOffset() {
+    let E=0,L=0;
+    for(let U of this.shakes) {
+      let K=1-U.elapsed/U.duration,F=U.intensity*K*K*34*x.camera.shakeIntensity,Q=U.elapsed*0.055;
+      E+=Math.sin(Q*9.1)*F*(0.5+Math.abs(U.dirX)),L+=Math.cos(Q*7.3)*F*(0.5+Math.abs(U.dirY))
+    }
+    return {
+      x:E,y:L
+    }
+    
+  }
+  
+}
+class Y0 {
+  map=new Map;
+  on(E,L) {
+    let U=this.map.get(E)??new Set;
+    return U.add(L),this.map.set(E,U),()=>U.delete(L)
+  }
+  emit(E,L) {
+    let U=this.map.get(E);
+    if(!U)return;
+    for(let K of U)K(L)
+  }
+  clear() {
+    this.map.clear()
+  }
+  
+}
+class M0 {
+  keys=new Set;
+  touchLeft=!1;
+  touchRight=!1;
+  onReset=null;
+  onDebug=null;
+  handleDown=(E)=> {
+    let L=E.key.toLowerCase();
+    if(["arrowleft","arrowright","arrowup","arrowdown"," "].includes(L))E.preventDefault();
+    if(L==="r")this.onReset?.();
+    if(E.key==="F3")E.preventDefault(),this.onDebug?.();
+    this.keys.add(L)
+  }
+  ;
+  handleUp=(E)=> {
+    this.keys.delete(E.key.toLowerCase())
+  }
+  ;
+  blur=()=>this.keys.clear();
+  attach() {
+    window.addEventListener("keydown",this.handleDown),window.addEventListener("keyup",this.handleUp),window.addEventListener("blur",this.blur)
+  }
+  detach() {
+    window.removeEventListener("keydown",this.handleDown),window.removeEventListener("keyup",this.handleUp),window.removeEventListener("blur",this.blur),this.keys.clear()
+  }
+  pad(E) {
+    let L=typeof navigator<"u"?navigator.getGamepads?.():null;
+    if(!L)return 0;
+    for(let U of L) {
+      if(!U)continue;
+      let K=U.buttons[E===1?7:6]?.value??0,F=U.axes[0]??0,Q=E===1?Math.max(0,F):Math.max(0,-F);
+      return Math.max(K,Q>0.15?Q:0)
+    }
+    return 0
+  }
+  get throttle() {
+    let E=this.keys.has("d")||this.keys.has("arrowright")||this.keys.has("w")?1:0;
+    return Math.max(E,this.touchRight?1:0,this.pad(1))
+  }
+  get brake() {
+    let E=this.keys.has("a")||this.keys.has("arrowleft")||this.keys.has("s")?1:0;
+    return Math.max(E,this.touchLeft?1:0,this.pad(0))
+  }
+  
+}
+var t0=520;
+class S0 {
+  pool=[];
+  constructor() {
+    for(let E=0;
+    E<t0;
+    E++)this.pool.push( {
+      active:!1,x:0,y:0,vx:0,vy:0,life:0,maxLife:1,size:1,rot:0,spin:0,drag:0.98,gravity:0,tone:0,kind:"dust"
+    }
+    )
+  }
+  acquire() {
+    for(let E=0;
+    E<this.pool.length;
+    E++) {
+      let L=this.pool[E];
+      if(!L.active)return L
+    }
+    return null
+  }
+  clear() {
+    for(let E of this.pool)E.active=!1
+  }
+  spawnDust(E,L,U,K,F) {
+    let Q=Math.round(F*6*x.visual.dustDensity);
+    for(let J=0;
+    J<Q;
+    J++) {
+      let G=this.acquire();
+      if(!G)return;
+      G.active=!0,G.kind="dust",G.x=E+(Math.random()-0.5)*14,G.y=L+(Math.random()-0.5)*6,G.vx=U*0.25+(Math.random()-0.5)*1.5,G.vy=K*0.2-Math.random()*1.1-0.2,G.maxLife=520+Math.random()*720,G.life=G.maxLife,G.size=5+Math.random()*13*Math.min(2,F),G.rot=Math.random()*Math.PI,G.spin=(Math.random()-0.5)*0.02,G.drag=0.975,G.gravity=-0.004,G.tone=Math.random()
+    }
+    
+  }
+  spawnGrit(E,L,U,K,F) {
+    let Q=Math.round(F*5*x.visual.dustDensity);
+    for(let J=0;
+    J<Q;
+    J++) {
+      let G=this.acquire();
+      if(!G)return;
+      let $=(Math.random()-0.5)*1.4,W=1.5+Math.random()*4*F;
+      G.active=!0,G.kind="grit",G.x=E,G.y=L,G.vx=(U*Math.cos($)-K*Math.sin($))*W,G.vy=(U*Math.sin($)+K*Math.cos($))*W-1,G.maxLife=380+Math.random()*520,G.life=G.maxLife,G.size=1.6+Math.random()*3,G.rot=Math.random()*Math.PI,G.spin=(Math.random()-0.5)*0.3,G.drag=0.99,G.gravity=0.05,G.tone=Math.random()
+    }
+    
+  }
+  update(E) {
+    let L=E/16.666;
+    for(let U of this.pool) {
+      if(!U.active)continue;
+      if(U.life-=E,U.life<=0) {
+        U.active=!1;
+        continue
+      }
+      if(U.vy+=U.gravity*L,U.vx*=Math.pow(U.drag,L),U.vy*=Math.pow(U.drag,L),U.x+=U.vx*L,U.y+=U.vy*L,U.rot+=U.spin*L,U.kind==="dust")U.size+=0.16*L
+    }
+    
+  }
+  
+}
+var _= {
+  skyTop:"#cfd7d3",skyBottom:"#e8e0cf",sun:"#f0e3c6",far:"#a9b3ad",mid:"#7f8a84",near:"#57625d",groundFill:"#252a27",groundTop:"#6e7a55",groundTopLight:"#8a9566",ink:"#1b1f1d",paper:"#efe7d6",accent:"#d4622a",body:"#c8bda6",bodyDark:"#a3977e",tyre:"#24282a",rim:"#d9cfb8",dust:["#c9bda2","#b6a98d","#ddd3bc"]
+}
+;
+class R0 {
+  ctx;
+  terrain;
+  grainNoise=K0(7);
+  constructor(E,L) {
+    this.ctx=E;
+    this.terrain=L
+  }
+  setTerrain(E) {
+    this.terrain=E
+  }
+  render(E,L,U,K,F,Q,J,G) {
+    let $=this.ctx;
+    $.save(),$.clearRect(0,0,K,F),this.drawSky(K,F,E);
+    let W=E.shakeOffset;
+    if($.translate(K/2+W.x,F/2+W.y),$.scale(E.zoom,E.zoom),$.translate(-E.x,-E.y),this.drawParallax(E,K,F,Q),this.drawTerrain(E,K,F),this.drawParticles(U,"dust"),this.drawVehicle(L),this.drawParticles(U,"grit"),J)this.drawDebug(G,L);
+    $.restore(),this.drawGrain(K,F),this.drawVignette(K,F)
+  }
+  drawSky(E,L,U) {
+    let K=this.ctx,F=K.createLinearGradient(0,0,0,L);
+    F.addColorStop(0,_.skyTop),F.addColorStop(1,_.skyBottom),K.fillStyle=F,K.fillRect(0,0,E,L),K.save(),K.globalAlpha=0.5,K.fillStyle=_.sun,K.beginPath(),K.arc(E*0.74-U.x*0.01,L*0.2,86,0,Math.PI*2),K.fill(),K.restore()
+  }
+  drawParallax(E,L,U,K) {
+    let F=this.ctx,Q=[ {
+      depth:0.12,color:_.far,amp:120,base:250,freq:0.0016,wob:5
+    }
+    , {
+      depth:0.28,color:_.mid,amp:150,base:340,freq:0.0023,wob:4
+    }
+    , {
+      depth:0.52,color:_.near,amp:130,base:430,freq:0.0031,wob:3
+    }
+    ],J=E.x-L/E.zoom,G=E.x+L/E.zoom;
+    Q.forEach(($,W)=> {
+      let N=K0(31+W*13);
+      F.beginPath(),F.moveTo(J,3000);
+      for(let Z=J;
+      Z<=G;
+      Z+=14) {
+        let z=(Z-E.x)*$.depth+E.x,O=x.world.groundBase-$.base-N(z*$.freq)*$.amp-N(z*$.freq*4.1)*$.wob*4+Math.sin(z*0.05+K*0.0003)*$.wob*0.4;
+        F.lineTo(Z,O)
+      }
+      F.lineTo(G,3000),F.closePath(),F.fillStyle=$.color,F.fill()
+    }
+    )
+  }
+  drawTerrain(E,L,U) {
+    let K=this.ctx,F=this.terrain,Q=E.x-L/E.zoom/2-120,J=E.x+L/E.zoom/2+120,G=[];
+    for(let $ of F.samples) {
+      if($.x<Q||$.x>J)continue;
+      G.push($)
+    }
+    if(G.length<2)return;
+    K.beginPath(),K.moveTo(G[0].x,G[0].y);
+    for(let $ of G) {
+      let W=this.grainNoise($.x*0.09)*1.6;
+      K.lineTo($.x,$.y+W)
+    }
+    K.lineTo(G[G.length-1].x,4000),K.lineTo(G[0].x,4000),K.closePath(),K.fillStyle=_.groundFill,K.fill(),K.save(),K.clip(),K.beginPath(),K.moveTo(G[0].x,G[0].y);
+    for(let $ of G)K.lineTo($.x,$.y+1);
+    for(let $=G.length-1;
+    $>=0;
+    $--)K.lineTo(G[$].x,G[$].y+17);
+    K.closePath(),K.fillStyle=_.groundTop,K.fill(),K.strokeStyle="rgba(240,232,214,0.06)",K.lineWidth=1;
+    for(let $=Math.floor(Q/26)*26;
+    $<J;
+    $+=26) {
+      let W=F.heightAt($);
+      K.beginPath(),K.moveTo($,W+26),K.lineTo($-22,W+90+this.grainNoise($*0.03)*20),K.stroke()
+    }
+    K.restore(),K.beginPath(),K.moveTo(G[0].x,G[0].y);
+    for(let $ of G)K.lineTo($.x,$.y+this.grainNoise($.x*0.09)*1.6);
+    K.strokeStyle=_.ink,K.lineWidth=2.4,K.lineJoin="round",K.stroke();
+    for(let $=Math.floor(Q/70)*70;
+    $<J;
+    $+=70) {
+      let W=this.grainNoise($*0.21);
+      if(W<0.25)continue;
+      let N=F.heightAt($),Z=F.slopeAt($);
+      K.save(),K.translate($,N),K.rotate(Z),K.strokeStyle="rgba(27,31,29,0.55)",K.lineWidth=1.6,K.beginPath(),K.moveTo(0,0),K.lineTo(W*4,-8-W*8),K.moveTo(0,0),K.lineTo(-3-W*3,-6-W*5),K.stroke(),K.restore()
+    }
+    
+  }
+  drawParticles(E,L) {
+    let U=this.ctx;
+    for(let K of E.pool) {
+      if(!K.active||K.kind!==L)continue;
+      let F=K.life/K.maxLife;
+      if(U.save(),U.globalAlpha=L==="dust"?F*0.42:F*0.9,U.translate(K.x,K.y),U.rotate(K.rot),L==="dust")U.fillStyle=_.dust[Math.floor(K.tone*_.dust.length)]??_.dust[0],U.beginPath(),U.ellipse(0,0,K.size,K.size*0.78,0,0,Math.PI*2),U.fill();
+      else U.fillStyle=_.ink,U.fillRect(-K.size/2,-K.size/2,K.size,K.size*0.8);
+      U.restore()
+    }
+    
+  }
+  drawVehicle(E) {
+    let L=this.ctx,U=x.vehicle;
+    L.save(),L.translate(E.chassis.position.x,E.chassis.position.y),L.rotate(E.chassis.angle);
+    let K=x.vehicle.chassisWidth,F=x.vehicle.chassisHeight;
+    L.fillStyle=_.body,L.strokeStyle=_.ink,L.lineWidth=2.6,L.beginPath(),L.moveTo(-K/2,-F/2+4),L.lineTo(-K/2+12,-F/2-10),L.lineTo(K/2-26,-F/2-10),L.lineTo(K/2-8,-F/2+2),L.lineTo(K/2,F/2-6),L.lineTo(-K/2+4,F/2),L.closePath(),L.fill(),L.stroke(),L.fillStyle=_.bodyDark,L.beginPath(),L.moveTo(-K/2+14,-F/2-8),L.lineTo(-K/2+40,-F/2-26),L.lineTo(-K/2+58,-F/2-26),L.lineTo(-K/2+58,-F/2-8),L.closePath(),L.fill(),L.stroke(),L.fillStyle=_.accent,L.fillRect(K/2-22,-F/2-6,14,8),L.strokeRect(K/2-22,-F/2-6,14,8),L.beginPath(),L.moveTo(-K/2+18,-F/2-8),L.lineTo(-K/2+16,-F/2-28),L.lineWidth=5,L.strokeStyle=_.ink,L.stroke(),L.fillStyle=_.ink;
+    for(let Q=0;
+    Q<6;
+    Q++)L.beginPath(),L.arc(-K/2+10+Q*16,F/2-7,1.7,0,Math.PI*2),L.fill();
+    L.restore();
+    for(let Q of E.wheels) {
+      let J= {
+        x:E.chassis.position.x+Math.cos(E.chassis.angle)*Q.restOffset.x-Math.sin(E.chassis.angle)*4,y:E.chassis.position.y+Math.sin(E.chassis.angle)*Q.restOffset.x+Math.cos(E.chassis.angle)*4
+      }
+      ,G=Q.body.position.x-J.x,$=Q.body.position.y-J.y,W=Math.hypot(G,$),N=Math.atan2($,G);
+      L.save(),L.translate(J.x,J.y),L.rotate(N);
+      let Z=W*0.18;
+      L.strokeStyle=_.ink,L.lineWidth=3.5,L.beginPath(),L.moveTo(Z,0),L.lineTo(W,0),L.stroke();
+      let z=6,O=z*8;
+      L.lineWidth=2.4,L.strokeStyle=_.accent,L.beginPath();
+      for(let H=0;
+      H<=O;
+      H++) {
+        let T=H/O;
+        L.lineTo(Z+T*(W-Z),Math.sin(T*z*Math.PI*2)*6)
+      }
+      L.stroke(),L.restore()
+    }
+    for(let Q of E.wheels) {
+      L.save(),L.translate(Q.body.position.x,Q.body.position.y),L.rotate(Q.body.angle),L.fillStyle=_.tyre,L.beginPath(),L.arc(0,0,U.wheelRadius,0,Math.PI*2),L.fill(),L.strokeStyle=_.ink,L.lineWidth=2,L.stroke(),L.fillStyle=_.rim,L.beginPath(),L.arc(0,0,U.wheelRadius*0.45,0,Math.PI*2),L.fill(),L.strokeStyle=_.ink,L.lineWidth=1.6;
+      for(let J=0;
+      J<5;
+      J++) {
+        let G=J/5*Math.PI*2;
+        L.beginPath(),L.moveTo(Math.cos(G)*U.wheelRadius*0.45,Math.sin(G)*U.wheelRadius*0.45),L.lineTo(Math.cos(G)*U.wheelRadius*0.92,Math.sin(G)*U.wheelRadius*0.92),L.stroke()
+      }
+      L.strokeStyle="rgba(239,231,214,0.35)",L.lineWidth=2;
+      for(let J=0;
+      J<10;
+      J++) {
+        let G=J/10*Math.PI*2;
+        L.beginPath(),L.moveTo(Math.cos(G)*(U.wheelRadius-5),Math.sin(G)*(U.wheelRadius-5)),L.lineTo(Math.cos(G)*U.wheelRadius,Math.sin(G)*U.wheelRadius),L.stroke()
+      }
+      L.restore()
+    }
+    
+  }
+  drawDebug(E,L) {
+    let U=this.ctx;
+    U.save(),U.strokeStyle="rgba(212,98,42,0.9)",U.lineWidth=1;
+    for(let K of E) {
+      let F=K.vertices;
+      U.beginPath(),U.moveTo(F[0].x,F[0].y);
+      for(let Q of F)U.lineTo(Q.x,Q.y);
+      U.closePath(),U.stroke()
+    }
+    U.strokeStyle="#2ea3a5",U.lineWidth=2,U.beginPath(),U.moveTo(L.chassis.position.x,L.chassis.position.y),U.lineTo(L.chassis.position.x+L.chassis.velocity.x*10,L.chassis.position.y+L.chassis.velocity.y*10),U.stroke();
+    for(let K of L.wheels)U.fillStyle=K.contact?"#2ea3a5":"rgba(27,31,29,0.4)",U.beginPath(),U.arc(K.body.position.x,K.body.position.y,4,0,Math.PI*2),U.fill();
+    U.restore()
+  }
+  grainCanvas=null;
+  drawGrain(E,L) {
+    if(!this.grainCanvas) {
+      let F=document.createElement("canvas");
+      F.width=180,F.height=180;
+      let Q=F.getContext("2d");
+      if(Q) {
+        let J=Q.createImageData(180,180);
+        for(let G=0;
+        G<J.data.length;
+        G+=4) {
+          let $=120+Math.random()*135;
+          J.data[G]=J.data[G+1]=J.data[G+2]=$,J.data[G+3]=16
+        }
+        Q.putImageData(J,0,0)
+      }
+      this.grainCanvas=F
+    }
+    let U=this.ctx,K=U.createPattern(this.grainCanvas,"repeat");
+    if(!K)return;
+    U.save(),U.globalCompositeOperation="overlay",U.fillStyle=K,U.fillRect(0,0,E,L),U.restore()
+  }
+  drawVignette(E,L) {
+    let U=this.ctx,K=U.createRadialGradient(E/2,L/2,Math.min(E,L)*0.35,E/2,L/2,Math.max(E,L)*0.75);
+    K.addColorStop(0,"rgba(0,0,0,0)"),K.addColorStop(1,"rgba(24,26,22,0.38)"),U.fillStyle=K,U.fillRect(0,0,E,L)
+  }
+  
+}
+var x0=L0(z0(),1);
+class P0 {
+  samples=[];
+  bodies=[];
+  seed;
+  step=x.world.sampleStep;
+  constructor(E) {
+    this.seed=E;
+    let L=K0(E),U=K0(E+17),K=K0(E+91),F=x.world.groundBase;
+    for(let Q=-3000;
+    Q<=x.world.length;
+    Q+=this.step) {
+      let J=Math.min(1,Math.max(0,(Q-120)/700)),G=L(Q/900)*150+U(Q/280)*52+K(Q/90)*13+Math.sin(Q/1700)*70;
+      this.samples.push( {
+        x:Q,y:F-G*J
+      }
+      )
+    }
+    for(let Q=0;
+    Q<this.samples.length-1;
+    Q++) {
+      let J=this.samples[Q],G=this.samples[Q+1],$=G.x-J.x,W=G.y-J.y,N=Math.hypot($,W),Z=Math.atan2(W,$),z=x0.default.Bodies.rectangle((J.x+G.x)/2,(J.y+G.y)/2+10,N+2,22, {
+        isStatic:!0,angle:Z,friction:1,frictionStatic:1.2,restitution:0.02,label:"terrain",chamfer: {
+          radius:2
+        }
+        
+      }
+      );
+      this.bodies.push(z)
+    }
+    
+  }
+  heightAt(E) {
+    let L=this.samples[0].x,U=Math.floor((E-L)/this.step),K=this.samples[Math.max(0,Math.min(this.samples.length-1,U))],F=this.samples[Math.max(0,Math.min(this.samples.length-1,U+1))];
+    if(K===F)return K.y;
+    let Q=(E-K.x)/(F.x-K.x);
+    return K.y+(F.y-K.y)*Q
+  }
+  slopeAt(E) {
+    return Math.atan2(this.heightAt(E+12)-this.heightAt(E-12),24)
+  }
+  
+}
+var d=L0(z0(),1);
+class f0 {
+  chassis;
+  wheels=[];
+  constraints=[];
+  composite;
+  constructor(E,L) {
+    let U=x.vehicle;
+    this.chassis=d.default.Bodies.rectangle(E,L,U.chassisWidth,U.chassisHeight, {
+      label:"chassis",collisionFilter: {
+        group:-3
+      }
+      ,density:U.chassisMass/(U.chassisWidth*U.chassisHeight),friction:0.4,frictionAir:0.006,restitution:0.05,chamfer: {
+        radius:7
+      }
+      
+    }
+    );
+    let K=[ {
+      x:-U.wheelBase/2,y:U.wheelOffsetY
+    }
+    , {
+      x:U.wheelBase/2,y:U.wheelOffsetY
+    }
+    ];
+    for(let F of K) {
+      let Q=d.default.Bodies.circle(E+F.x,L+F.y,U.wheelRadius, {
+        label:"wheel",collisionFilter: {
+          group:-3
+        }
+        ,density:U.wheelMass/(Math.PI*U.wheelRadius*U.wheelRadius),friction:U.tireGrip,frictionStatic:U.tireGrip*1.4,frictionAir:0.004,restitution:0.12,slop:0.02
+      }
+      ),J=18,G=2,$=Math.hypot(18,U.wheelOffsetY-2),W=(z)=>d.default.Constraint.create( {
+        bodyA:this.chassis,pointA: {
+          x:F.x+z,y:2
+        }
+        ,bodyB:Q,length:$,stiffness:U.suspensionStiffness,damping:U.suspensionDamping
+      }
+      ),N=W(18),Z=W(-18);
+      this.constraints.push(N,Z),this.wheels.push( {
+        body:Q,restOffset:F,compression:0,contact:!1,slip:0
+      }
+      )
+    }
+    this.composite=d.default.Composite.create( {
+      label:"vehicle"
+    }
+    ),d.default.Composite.add(this.composite,[this.chassis,...this.wheels.map((F)=>F.body),...this.constraints])
+  }
+  get speed() {
+    return d.default.Vector.magnitude(this.chassis.velocity)
+  }
+  get forwardSpeed() {
+    let E= {
+      x:Math.cos(this.chassis.angle),y:Math.sin(this.chassis.angle)
+    }
+    ;
+    return d.default.Vector.dot(E,this.chassis.velocity)
+  }
+  get rpm() {
+    let E=Math.max(...this.wheels.map((L)=>Math.abs(L.body.angularVelocity)));
+    return b(E/x.vehicle.maxWheelSpeed,0,1.4)
+  }
+  get airborne() {
+    return!this.wheels.some((E)=>E.contact)
+  }
+  update(E,L) {
+    let U=x.vehicle,K=E.throttle-E.brake;
+    for(let[Q,J]of this.wheels.entries()) {
+      let G=Q===0?1:0.35,$=J.body.angularVelocity,W=b(1-Math.abs($)/U.maxWheelSpeed,0,1);
+      if(K!==0) {
+        let O=Math.sign(K)===Math.sign($)||Math.abs($)<0.02?U.engineTorque*W*K:U.brakeTorque*K;
+        J.body.torque+=O*G*J.body.mass*12
+      }
+      else d.default.Body.setAngularVelocity(J.body,$*0.995);
+      let N=d.default.Vector.add(this.chassis.position,d.default.Vector.rotate( {
+        x:J.restOffset.x,y:J.restOffset.y
+      }
+      ,this.chassis.angle)),Z=d.default.Vector.magnitude(d.default.Vector.sub(J.body.position,N));
+      J.compression=b((U.wheelOffsetY-Z)/U.suspensionTravel+0.5,-1,1),J.slip=Math.abs($*U.wheelRadius-this.forwardSpeed)
+    }
+    if(this.airborne&&K!==0) {
+      let J=b(1-Math.abs(this.chassis.angularVelocity)/0.32,0,1),$=Math.sign(K)!==Math.sign(this.chassis.angularVelocity)?1:J;
+      this.chassis.torque+=K*U.airControl*$*this.chassis.mass*60
+    }
+    let F=this.airborne?U.angularDamping:U.angularDamping*6;
+    d.default.Body.setAngularVelocity(this.chassis,this.chassis.angularVelocity*(1-Math.min(F*(L/16.66),0.5)))
+  }
+  markContacts(E,L) {
+    for(let U of this.wheels)U.contact=!1;
+    for(let U of L) {
+      let {
+        bodyA:K,bodyB:F
+      }
+      =U,Q=this.wheels.find((G)=>G.body===K||G.body===F);
+      if(!Q)continue;
+      let J=K===Q.body?F:K;
+      if(E.has(J))Q.contact=!0
+    }
+    
+  }
+  
+}
+class q0 {
+  canvas;
+  bus=new Y0;
+  input=new M0;
+  audio=new T0;
+  particles=new S0;
+  camera=new X0;
+  engine;
+  terrain;
+  terrainSet=new Set;
+  vehicle;
+  renderer;
+  ctx;
+  raf=0;
+  last=0;
+  accumulator=0;
+  time=0;
+  timeScale=1;
+  timeScaleTarget=1;
+  running=!1;
+  debug=!1;
+  fps=60;
+  frameSamples=[];
+  startX=0;
+  maxDistance=0;
+  score=0;
+  airtime=0;
+  bestAirtime=0;
+  wasAirborne=!1;
+  stuckTimer=0;
+  seed;
+  constructor(E,L=Math.floor(Math.random()*99999)) {
+    this.canvas=E;
+    let U=E.getContext("2d", {
+      alpha:!1
+    }
+    );
+    if(!U)throw Error("Canvas 2D unavailable");
+    this.ctx=U,this.seed=L,this.build(),this.renderer=new R0(this.ctx,this.terrain),this.input.attach(),this.input.onReset=()=>this.reset(),this.input.onDebug=()=> {
+      this.debug=!this.debug
+    }
+    
+  }
+  build() {
+    this.engine=u.default.Engine.create( {
+      gravity: {
+        x:0,y:x.physics.gravity,scale:0.001
+      }
+      ,enableSleeping:!0
+    }
+    ),this.engine.positionIterations=8,this.engine.velocityIterations=8,this.terrain=new P0(this.seed),this.terrainSet=new Set(this.terrain.bodies),u.default.Composite.add(this.engine.world,this.terrain.bodies),this.startX=x.world.startX;
+    let E=this.terrain.heightAt(this.startX)-90;
+    this.vehicle=new f0(this.startX,E),u.default.Composite.add(this.engine.world,this.vehicle.composite),this.camera.reset(this.startX,E),u.default.Events.on(this.engine,"collisionStart",(L)=>this.onCollisions(L.pairs))
+  }
+  start() {
+    if(this.running)return;
+    this.running=!0,this.last=performance.now(),this.loop(this.last)
+  }
+  reset() {
+    u.default.Events.off(this.engine,"collisionStart"),u.default.Composite.clear(this.engine.world,!1,!0),u.default.Engine.clear(this.engine),this.particles.clear(),this.build(),this.renderer.setTerrain(this.terrain),this.maxDistance=0,this.score=0,this.airtime=0,this.bestAirtime=0,this.timeScale=1,this.timeScaleTarget=1,this.stuckTimer=0,this.bus.emit("run:reset", {
+      
+    }
+    )
+  }
+  newRun(E) {
+    this.seed=E??Math.floor(Math.random()*99999),this.reset()
+  }
+  setPaused(E) {
+    if(this.running=!E,!E)this.last=performance.now(),this.loop(this.last);
+    else cancelAnimationFrame(this.raf),this.audio.setEngine(0,0)
+  }
+  dispose() {
+    cancelAnimationFrame(this.raf),this.running=!1,this.input.detach(),this.audio.dispose(),u.default.Events.off(this.engine,"collisionStart"),u.default.Composite.clear(this.engine.world,!1,!0),u.default.Engine.clear(this.engine),this.bus.clear()
+  }
+  classify(E) {
+    if(E>2.6)return"critical";
+    if(E>1.3)return"heavy";
+    if(E>0.45)return"medium";
+    return"light"
+  }
+  onCollisions(E) {
+    let L=new Set([this.vehicle.chassis,...this.vehicle.wheels.map((U)=>U.body)]);
+    for(let U of E) {
+      let {
+        bodyA:K,bodyB:F
+      }
+      =U,Q=L.has(K)?K:L.has(F)?F:null;
+      if(!Q)continue;
+      let J=Q===K?F:K;
+      if(!this.terrainSet.has(J))continue;
+      let G=Q.velocity,$=Math.hypot(G.x,G.y),W=0.5*Q.mass*$*$*0.045;
+      if(W<0.06)continue;
+      let N=U.collision?.supports?.[0]??Q.position,Z=U.collision?.normal?? {
+        x:0,y:-1
+      }
+      ,z=this.classify(W),O=Q===this.vehicle.chassis;
+      if(this.audio.impact(b(W/3,0.05,1),O?"hard":"soft"),this.particles.spawnDust(N.x,N.y,G.x,G.y,b(W*1.4,0.4,3)),z!=="light")this.particles.spawnGrit(N.x,N.y,Z.x,Z.y,b(W,0.5,3));
+      let H= {
+        light:0.05,medium:0.14,heavy:0.24,critical:0.4
+      }
+      ;
+      if(this.camera.shake(H[z],z==="light"?140:260,Z.x,Z.y),this.camera.pulseZoom(z==="light"?0.008:0.03),z==="critical"&&!x.visual.reducedMotion)this.timeScale=0.25,this.timeScaleTarget=1;
+      this.score+=Math.round(W*12),this.bus.emit("vehicle:impact", {
+        energy:W,x:N.x,y:N.y,nx:Z.x,ny:Z.y
+      }
+      )
+    }
+    
+  }
+  step(E) {
+    let L= {
+      throttle:this.input.throttle,brake:this.input.brake
+    }
+    ;
+    this.vehicle.update(L,E),u.default.Engine.update(this.engine,E);
+    let U=this.engine.pairs.list.filter((K)=>K.isActive);
+    this.vehicle.markContacts(this.terrainSet,U),this.safety()
+  }
+  safety() {
+    let E=this.vehicle.chassis.position,L=this.vehicle.chassis.velocity;
+    if(!I0(E)||!I0(L)||Math.hypot(L.x,L.y)>200||E.y>4000) {
+      this.respawn();
+      return
+    }
+    let K=Math.abs(Math.sin(this.vehicle.chassis.angle))>0.92,F=Math.hypot(L.x,L.y)<0.4;
+    if(K&&F) {
+      if(this.stuckTimer+=x.physics.fixedDelta,this.stuckTimer>2200)this.respawn()
+    }
+    else this.stuckTimer=0
+  }
+  respawn() {
+    let E=Math.max(x.world.startX,this.vehicle.chassis.position.x-120),L=this.terrain.heightAt(E)-90,U=[this.vehicle.chassis,...this.vehicle.wheels.map((K)=>K.body)];
+    for(let K of U)u.default.Body.setVelocity(K, {
+      x:0,y:0
+    }
+    ),u.default.Body.setAngularVelocity(K,0);
+    u.default.Body.setPosition(this.vehicle.chassis, {
+      x:E,y:L
+    }
+    ),u.default.Body.setAngle(this.vehicle.chassis,0),this.vehicle.wheels.forEach((K)=> {
+      u.default.Body.setPosition(K.body, {
+        x:E+K.restOffset.x,y:L+K.restOffset.y
+      }
+      )
+    }
+    ),this.camera.reset(E,L),this.stuckTimer=0
+  }
+  loop=(E)=> {
+    if(!this.running)return;
+    this.raf=requestAnimationFrame(this.loop);
+    let L=Math.min(50,E-this.last);
+    if(this.last=E,this.time+=L,this.frameSamples.push(L),this.frameSamples.length>30)this.frameSamples.shift();
+    this.fps=1000/(this.frameSamples.reduce((K,F)=>K+F,0)/this.frameSamples.length),this.timeScale+=(this.timeScaleTarget-this.timeScale)*Math.min(1,L/190),L*=this.timeScale;
+    let U=x.physics.fixedDelta;
+    this.accumulator=Math.min(this.accumulator+L,U*x.physics.maxSubSteps);
+    while(this.accumulator>=U)this.step(U),this.accumulator-=U;
+    this.postPhysics(L),this.particles.update(L),this.draw()
+  }
+  ;
+  postPhysics(E) {
+    let L=this.vehicle,U=L.airborne;
+    if(U) {
+      if(this.airtime+=E,!this.wasAirborne&&this.airtime>90)this.bus.emit("vehicle:jump", {
+        x:L.chassis.position.x,y:L.chassis.position.y
+      }
+      )
+    }
+    else if(this.wasAirborne) {
+      if(this.airtime>260) {
+        let Q=this.terrain.slopeAt(L.chassis.position.x),J=Math.abs(L.chassis.angle-Q),G=b(1-J/0.8,0,1),$=b(Math.abs(L.chassis.velocity.y)/12,0,1.6);
+        this.score+=Math.round(this.airtime*0.05+G*40),this.bestAirtime=Math.max(this.bestAirtime,this.airtime),this.camera.pulseZoom(0.02+$*0.03),this.bus.emit("vehicle:land", {
+          energy:$,quality:G,x:L.chassis.position.x,y:L.chassis.position.y
+        }
+        )
+      }
+      this.airtime=0
+    }
+    this.wasAirborne=U;
+    for(let Q of L.wheels) {
+      if(!Q.contact)continue;
+      let J=Q.slip,G=b((J-1.2)*0.35,0,1.6);
+      if(G>0.05&&Math.random()<0.6)this.particles.spawnDust(Q.body.position.x,Q.body.position.y+x.vehicle.wheelRadius*0.7,-L.chassis.velocity.x*0.4,0,G)
+    }
+    let K=Math.max(0,(L.chassis.position.x-this.startX)/40);
+    this.maxDistance=Math.max(this.maxDistance,K);
+    let F=b((this.input.throttle+this.input.brake)*0.6+Math.abs(L.forwardSpeed)*0.04,0,1);
+    this.audio.setEngine(L.rpm,F),this.camera.update( {
+      x:L.chassis.position.x,y:L.chassis.position.y
+    }
+    ,L.chassis.velocity,U,E),this.bus.emit("stats:update", {
+      distance:this.maxDistance,speed:Math.abs(L.forwardSpeed)*7.2,airtime:this.airtime,bestAirtime:this.bestAirtime,rpm:L.rpm,airborne:U,score:this.score
+    }
+    )
+  }
+  draw() {
+    let E=Math.min(2,window.devicePixelRatio||1),L=this.canvas.clientWidth,U=this.canvas.clientHeight;
+    if(this.canvas.width!==L*E||this.canvas.height!==U*E)this.canvas.width=L*E,this.canvas.height=U*E;
+    this.ctx.setTransform(E,0,0,E,0,0),this.renderer.render(this.camera,this.vehicle,this.particles,L,U,this.time,this.debug,this.debug?u.default.Composite.allBodies(this.engine.world):[])
+  }
+  get debugInfo() {
+    return {
+      fps:this.fps,bodies:u.default.Composite.allBodies(this.engine.world).length,particles:this.particles.pool.filter((E)=>E.active).length,compression:this.vehicle.wheels.map((E)=>E.compression),contacts:this.vehicle.wheels.map((E)=>E.contact),camera: {
+        x:this.camera.x,y:this.camera.y,zoom:this.camera.zoom
+      }
+      ,seed:this.seed,timeScale:this.timeScale
+    }
+    
+  }
+  applyGravity() {
+    this.engine.gravity.y=x.physics.gravity
+  }
+  applyVehicleTuning() {
+    let E=x.vehicle;
+    for(let L of this.vehicle.constraints)L.stiffness=E.suspensionStiffness,L.damping=E.suspensionDamping;
+    for(let L of this.vehicle.wheels)L.body.friction=E.tireGrip,L.body.frictionStatic=E.tireGrip*1.4
+  }
+  
+}
+var o0=document.getElementById("game"),a=(E)=>document.getElementById(E),e=new q0(o0),v0=!1,N0=!1,e0=a("hud-dist"),K1=a("hud-speed"),Z1=a("hud-score"),$1=a("hud-rpm"),J1=a("hud-air"),Z0= {
+  distance:0,speed:0,airtime:0,bestAirtime:0,rpm:0,airborne:!1,score:0
+}
+;
+e.bus.on("stats:update",(E)=> {
+  Z0=E
+}
+);
+setInterval(()=> {
+  e0.textContent=Z0.distance.toFixed(0)+" m",K1.textContent=Z0.speed.toFixed(0)+" km/h",Z1.textContent=String(Z0.score),$1.style.width=Math.min(100,Z0.rpm*100).toFixed(0)+"%",J1.textContent=Z0.airborne?"AIR "+(Z0.airtime/1000).toFixed(1)+"s":""
+}
+,90);
+window.addEventListener("keydown",(E)=> {
+  if(E.key==="Escape"&&v0)W0()
+}
+);
+function W0() {
+  N0=!N0,e.setPaused(N0),a("pause").style.display=N0?"flex":"none"
+}
+a("start-btn").addEventListener("click",()=> {
+  e.audio.start(),e.audio.resume(),v0=!0,a("title").style.display="none",a("hud").style.display="block",a("pedals").style.display="flex"
+}
+);
+a("resume-btn").addEventListener("click",W0);
+a("restart-btn").addEventListener("click",()=> {
+  e.reset(),W0()
+}
+);
+a("seed-btn").addEventListener("click",()=> {
+  e.newRun(),W0()
+}
+);
+var g0=(E,L)=> {
+  let U=a(E),K=(F)=>(Q)=> {
+    Q.preventDefault(),e.input[L]=F
+  }
+  ;
+  U.addEventListener("pointerdown",K(!0)),U.addEventListener("pointerup",K(!1)),U.addEventListener("pointerleave",K(!1))
+}
+;
+g0("pedal-l","touchLeft");
+g0("pedal-r","touchRight");
+e.start();
+
+
+</script>
+</body>
+</html>

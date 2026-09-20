@@ -1,0 +1,3164 @@
+Task: # OLD MOUNTAIN WORKS
+
+## EXTREME MOUNTAIN PHYSICS + 3D WORLD + DEATH SYSTEM + UI/UX + ART DIRECTION
+
+### MASTER IMPLEMENTATION PROMPT
+
+You are taking the existing `old-mountain-works(1).html` prototype and transforming it into a **serious, polished, physics-driven mountain climbing game**.
+
+This is not a reskin.
+
+This is not a generic Hill Climb Racing clone.
+
+This is not a completely new unrelated game.
+
+This is a **deep technical overhaul of the existing prototype**.
+
+The final experience should feel like:
+
+> **A dangerous mountain expedition where the player fights gravity, terrain, momentum, suspension and vehicle balance while climbing increasingly enormous mountains.**
+
+The mountain should feel like an actual mountain.
+
+The vehicle should feel like an actual machine.
+
+Crashes should feel physical.
+
+Death should feel earned.
+
+Jumps should feel terrifying.
+
+Climbing should feel difficult.
+
+Descending should feel dangerous.
+
+And surviving a ridiculous landing should feel incredible.
+
+---
+
+# 01 — FIRST RULE: ANALYZE THE EXISTING HTML BEFORE MODIFYING IT
+
+You have the existing file:
+
+```text
+old-mountain-works(1).html
+```
+
+Read the entire file before implementing anything.
+
+Do not assume the architecture.
+
+Do not blindly replace it.
+
+Understand the existing systems.
+
+The current implementation contains:
+
+* Canvas 2D rendering
+* Matter.js 0.20.0
+* fixed timestep physics
+* procedural terrain
+* vehicle/chassis
+* two wheels
+* suspension constraints
+* wheel contact tracking
+* wheel slip
+* engine torque
+* braking
+* air control
+* camera follow
+* camera zoom
+* screen shake
+* particle pooling
+* audio
+* event bus
+* HUD
+* pause system
+* touch controls
+* gamepad/keyboard input
+* debug mode
+* seeded terrain
+
+Important conceptual classes already exist:
+
+```text
+q0 → game orchestrator
+R0 → renderer
+P0 → terrain
+f0 → vehicle
+M0 → input
+Y0 → event bus
+S0 → particles
+X0 → camera
+T0 → audio
+```
+
+Preserve these foundations where useful.
+
+---
+
+# 02 — CURRENT PHYSICS PROBLEM
+
+The biggest immediate gameplay issue is:
+
+> THE VEHICLE RANDOMLY FLIPS / ROLLS OVER AND DOES NOT FEEL PROPERLY CONTROLLABLE.
+
+Do NOT solve this by simply reducing gravity or making the car artificially heavy.
+
+Diagnose the actual causes.
+
+Investigate:
+
+* chassis center of mass
+* wheelbase
+* wheel placement
+* suspension constraint geometry
+* suspension stiffness
+* suspension damping
+* tire friction
+* wheel angular velocity
+* torque application
+* chassis angular velocity
+* terrain normal
+* terrain curvature
+* collision impulse
+* air control
+* landing impulse
+* fixed timestep
+* Matter.js solver iterations
+* constraint stability
+* steep-slope contact geometry
+
+The goal is:
+
+> **hard terrain without uncontrollable physics.**
+
+---
+
+# 03 — PHYSICS DESIGN PRINCIPLE
+
+The player should lose control because they made a bad decision.
+
+Not because the physics randomly exploded.
+
+Bad:
+
+```text
+drive normally
+→ car randomly launches into a flip
+```
+
+Good:
+
+```text
+too much throttle
+→ rear suspension unloads
+→ front wheel rises
+→ player keeps accelerating
+→ center of mass shifts relative to contact patch
+→ wheelie becomes unstable
+→ player must correct
+```
+
+The physics must be difficult but readable.
+
+---
+
+# 04 — DO NOT OVER-CONSTRAIN THE CAR
+
+Do NOT add a giant invisible stabilizer that permanently forces:
+
+```text
+angle = terrain angle
+```
+
+That would destroy the physics.
+
+Instead use subtle assistance only where physically justified.
+
+The car must still be capable of:
+
+* wheelies
+* stoppies
+* backflips
+* frontflips
+* rollover
+* nose diving
+* controlled landings
+
+---
+
+# 05 — PHYSICS MATHEMATICS
+
+Implement physics using explicit, tunable equations.
+
+Document these equations inside the code.
+
+---
+
+## 5.1 GRAVITY
+
+Use:
+
+$$
+F_g = m g
+$$
+
+where:
+
+```text
+m = vehicle mass
+g = world gravity
+```
+
+Gravity should remain consistent.
+
+Do not secretly modify gravity based on terrain difficulty.
+
+---
+
+# 06 — SUSPENSION MODEL
+
+Current suspension should be upgraded from a basic constraint-only feel into a more deliberate spring-damper model.
+
+Use:
+
+$$
+F_s = -k x - c v
+$$
+
+where:
+
+```text
+k = suspension stiffness
+c = damping coefficient
+x = suspension displacement
+v = suspension displacement velocity
+```
+
+Clamp the suspension travel:
+
+$$
+x_{clamped} = clamp(x,-x_{max},x_{max})
+$$
+
+Add bottom-out handling when:
+
+$$
+|x| \ge x_{max}
+$$
+
+At bottom-out:
+
+* increase impact force
+* generate stronger camera response
+* generate mechanical audio
+* generate particles
+* increase rollover risk only when physically justified
+
+Do not instantly kill the player.
+
+---
+
+# 07 — TIRE CONTACT MODEL
+
+For each wheel determine:
+
+```text
+contact
+surface normal
+surface tangent
+penetration
+relative velocity
+wheel angular velocity
+slip
+```
+
+Calculate tangent vector:
+
+$$
+T = normalize(1,-n_x/n_y)
+$$
+
+or construct a proper perpendicular basis from the surface normal.
+
+Calculate wheel contact velocity:
+
+$$
+v_{contact}=v_{wheel}+\omega \times r
+$$
+
+Then determine longitudinal slip approximately as:
+
+$$
+\kappa =
+\frac{v_{wheel}-v_{ground}}
+{\max(|v_{ground}|,\epsilon)}
+$$
+
+Clamp the value to avoid numerical instability.
+
+---
+
+# 08 — TRACTION MODEL
+
+Do not simply use:
+
+```javascript
+wheel.friction = 0.92;
+```
+
+as the entire driving model.
+
+Create a controllable traction response.
+
+A simplified tire force model can be:
+
+$$
+F_t = \mu N \cdot S(\kappa)
+$$
+
+where:
+
+```text
+μ = surface friction coefficient
+N = normal force
+S = slip response
+```
+
+Use a saturating function such as:
+
+$$
+S(\kappa)=\frac{\kappa}{|\kappa|+\kappa_0}
+$$
+
+This prevents absurd forces at extreme slip.
+
+Tune it visually and empirically.
+
+---
+
+# 09 — NORMAL FORCE
+
+Approximate wheel load from gravity + chassis dynamics.
+
+For a simple static distribution:
+
+$$
+N_{rear} + N_{front} \approx mg
+$$
+
+Then modify dynamically based on:
+
+* acceleration
+* braking
+* slope
+* pitch
+* suspension compression
+
+This should influence:
+
+* traction
+* wheelspin
+* braking
+* wheelie tendency
+* landing response
+
+---
+
+# 10 — ENGINE FORCE
+
+Instead of constant torque:
+
+```text
+engineTorque = constant
+```
+
+introduce an engine response curve.
+
+Conceptually:
+
+$$
+\tau_{engine} =
+\tau_{max} \cdot C(\omega)
+$$
+
+where:
+
+```text
+ω = wheel / engine rotational speed
+C = torque curve
+```
+
+Create a normalized torque curve:
+
+```text
+0 RPM
+↓
+strong low-end
+↓
+peak torque
+↓
+falloff
+↓
+redline
+```
+
+This makes throttle more controllable.
+
+---
+
+# 11 — DRIVE FORCE
+
+Convert wheel torque into longitudinal force:
+
+$$
+F = \frac{\tau}{r}
+$$
+
+where:
+
+```text
+τ = applied wheel torque
+r = wheel radius
+```
+
+Then cap force based on available traction:
+
+$$
+F_{usable} = min(F_{engine},\mu N)
+$$
+
+This is critical.
+
+The car should not magically generate unlimited horizontal acceleration on a steep mountain.
+
+---
+
+# 12 — BRAKING
+
+Brake torque:
+
+$$
+\tau_b = \tau_{max} \cdot input
+$$
+
+But braking force must also respect available traction.
+
+Avoid instant velocity cancellation.
+
+The player should be able to lock/slip tires on low-grip surfaces.
+
+---
+
+# 13 — CENTER OF MASS
+
+Create an explicit center-of-mass model.
+
+Expose:
+
+```javascript
+vehicle.centerOfMass
+vehicle.mass
+vehicle.inertia
+vehicle.frontWeightBias
+```
+
+For a two-wheelbase vehicle:
+
+$$
+N_f = mg\frac{L-x_{COM}}{L}
+$$
+
+$$
+N_r = mg\frac{x_{COM}}{L}
+$$
+
+where:
+
+```text
+L = wheelbase
+xCOM = COM distance from rear contact
+```
+
+Use this to calculate approximate dynamic weight distribution.
+
+---
+
+# 14 — ROLLOVER PHYSICS
+
+The vehicle should not flip randomly.
+
+Create a rollover model based on:
+
+* center of mass height
+* wheelbase
+* lateral/normal acceleration
+* terrain angle
+* angular velocity
+* contact configuration
+
+A basic static tipping condition can be approximated from:
+
+$$
+a_{critical} \approx g\frac{b}{h}
+$$
+
+where:
+
+```text
+b = half-width / effective support distance
+h = COM height
+```
+
+For longitudinal rollover, use the equivalent wheelbase/contact geometry.
+
+This is not a replacement for Matter.js.
+
+It is a **diagnostic / assist / prediction model**.
+
+Use it to understand when the vehicle is approaching instability.
+
+---
+
+# 15 — SUBTLE STABILITY ASSIST
+
+Add a very weak grounded stabilization torque ONLY when:
+
+```text
+both wheels are grounded
+```
+
+and only when angular velocity is becoming unstable.
+
+Use:
+
+$$
+\tau_{assist}
+=
+-k_\theta\theta
+-c_\omega\omega
+$$
+
+where:
+
+```text
+θ = chassis pitch relative to local terrain
+ω = angular velocity
+```
+
+Then heavily clamp:
+
+$$
+|\tau_{assist}| \le \tau_{maxAssist}
+$$
+
+This should be a tiny percentage of real physics torque.
+
+The purpose is to remove numerical jitter, NOT remove skill.
+
+---
+
+# 16 — TERRAIN NORMAL
+
+For terrain height function:
+
+$$
+y=f(x)
+$$
+
+the local slope is:
+
+$$
+\frac{dy}{dx}=f'(x)
+$$
+
+and tangent:
+
+$$
+T =
+\frac{(1,f'(x))}
+{\sqrt{1+(f'(x))^2}}
+$$
+
+The normal becomes:
+
+$$
+N =
+\frac{(-f'(x),1)}
+{\sqrt{1+(f'(x))^2}}
+$$
+
+Use the normal for:
+
+* wheel contact
+* terrain orientation
+* landing quality
+* visual alignment
+* slope classification
+* traction calculations
+* debug display
+
+---
+
+# 17 — MOUNTAIN TERRAIN MUST BE COMPLETELY REDESIGNED
+
+The current terrain is based on multiple noise layers and sinusoidal variation.
+
+Keep seeded procedural generation.
+
+But DO NOT let noise alone decide the mountain.
+
+Create a:
+
+# TERRAIN GRAMMAR ENGINE
+
+---
+
+# 18 — MOUNTAIN SCALE
+
+The player should feel like they are climbing a massive mountain.
+
+Not tiny hills.
+
+The terrain should contain:
+
+```text
+foothills
+→ rolling slopes
+→ large ridges
+→ steep mountain faces
+→ deep depressions
+→ ravines
+→ cliffs
+→ summit approach
+```
+
+The world should visually communicate enormous elevation.
+
+---
+
+# 19 — STEEP ELEVATION
+
+Create genuine steep climbs.
+
+Example target slope ranges:
+
+```text
+easy:
+5°–12°
+
+medium:
+12°–22°
+
+hard:
+22°–32°
+
+extreme:
+32°–42°
+
+technical:
+42°+
+```
+
+Do NOT blindly enforce these exact values everywhere.
+
+Use them as terrain-generation targets.
+
+---
+
+# 20 — DEEP DEPRESSIONS / VALLEYS
+
+The mountain must also go DOWN.
+
+Create massive:
+
+* valleys
+* ravines
+* bowls
+* gullies
+* V-shaped depressions
+* U-shaped valleys
+* erosion channels
+* cliff drops
+
+Example:
+
+```text
+───────╲
+        ╲
+         ╲
+          ╲____
+               ╲
+                ╲──────
+```
+
+The player should sometimes see:
+
+> “If I descend into this valley too fast, I'm fucked.”
+
+That is intentional gameplay.
+
+---
+
+# 21 — EVEREST-STYLE CLIMBING SECTIONS
+
+Create giant mountain ascent segments.
+
+Not literally a simulation of Mount Everest.
+
+Instead create a fantasy mountain inspired by:
+
+* Himalayan scale
+* enormous elevation
+* snowline
+* exposed rock
+* narrow ascent routes
+* steep faces
+* atmospheric depth
+* clouds below the player
+* summit ridges
+
+The final biome should feel like:
+
+> **the player is climbing above the world.**
+
+---
+
+# 22 — VERTICALITY
+
+Do not represent verticality only through camera movement.
+
+The world itself should visually communicate:
+
+```text
+height
+distance
+scale
+depth
+```
+
+Use:
+
+* distant peaks
+* foreground cliffs
+* clouds
+* atmospheric perspective
+* vertical rock faces
+* waterfalls
+* snow lines
+* deep valleys
+* distant terrain layers
+
+---
+
+# 23 — TERRAIN SEGMENTS
+
+Build reusable segment archetypes.
+
+Examples:
+
+```text
+ROLLERS
+LONG_CLIMB
+STEEP_CLIMB
+STEEP_DESCENT
+VALLEY
+V_RAVINE
+U_BOWL
+DOUBLE_HUMP
+CAMELBACK
+GIANT_LAUNCH
+CLIFF_DROP
+NARROW_RIDGE
+ROCK_FIELD
+TECHNICAL_CLIMB
+SUMMIT_FACE
+```
+
+Each segment has parameters.
+
+Example:
+
+```javascript
+{
+    type: "STEEP_CLIMB",
+    length: 700,
+    elevationGain: 260,
+    slopeMin: 0.35,
+    slopeMax: 0.8,
+    difficulty: 0.75
+}
+```
+
+Then deform it procedurally.
+
+---
+
+# 24 — CURVATURE CONTROL
+
+Terrain difficulty must consider not only slope but slope change.
+
+Curvature:
+
+$$
+\kappa =
+\frac{|y''|}
+{(1+(y')^2)^{3/2}}
+$$
+
+Use curvature to identify:
+
+* sharp crests
+* sudden drops
+* launch points
+* dangerous transitions
+* smooth climbs
+* landing surfaces
+
+This is critical.
+
+A 25° hill with smooth curvature is very different from a 25° hill that suddenly turns into a 45° drop.
+
+---
+
+# 25 — TERRAIN DIFFICULTY FUNCTION
+
+Create a normalized terrain difficulty score:
+
+$$
+D =
+w_sD_s +
+w_cD_c +
+w_jD_j +
+w_rD_r +
+w_oD_o +
+w_vD_v
+$$
+
+where:
+
+```text
+Ds = slope difficulty
+Dc = curvature difficulty
+Dj = jump difficulty
+Dr = recovery difficulty
+Do = obstacle difficulty
+Dv = verticality/elevation difficulty
+```
+
+Normalize all values to:
+
+```text
+0 → 1
+```
+
+Use distance-based progression:
+
+$$
+D_{distance}
+=
+clamp
+\left(
+\frac{x-x_0}{X_{max}},
+0,1
+\right)
+$$
+
+Then combine with biome difficulty.
+
+---
+
+# 26 — TERRAIN PACING
+
+Do not make every 50 meters insane.
+
+Use:
+
+```text
+challenge
+→ recovery
+→ challenge
+→ major landmark
+→ recovery
+→ technical section
+→ large jump
+→ recovery
+→ steep mountain
+```
+
+The player needs rhythm.
+
+---
+
+# 27 — HUGE LANDMARKS
+
+Every major mountain section should have memorable landmarks.
+
+Examples:
+
+* gigantic waterfall
+* ruined mountain station
+* suspension bridge
+* giant stone arch
+* abandoned mining tower
+* avalanche zone
+* cliff monastery/shrine silhouette
+* enormous frozen waterfall
+* mountain observatory
+* cable-car ruins
+* summit gate
+* giant rock formation
+
+These are not random decorations.
+
+They should become navigation memories.
+
+---
+
+# 28 — CREATIVE COLLECTIBLE SYSTEM
+
+DO NOT USE COINS.
+
+Coins are too generic for this world.
+
+Create a unique collectible called:
+
+# MOUNTAIN ECHOES
+
+These are small fragments of memory/history left behind by previous expeditions.
+
+Visual form:
+
+* glowing amber fragments
+* hand-drawn glyph-like shards
+* tiny floating paper/ink relics
+* crystalline sound fragments
+* fragments of old expedition notes
+
+But do not make them look like generic coins.
+
+---
+
+# 29 — MOUNTAIN ECHO MECHANIC
+
+When collected:
+
+```text
+Echo enters player's archive.
+```
+
+Each Echo can contain:
+
+* tiny historical note
+* landmark information
+* mountain observation
+* vehicle engineering note
+* environmental lore
+* cryptic drawing
+* hidden route clue
+
+The collectible system therefore serves:
+
+```text
+progression
+exploration
+worldbuilding
+discovery
+```
+
+instead of simply:
+
+```text
++10 coins
+```
+
+---
+
+# 30 — ECHO VISUALIZATION
+
+Use Three.js for a beautiful collectible representation.
+
+Each Echo can be:
+
+* a tiny rotating 3D fragment
+* translucent crystalline geometry
+* procedural glyph
+* floating geometric relic
+
+When approaching:
+
+```text
+subtle glow
+→ magnetic pull
+→ particles
+→ collection
+→ sound resonance
+→ UI archive update
+```
+
+Do NOT make them visually resemble coins.
+
+---
+
+# 31 — THREE.JS ARCHITECTURE
+
+Do NOT replace Matter.js with Three.js.
+
+Use a hybrid architecture:
+
+```text
+MATTER.JS
+    ↓
+authoritative vehicle physics
+terrain collision
+wheel dynamics
+crashes
+    ↓
+GAME STATE
+    ↓
+THREE.JS
+visual world
+mountains
+landmarks
+atmosphere
+3D collectibles
+clouds
+environment
+depth
+    ↓
+CANVAS / DOM
+HUD
+menus
+debug
+```
+
+---
+
+# 32 — THREE.JS WORLD
+
+Use Three.js for:
+
+* distant 3D mountain silhouettes
+* volumetric-looking cloud layers
+* summit peaks
+* large landmarks
+* environmental depth
+* 3D Echo collectibles
+* atmospheric particles
+* sky dome
+* subtle camera parallax
+
+The 2D gameplay plane remains authoritative.
+
+Three.js is primarily the **visual depth layer**.
+
+---
+
+# 33 — 2.5D CAMERA
+
+Synchronize:
+
+```text
+Matter vehicle X/Y
+↓
+Three.js camera
+```
+
+Create a controlled parallax relationship.
+
+The player should feel like they are driving through a 3D mountain world even though gameplay physics remain stable in 2D.
+
+---
+
+# 34 — THREE.JS PERFORMANCE
+
+Do NOT create thousands of meshes.
+
+Use:
+
+* InstancedMesh
+* BufferGeometry
+* shared materials
+* object pooling
+* frustum culling
+* LOD
+* simple shaders
+* low-poly silhouettes
+
+Only keep detailed 3D objects near the camera.
+
+---
+
+# 35 — MOUNTAIN 3D VISUAL SYSTEM
+
+Generate mountain ranges with:
+
+* low-poly geometry
+* layered silhouettes
+* custom vertex deformation
+* atmospheric fade
+* snow caps
+* rock layers
+
+Do not make it look like a generic low-poly asset pack.
+
+It should retain the original illustrated identity.
+
+---
+
+# 36 — SHADERS
+
+Use GLSL only where it adds real value.
+
+Possible shader effects:
+
+* atmospheric mountain fade
+* snow highlight
+* subtle wind
+* animated clouds
+* Echo glow
+* heat haze
+* summit atmosphere
+
+Avoid shader complexity for its own sake.
+
+---
+
+# 37 — ART DIRECTION
+
+The current paper/ink aesthetic should evolve into:
+
+> **Illustrated Alpine Engineering Journal + cinematic mountain expedition.**
+
+Preserve:
+
+* paper
+* ink
+* earthy greens
+* stone
+* muted blues
+* warm orange accents
+
+Add:
+
+* snow white
+* cold summit blue
+* weathered metal
+* deep mountain shadow
+* amber Echo light
+
+---
+
+# 38 — UI OVERHAUL
+
+The current UI is a prototype UI.
+
+Replace it with a professional game interface.
+
+The HUD should feel like a:
+
+> **mountain expedition instrument panel**
+
+Not a generic racing HUD.
+
+---
+
+# 39 — MAIN HUD
+
+Display:
+
+### DISTANCE
+
+Large but subtle.
+
+### ALTITUDE
+
+Very important.
+
+### SPEED
+
+Secondary.
+
+### ENGINE / RPM
+
+Compact.
+
+### AIRTIME
+
+Only when airborne.
+
+### STUNT COMBO
+
+Only when active.
+
+### ECHO COUNT
+
+Small.
+
+### MOUNTAIN REGION
+
+Contextual.
+
+---
+
+# 40 — ALTITUDE SYSTEM
+
+Track actual relative elevation:
+
+$$
+H = y_{reference} - y_{vehicle}
+$$
+
+depending on the coordinate system.
+
+Display:
+
+```text
+ALT 2,840 m
+```
+
+As the player climbs, altitude should become a major psychological metric.
+
+---
+
+# 41 — DEATH SYSTEM
+
+Implement a real game death state.
+
+The vehicle should not immediately die because it rotated 10°.
+
+Create a robust death state machine:
+
+```text
+NORMAL
+↓
+UNSTABLE
+↓
+CRITICAL
+↓
+CRASHED
+↓
+WRECKED
+↓
+DEATH
+```
+
+---
+
+# 42 — UPSIDE-DOWN DEATH
+
+Detect sustained upside-down state.
+
+Do NOT kill instantly.
+
+Use:
+
+```text
+vehicle angle relative to world
++
+wheel contact
++
+roof contact
++
+velocity
++
+angular velocity
++
+time
+```
+
+Define normalized upside-down amount:
+
+$$
+U =
+\frac{|\theta_{wrapped}|-\theta_{safe}}
+{\theta_{death}-\theta_{safe}}
+$$
+
+clamped:
+
+$$
+U \in [0,1]
+$$
+
+Then require a persistence timer.
+
+Example concept:
+
+```text
+roof-down
+AND
+both wheels not usable
+AND
+speed low
+AND
+upside-down timer > threshold
+```
+
+→ WRECKED
+
+This prevents accidental instant death during a recoverable roll.
+
+---
+
+# 43 — ROOF CONTACT
+
+Add explicit roof contact detection.
+
+If the chassis roof contacts terrain:
+
+```text
+roofContact = true
+```
+
+Track duration.
+
+If:
+
+```text
+roofContact
++
+low mobility
++
+inverted
+```
+
+then begin death countdown.
+
+---
+
+# 44 — RECOVERY WINDOW
+
+The player should have a chance to recover.
+
+If the car is upside down but moving:
+
+```text
+air control
+terrain slope
+wheel contact
+```
+
+can allow recovery.
+
+Only kill when the vehicle is genuinely stuck.
+
+This makes crashes more exciting.
+
+---
+
+# 45 — CRASH DAMAGE
+
+Create a lightweight damage model.
+
+Track:
+
+```text
+impactEnergy
+rollCount
+hardLandings
+roofImpacts
+criticalCollisions
+```
+
+Impact energy:
+
+$$
+E_k=\frac{1}{2}mv^2
+$$
+
+Use relative collision velocity where possible.
+
+Do NOT make every collision destroy the vehicle.
+
+---
+
+# 46 — DEATH SCREEN
+
+When dead:
+
+Pause physics.
+
+Camera remains focused on wreck.
+
+Show:
+
+```text
+RUN ENDED
+```
+
+Then:
+
+```text
+DISTANCE
+MAX ALTITUDE
+BEST AIRTIME
+STUNTS
+ECHOES FOUND
+LANDMARKS
+```
+
+Buttons:
+
+```text
+RETRY
+NEW ROUTE
+GARAGE
+```
+
+Do not instantly hard-reset.
+
+Give the player a satisfying post-run moment.
+
+---
+
+# 47 — DEATH ANIMATION
+
+On fatal crash:
+
+```text
+impact
+↓
+vehicle rolls
+↓
+dust/debris
+↓
+camera shake
+↓
+short time dilation
+↓
+vehicle settles
+↓
+audio fades
+↓
+death UI
+```
+
+Do not use a cartoon explosion unless the vehicle actually warrants it.
+
+---
+
+# 48 — CRASH SLOW MOTION
+
+For major impacts:
+
+$$
+timeScale \rightarrow 0.25-0.45
+$$
+
+for a short period.
+
+Then smoothly:
+
+$$
+timeScale \rightarrow 1
+$$
+
+Only for critical crashes.
+
+Respect reduced-motion settings.
+
+---
+
+# 49 — VEHICLE RECOVERY
+
+Before death, allow:
+
+* throttle
+* brake
+* air rotation
+* wheel contact
+* terrain-assisted recovery
+
+The player should occasionally turn:
+
+> “I definitely crashed”
+
+into:
+
+> “HOW DID I SAVE THAT?”
+
+---
+
+# 50 — MAP SYSTEM
+
+Build a mountain expedition map.
+
+Instead of a generic linear level selector, show a stylized mountain route.
+
+Map contains:
+
+```text
+FOOTHILLS
+RIDGE
+CANYON
+SNOWLINE
+HIGH CAMP
+SUMMIT
+```
+
+with discovered landmarks.
+
+The map itself should look like an illustrated expedition chart.
+
+---
+
+# 51 — WORLD PROGRESSION
+
+Progress should be based on:
+
+* distance
+* altitude
+* discoveries
+* Echoes
+* landmarks
+* stunt mastery
+* vehicle upgrades
+
+Avoid:
+
+* artificial energy systems
+* meaningless currencies
+* excessive grind
+* loot boxes
+
+---
+
+# 52 — SECONDARY CURRENCY
+
+If upgrades require a currency, derive it from the world.
+
+Use:
+
+# EXPEDITION DATA
+
+Earned from:
+
+* new altitude
+* first-time landmarks
+* Echo discoveries
+* successful extreme climbs
+* stunt challenges
+* route completion
+
+This keeps progression connected to exploration.
+
+---
+
+# 53 — CHALLENGES
+
+Examples:
+
+```text
+Reach 2,000 m without a rollover.
+
+Survive a 40° climb.
+
+Perform a 360° rotation.
+
+Land a jump on both wheels.
+
+Collect three Echoes in one run.
+
+Cross the summit ridge.
+
+Survive a 500 m descent without crashing.
+```
+
+Challenges should teach mastery.
+
+---
+
+# 54 — GARAGE
+
+Garage UI should feel like an engineering workshop.
+
+Display:
+
+```text
+ENGINE
+SUSPENSION
+TIRES
+WEIGHT
+AIR CONTROL
+DURABILITY
+```
+
+Show actual physics impact.
+
+For example:
+
+```text
+Suspension stiffness
+0.12 → 0.15
+
+Expected:
++ landing stability
+- terrain compliance
+```
+
+No fake RPG bars.
+
+---
+
+# 55 — PHYSICS TELEMETRY
+
+Create a hidden telemetry panel.
+
+Show:
+
+```text
+COM
+normal force front
+normal force rear
+traction
+slip ratio
+wheel angular velocity
+suspension compression
+suspension velocity
+pitch
+angular velocity
+terrain slope
+terrain curvature
+rollover risk
+landing energy
+```
+
+This is essential for tuning.
+
+---
+
+# 56 — DEBUG VISUALIZATION
+
+F3 should show:
+
+```text
+CENTER OF MASS
+↓
+velocity vector
+↓
+wheel contact points
+↓
+surface normals
+↓
+terrain tangent
+↓
+suspension travel
+↓
+COM → support polygon
+↓
+rollover risk
+↓
+predicted landing
+```
+
+Draw these directly on screen.
+
+---
+
+# 57 — PYTHON TOOLING
+
+Create optional Python development scripts.
+
+Do NOT make Python part of browser runtime.
+
+Use Python for offline development.
+
+Create:
+
+```text
+/tools/
+    terrain_analysis.py
+    physics_tuner.py
+    terrain_validator.py
+    parameter_sweep.py
+    telemetry_plot.py
+```
+
+---
+
+# 58 — TERRAIN VALIDATOR PYTHON SCRIPT
+
+The script should:
+
+1. generate terrain from a seed
+2. calculate slope
+3. calculate curvature
+4. calculate elevation
+5. detect impossible sections
+6. detect excessive slope changes
+7. detect insufficient landing zones
+8. detect giant vertical discontinuities
+9. export statistics
+
+Example:
+
+$$
+s(x)=f'(x)
+$$
+
+$$
+\kappa(x)=
+\frac{|f''(x)|}
+{(1+f'(x)^2)^{3/2}}
+$$
+
+Generate a report:
+
+```text
+Seed: 48192
+
+Maximum slope: 43.2°
+Maximum curvature: ...
+Average slope: ...
+Extreme sections: 12
+Unsafe jumps: 0
+Recovery zones: 17
+Elevation gain: ...
+```
+
+---
+
+# 59 — PHYSICS PARAMETER SWEEP
+
+Create Python tooling capable of testing parameter combinations.
+
+Parameters:
+
+```text
+gravity
+mass
+wheel mass
+wheelbase
+suspension stiffness
+suspension damping
+grip
+engine torque
+brake torque
+air control
+COM height
+```
+
+Evaluate:
+
+```text
+rollover frequency
+average speed
+landing stability
+climb success
+wheel slip
+```
+
+Use this to find stable regions of the parameter space.
+
+Do not blindly optimize for one metric.
+
+---
+
+# 60 — TELEMETRY EXPORT
+
+Add optional browser telemetry:
+
+```javascript
+telemetry.record(...)
+```
+
+Export JSON:
+
+```text
+run telemetry
+```
+
+Then Python can analyze it.
+
+Useful graphs:
+
+* speed vs distance
+* slope vs distance
+* altitude vs distance
+* pitch vs distance
+* suspension compression
+* wheel slip
+* rollover events
+* crash locations
+
+---
+
+# 61 — AUTOMATION
+
+If using Zapier or similar automation tools, keep them OUT of the gameplay runtime.
+
+They may be used for development workflow only.
+
+Potential workflow:
+
+```text
+test report generated
+↓
+telemetry JSON saved
+↓
+automation detects failed QA
+↓
+developer notification
+```
+
+or:
+
+```text
+build completed
+↓
+performance report
+↓
+archive report
+```
+
+Do not add network automation to the game loop.
+
+---
+
+# 62 — JAVASCRIPT LIBRARIES
+
+Use libraries only when they solve a real problem.
+
+Recommended architecture:
+
+### Matter.js
+
+Physics.
+
+### Three.js
+
+3D world / atmosphere / landmarks.
+
+### GSAP
+
+UI and non-physics animation.
+
+### Rough.js
+
+Hand-drawn visual accents where useful.
+
+### Howler.js
+
+Optional audio management if the existing Web Audio implementation becomes insufficient.
+
+### lil-gui
+
+Optional development-only debug tuning.
+
+### Stats.js
+
+Development-only FPS telemetry.
+
+Do not add libraries simply because they are available.
+
+---
+
+# 63 — THREE.JS + MATTER.JS SYNCHRONIZATION
+
+The authoritative state is always:
+
+```text
+Matter.js
+```
+
+Three.js receives transforms:
+
+```text
+vehicle.position
+vehicle.angle
+wheel.position
+wheel.angle
+```
+
+Never allow Three.js visual interpolation to modify gameplay physics.
+
+---
+
+# 64 — RENDER PIPELINE
+
+Use:
+
+```text
+PHYSICS
+↓
+GAME STATE
+↓
+VISUAL INTERPOLATION
+↓
+THREE.JS WORLD
+↓
+CANVAS VEHICLE / EFFECTS
+↓
+DOM HUD
+```
+
+If necessary, render the vehicle itself using Canvas/vector art while Three.js handles world depth.
+
+This preserves the original illustration style.
+
+---
+
+# 65 — INTERPOLATION
+
+Because physics runs at a fixed timestep, interpolate visuals:
+
+$$
+P_{render}
+=
+P_{previous}
++
+\alpha(P_{current}-P_{previous})
+$$
+
+where:
+
+$$
+\alpha =
+\frac{accumulator}{fixedDelta}
+$$
+
+This reduces visual jitter without modifying physics.
+
+---
+
+# 66 — FIXED TIMESTEP
+
+Maintain deterministic physics.
+
+Use:
+
+```text
+fixedDelta ≈ 1/120 s
+```
+
+or another tested fixed timestep.
+
+Do not let:
+
+```text
+frame rate
+```
+
+directly determine physics behavior.
+
+---
+
+# 67 — MATTER.JS SOLVER
+
+Tune:
+
+```text
+positionIterations
+velocityIterations
+constraintIterations
+```
+
+based on measured stability.
+
+Do not blindly increase them to extreme values.
+
+Use debug telemetry to identify constraint instability.
+
+---
+
+# 68 — VEHICLE PHYSICS ACCEPTANCE TEST
+
+The car must pass these tests:
+
+### Test A
+
+Drive over a smooth hill.
+
+Result:
+
+Stable.
+
+### Test B
+
+Drive over a steep hill.
+
+Result:
+
+Vehicle climbs but requires throttle management.
+
+### Test C
+
+Drive over a crest.
+
+Result:
+
+Front wheel naturally unloads.
+
+### Test D
+
+Jump.
+
+Result:
+
+Player can control rotation.
+
+### Test E
+
+Land slightly nose-first.
+
+Result:
+
+Suspension absorbs impact.
+
+### Test F
+
+Land badly.
+
+Result:
+
+Vehicle may bounce/roll.
+
+### Test G
+
+Flip.
+
+Result:
+
+Player has opportunity to recover.
+
+### Test H
+
+Remain upside down.
+
+Result:
+
+Death after persistence threshold.
+
+### Test I
+
+Hard crash.
+
+Result:
+
+Damage + feedback + possible death.
+
+---
+
+# 69 — MOUNTAIN DIFFICULTY ACCEPTANCE TEST
+
+The world should visibly progress:
+
+```text
+0–500 m
+rolling foothills
+
+500–1500 m
+large hills
+
+1500–3000 m
+steep ridges
+
+3000–5000 m
+deep valleys + major jumps
+
+5000–7000 m
+technical mountain
+
+7000m+
+snowline / extreme terrain
+
+final section
+summit
+```
+
+These distances are examples.
+
+Tune them according to actual gameplay length.
+
+---
+
+# 70 — MOUNTAIN SCALE
+
+The player must feel small.
+
+Use:
+
+* huge background peaks
+* distant waterfalls
+* enormous cliffs
+* clouds
+* vertical scale
+* tiny vehicle relative to world
+
+The car should look like a small machine attempting something much larger than itself.
+
+---
+
+# 71 — SUMMIT EXPERIENCE
+
+The final mountain should have a genuine summit moment.
+
+As the player approaches:
+
+```text
+terrain gets steeper
+vegetation decreases
+wind increases
+clouds pass below
+sky becomes brighter
+mountain scale increases
+music changes
+```
+
+Then:
+
+```text
+SUMMIT REACHED
+```
+
+Do not immediately cut to a menu.
+
+Let the player breathe.
+
+---
+
+# 72 — UI MOTION
+
+Use GSAP or equivalent for:
+
+* HUD entrance
+* stunt text
+* Echo collection
+* death screen
+* map transitions
+* garage transitions
+* altitude milestones
+
+Motion must be restrained.
+
+No excessive bounce.
+
+No generic “AI dashboard” animation.
+
+---
+
+# 73 — TYPOGRAPHY
+
+Create a visual hierarchy:
+
+```text
+EXPEDITION TITLES
+serif / editorial
+
+GAMEPLAY DATA
+monospace
+
+BUTTONS
+condensed / technical
+
+WORLD LORE
+serif / handwritten accent
+```
+
+Keep it coherent.
+
+---
+
+# 74 — UI COLOR SYSTEM
+
+Primary:
+
+```text
+paper
+ink
+earth
+mountain green
+stone
+```
+
+Accent:
+
+```text
+burnt orange
+```
+
+Special:
+
+```text
+Echo amber
+```
+
+Danger:
+
+```text
+deep red
+```
+
+Do not turn the entire UI into neon.
+
+---
+
+# 75 — MENU REDESIGN
+
+Main screen should communicate the fantasy immediately.
+
+Example composition:
+
+```text
+OLD MOUNTAIN WORKS
+
+EXPEDITION 07
+
+[ CONTINUE CLIMB ]
+
+DISTANCE
+ALTITUDE
+ECHOES
+BEST RUN
+```
+
+Background:
+
+slow cinematic mountain movement.
+
+No giant generic game logo.
+
+---
+
+# 76 — PAUSE MENU
+
+Include:
+
+```text
+RESUME
+RESTART RUN
+MAP
+GARAGE
+SETTINGS
+QUIT EXPEDITION
+```
+
+Use the same design language.
+
+---
+
+# 77 — MAP UI
+
+The map should be visually beautiful.
+
+Use:
+
+* mountain contour lines
+* hand-drawn route
+* elevation markings
+* discovered landmarks
+* Echo locations
+* summit marker
+
+This can be rendered using SVG/Canvas/Three.js.
+
+---
+
+# 78 — WORLD DETAIL
+
+Add environmental storytelling.
+
+Examples:
+
+* abandoned tire tracks
+* old camps
+* broken signs
+* equipment
+* ropes
+* shelters
+* footprints
+* old expedition markings
+* ruined machinery
+
+The world should imply:
+
+> people have attempted this mountain before.
+
+---
+
+# 79 — NO RANDOM DECORATION
+
+Every environmental object must serve at least one:
+
+```text
+visual
+gameplay
+navigation
+story
+physics
+```
+
+purpose.
+
+---
+
+# 80 — AUDIO DIRECTION
+
+The soundscape should evolve with altitude.
+
+Lower:
+
+```text
+birds
+grass
+wind
+insects
+```
+
+Higher:
+
+```text
+wind
+rocks
+thin atmosphere
+snow
+```
+
+Summit:
+
+```text
+strong wind
+sparse ambience
+large sense of emptiness
+```
+
+---
+
+# 81 — ENGINE AUDIO
+
+Existing Web Audio engine system should be preserved and improved.
+
+The current implementation already responds to RPM/throttle-like parameters.
+
+Expand it to react to:
+
+```text
+RPM
+load
+wheel slip
+terrain
+airborne
+damage
+```
+
+---
+
+# 82 — IMPACT AUDIO
+
+Impact energy:
+
+$$
+E=\frac12mv^2
+$$
+
+Use normalized energy:
+
+$$
+I=clamp(E/E_{reference},0,1)
+$$
+
+Then map:
+
+```text
+volume
+pitch
+low-frequency impact
+debris sound
+camera shake
+```
+
+---
+
+# 83 — CAMERA FORMULA
+
+Camera follow should use smoothing:
+
+$$
+C_{new}=C_{old}+\alpha(P_{target}-C_{old})
+$$
+
+where α depends on:
+
+* speed
+* airborne state
+* player direction
+* camera mode
+
+Do not directly snap the camera.
+
+---
+
+# 84 — LOOK-AHEAD
+
+$$
+L =
+L_0 +
+k|v_x|
+$$
+
+Clamp it.
+
+At high speed:
+
+```text
+look farther ahead
+```
+
+At low speed:
+
+```text
+look closer
+```
+
+---
+
+# 85 — AIR CAMERA
+
+During jumps:
+
+```text
+camera target
+=
+vehicle
++
+predicted landing direction
+```
+
+But never reveal the entire future path.
+
+Maintain tension.
+
+---
+
+# 86 — CRASH CAMERA
+
+Impact shake amplitude:
+
+$$
+A = A_{max} \cdot clamp(I,0,1)
+$$
+
+Frequency should increase with impact severity.
+
+Reduced motion:
+
+```text
+A → 0
+```
+
+---
+
+# 87 — ECHO COLLECTION CAMERA
+
+When collecting a major Echo:
+
+* tiny focus shift
+* subtle time dilation
+* particle orbit
+* resonance sound
+* elegant UI notification
+
+Never freeze the entire game for normal collectibles.
+
+---
+
+# 88 — PERFORMANCE BUDGET
+
+Target:
+
+```text
+60 FPS desktop
+```
+
+Avoid:
+
+* hundreds of dynamic DOM nodes
+* thousands of physics bodies
+* unbounded particles
+* per-frame allocations
+* unnecessary garbage collection
+* heavy Three.js geometry generation every frame
+
+---
+
+# 89 — OBJECT POOLS
+
+Pool:
+
+* dust
+* debris
+* rocks
+* Echo particles
+* environmental effects
+
+Destroy/reuse rather than constantly allocating.
+
+---
+
+# 90 — THREE.JS LOD
+
+Use:
+
+```text
+near:
+high detail
+
+medium:
+medium detail
+
+far:
+silhouette
+```
+
+The far mountain should be extremely cheap.
+
+---
+
+# 91 — RESPONSIVE DESIGN
+
+Support:
+
+* desktop
+* laptop
+* ultrawide
+* 16:9
+* 16:10
+* mobile landscape
+
+HUD must adapt.
+
+Gameplay should never depend on CSS pixel dimensions.
+
+---
+
+# 92 — MOBILE CONTROLS
+
+Preserve the existing touch pedals.
+
+Improve them into:
+
+```text
+BRAKE / REVERSE
+THROTTLE
+```
+
+with tactile visual feedback.
+
+Optional:
+
+```text
+tilt steering
+```
+
+only if implemented properly.
+
+Do not add it just because it exists in other games.
+
+---
+
+# 93 — ACCESSIBILITY
+
+Keep:
+
+```text
+reduced motion
+screen shake toggle
+master volume
+music volume
+SFX volume
+```
+
+Also allow:
+
+```text
+high contrast HUD
+```
+
+if practical.
+
+---
+
+# 94 — DEVELOPMENT TOOLS
+
+Create a developer panel accessible through F3.
+
+Include sliders for:
+
+```text
+gravity
+engine torque
+grip
+suspension stiffness
+damping
+air control
+COM
+camera smoothing
+difficulty
+```
+
+Changes should apply live where safe.
+
+---
+
+# 95 — TERRAIN SEED TOOL
+
+Display:
+
+```text
+SEED 48192
+```
+
+Allow:
+
+```text
+copy seed
+new seed
+```
+
+This allows reproducible bug reports.
+
+---
+
+# 96 — TEST ROUTES
+
+Create special debug seeds:
+
+```text
+SEED_FLAT
+SEED_STEEP
+SEED_JUMP
+SEED_RAVINE
+SEED_SUMMIT
+SEED_CRASH
+```
+
+These should deliberately test systems.
+
+---
+
+# 97 — AUTOMATED QA
+
+Create a development test mode that runs the vehicle through generated terrain and detects:
+
+* vehicle stuck
+* infinite rotation
+* impossible terrain
+* physics explosion
+* NaN positions
+* excessive velocity
+* missing collision
+* camera failure
+* object count explosion
+
+---
+
+# 98 — NUMERICAL SAFETY
+
+Every important physics calculation should guard against:
+
+```text
+NaN
+Infinity
+division by zero
+extreme velocity
+extreme angular velocity
+```
+
+For example:
+
+$$
+safeDivide(a,b)=
+\frac{a}{max(|b|,\epsilon)}
+$$
+
+with appropriate sign handling.
+
+---
+
+# 99 — PHYSICS CLAMPING
+
+Do NOT blindly clamp the entire physics state.
+
+Instead establish sane emergency bounds:
+
+```text
+maxVelocity
+maxAngularVelocity
+maxForce
+maxImpulse
+```
+
+If exceeded:
+
+* log telemetry
+* apply controlled correction
+* identify source
+
+Do not hide bugs.
+
+---
+
+# 100 — IMPORTANT: NO CHEATING PHYSICS
+
+Do NOT implement:
+
+```text
+if car is about to flip:
+    rotate car upright
+```
+
+That is unacceptable.
+
+Instead:
+
+```text
+detect instability
+→ understand cause
+→ improve contact / suspension / torque
+→ provide subtle physically plausible stabilization
+```
+
+---
+
+# 101 — GAMEPLAY PHYSICS FEEL
+
+The car should have:
+
+### Weight
+
+You feel mass.
+
+### Suspension
+
+You feel terrain.
+
+### Momentum
+
+You must respect speed.
+
+### Gravity
+
+You must respect mountain slope.
+
+### Traction
+
+You must manage wheel slip.
+
+### Air control
+
+You can influence rotation.
+
+### Recovery
+
+You can save mistakes.
+
+### Death
+
+Bad decisions eventually have consequences.
+
+---
+
+# 102 — WHAT “HARD” MEANS
+
+Hard does NOT mean:
+
+```text
+random spikes
+```
+
+Hard means:
+
+```text
+steep climb
++
+limited traction
++
+momentum management
++
+dangerous crest
++
+deep valley
++
+precise landing
+```
+
+Difficulty should be readable.
+
+---
+
+# 103 — WHAT “FUN” MEANS
+
+Fun comes from:
+
+```text
+anticipation
+→ commitment
+→ risk
+→ physics
+→ surprise
+→ recovery
+→ mastery
+```
+
+Not from random chaos.
+
+---
+
+# 104 — CORE PLAYER MOMENTS
+
+Design specifically for these moments:
+
+### THE CREST
+
+Player approaches a giant ridge.
+
+They cannot see what's beyond it.
+
+They commit.
+
+The front lifts.
+
+The world disappears.
+
+Then:
+
+massive valley reveal.
+
+---
+
+### THE DROP
+
+Vehicle accelerates down a huge slope.
+
+Speed climbs.
+
+Camera opens.
+
+Wind intensifies.
+
+Player brakes before the ravine.
+
+---
+
+### THE JUMP
+
+Player hits a natural launch.
+
+Car becomes airborne.
+
+Player rotates.
+
+Huge mountain visible behind.
+
+Landing approaches.
+
+Player corrects.
+
+Suspension compresses.
+
+Dust explodes.
+
+---
+
+### THE SAVE
+
+Vehicle lands badly.
+
+Almost flips.
+
+One wheel catches.
+
+Throttle.
+
+Vehicle rotates back.
+
+Player survives.
+
+This should be one of the most satisfying moments in the game.
+
+---
+
+### THE DEATH
+
+Huge mistake.
+
+Vehicle rolls.
+
+Roof hits.
+
+Dust.
+
+Camera shake.
+
+Slow motion.
+
+Vehicle stops upside down.
+
+Silence.
+
+RUN ENDED.
+
+---
+
+# 105 — CREATIVE IDENTITY
+
+The final game should feel like:
+
+**Hill Climb Racing physics**
+
+combined with
+
+**mountain expedition**
+
+combined with
+
+**illustrated engineering journal**
+
+combined with
+
+**cinematic 2.5D/3D world**
+
+without becoming a clone of any of them.
+
+---
+
+# 106 — DO NOT DO THESE THINGS
+
+NEVER:
+
+* replace everything with generic Three.js terrain
+* abandon Matter.js physics without justification
+* create a generic 3D racing game
+* use coin collectibles
+* create random terrain spikes
+* fake flips with animations
+* force the car upright constantly
+* instantly kill the player for minor rotation
+* make every hill equally difficult
+* create impossible mountain geometry
+* add random UI panels
+* use neon gradients everywhere
+* create hundreds of unnecessary meshes
+* use Zapier in the gameplay loop
+* make Python a browser dependency
+* introduce frameworks without need
+* add features that do not improve the core driving experience
+
+---
+
+# 107 — IMPLEMENTATION ORDER
+
+Follow this order.
+
+## STAGE 1
+
+Audit existing HTML.
+
+## STAGE 2
+
+Fix vehicle physics.
+
+## STAGE 3
+
+Fix rollover instability.
+
+## STAGE 4
+
+Implement proper suspension/contact telemetry.
+
+## STAGE 5
+
+Implement terrain grammar.
+
+## STAGE 6
+
+Implement steep climbs + deep valleys.
+
+## STAGE 7
+
+Implement mountain altitude progression.
+
+## STAGE 8
+
+Implement death/crash state machine.
+
+## STAGE 9
+
+Implement Echo collectible system.
+
+## STAGE 10
+
+Integrate Three.js world layer.
+
+## STAGE 11
+
+Implement landmarks and environmental depth.
+
+## STAGE 12
+
+Overhaul UI/UX.
+
+## STAGE 13
+
+Implement progression/map/garage.
+
+## STAGE 14
+
+Implement Python development tools.
+
+## STAGE 15
+
+Implement QA/telemetry.
+
+## STAGE 16
+
+Performance optimization.
+
+## STAGE 17
+
+Final visual/audio polish.
+
+---
+
+# 108 — AFTER EACH STAGE
+
+The game must still:
+
+```text
+load
+start
+drive
+jump
+land
+crash
+restart
+pause
+resume
+```
+
+Do not continue if a stage breaks the core loop.
+
+---
+
+# 109 — FINAL QUALITY BAR
+
+The final result must NOT feel like:
+
+> “AI added 50 features to an HTML game.”
+
+It should feel like:
+
+> **A real indie game prototype that has gone through several serious development iterations.**
+
+The systems must reinforce each other.
+
+Terrain affects physics.
+
+Physics affects stunts.
+
+Stunts affect progression.
+
+Progression affects exploration.
+
+Exploration reveals Echoes.
+
+Echoes reveal the mountain's story.
+
+The mountain visually becomes more extreme.
+
+The UI communicates the player's expedition.
+
+The camera makes important physical moments feel cinematic.
+
+The audio communicates weight.
+
+Everything belongs to the same world.
+
+---
+
+# 110 — FINAL TECHNICAL REQUIREMENT
+
+At the end, provide a developer report containing:
+
+```text
+ARCHITECTURE CHANGES
+PHYSICS CHANGES
+TERRAIN CHANGES
+DEATH SYSTEM
+THREE.JS SYSTEM
+UI/UX CHANGES
+COLLECTIBLE SYSTEM
+AUDIO CHANGES
+VFX CHANGES
+PYTHON TOOLS
+DEBUG TOOLS
+PERFORMANCE CHANGES
+KNOWN LIMITATIONS
+```
+
+Also provide:
+
+```text
+new controls
+new systems
+important tunable parameters
+test seeds
+```
+
+---
+
+# 111 — FINAL COMMAND
+
+Now stop thinking of this as:
+
+> “Improve an HTML Hill Climb prototype.”
+
+Think of it as:
+
+> **Build a believable interactive mountain expedition around this existing physics prototype.**
+
+The mountain must feel enormous.
+
+The valleys must feel dangerous.
+
+The climbs must feel exhausting.
+
+The vehicle must feel heavy.
+
+The suspension must feel alive.
+
+The player must understand why they lost control.
+
+The physics must be difficult but predictable.
+
+The death system must feel earned.
+
+The collectibles must belong to the world.
+
+The UI must look like a real game.
+
+The 3D layer must add scale without destabilizing physics.
+
+The procedural terrain must create memorable routes rather than random noise.
+
+The final summit must feel like an achievement.
+
+Most importantly:
+
+## MAKE THE DRIVING ITSELF SO GOOD THAT EVERYTHING ELSE FEELS LIKE SUPPORTING THE DRIVING.
+
+Do not optimize for feature count.
+
+Optimize for:
+
+**control → momentum → terrain → danger → recovery → mastery.**
+
+That is the game.
+
+Additional Context:
+1. Work directly on `C:\Users\anish jha\.gemini\antigravity\scratch\old-mountain-works\old-mountain-works.html` and `old-mountain-works(1).html` (and synchronize to `C:\Users\anish jha\Downloads\old-mountain-works(1).html`).
+2. Create the offline Python tooling directory at `C:\Users\anish jha\.gemini\antigravity\scratch\old-mountain-works\tools\` containing `terrain_analysis.py`, `physics_tuner.py`, `terrain_validator.py`, `parameter_sweep.py`, and `telemetry_plot.py`.
+3. Implement the full 111-section specification (Spring-damper model, dynamic normal load distribution, slip/traction saturation curves, grounded subtle anti-jitter stability assist, steep elevation & deep valley terrain grammar, Three.js 2.5D visual depth & 3D rotating Mountain Echoes, death state machine with persistent upside-down timer and crash slow motion, expedition instrument HUD with altitude meter, expedition map and garage UI, debug seeds and F3 telemetry, and test with automated headless verification).
+4. Provide the full final developer report specified in Section 110.
