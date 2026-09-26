@@ -144,13 +144,15 @@ class q0 {
     this.echoManager.initEchoes(this.terrain);
 
     this.startX = x.world.startX;
-    const startY = this.terrain.heightAt(this.startX) - 62;
+    const initCfg = VEHICLE_ARCHETYPES[x.activeArchetype] ?? VEHICLE_ARCHETYPES.buggy;
+    const startY = this.terrain.heightAt(this.startX) - (initCfg.wheelOffsetY + initCfg.wheelRadius);
     this.vehicle = new f0(this.startX, startY, x.activeArchetype, this.audio);
     Matter.Composite.add(this.engine.world, this.vehicle.composite);
 
     // Initial contacts so vehicle starts in grounded driving state
     this.vehicle.wheels.forEach((w) => {
       w.contact = true;
+      w.contactGrace = 100;
       w.material = "grass";
     });
 
@@ -290,7 +292,7 @@ class q0 {
 
       // Interactive destructible prop collision
       if (other.propDef) {
-        this.propManager.onHit(other, energy, pt);
+        this.propManager.onHit(other, energy, pt, vel);
         this.score += 50;
         continue;
       }
@@ -354,9 +356,10 @@ class q0 {
 
     this.vehicle.update(inputState, dt, this.terrain);
     Matter.Engine.update(this.engine, dt);
+    this.vehicle.solvePrismaticSuspension();
 
     const activePairs = this.engine.pairs.list.filter((p) => p.isActive);
-    this.vehicle.markContacts(this.terrainSet, activePairs);
+    this.vehicle.markContacts(this.terrainSet, activePairs, this.terrain, dt);
 
     this.safety(dt);
   }
@@ -373,8 +376,9 @@ class q0 {
 
     // Normalized upside-down amount U in [0, 1] (Spec #42)
     const sinAngle = Math.sin(this.vehicle.chassis.angle);
-    const isInverted = Math.abs(sinAngle) > 0.88 || this.vehicle.roofContact;
-    const isUpright = Math.abs(sinAngle) < 0.45;
+    const cosAngle = Math.cos(this.vehicle.chassis.angle);
+    const isInverted = (cosAngle < -0.35 && Math.abs(sinAngle) > 0.88) || this.vehicle.roofContact;
+    const isUpright = cosAngle > 0.65 && Math.abs(sinAngle) < 0.45;
     const hasGroundContact = this.vehicle.wheels.some(w => w.contact);
 
     // Robust 6-Stage Death State Machine
@@ -427,6 +431,9 @@ class q0 {
     this.deathState = "death";
     this.deathReason = reason;
     this.saveCareer();
+
+    // Activate multi-body driver crash ragdoll on fatal impact
+    this.vehicle?.driver?.spawnCrashRagdoll(this.engine.world, this.vehicle.chassis);
 
     // Cinematic time dilation and camera lock
     this.timeScale = 0.35;
@@ -524,7 +531,7 @@ class q0 {
 
     this.postPhysics(dt);
     this.particles.update(dt);
-    this.propManager.updateChunking(this.camera.x);
+    this.propManager.updateChunking(this.camera.x, dt);
     this.draw();
   };
 
@@ -582,7 +589,7 @@ class q0 {
         distance: Math.round(this.maxDistance * 10) / 10,
         speed: Math.round(Math.abs(v.forwardSpeed) * 7.2 * 10) / 10,
         altitude: altitudeMeters,
-        pitch: Math.round(v.chassis.angle * 180 / Math.PI * 10) / 10,
+        pitch: Math.round(normalizeAngle(v.chassis.angle) * 180 / Math.PI * 10) / 10,
         compFront: Math.round(v.wheels[1].compression * 100) / 100,
         compRear: Math.round(v.wheels[0].compression * 100) / 100,
         slip: Math.round(v.wheels[0].slip * 100) / 100,
@@ -604,7 +611,7 @@ class q0 {
       rpm: v.rpm,
       airborne: v.airborne,
       score: this.score,
-      incline: Math.round(v.chassis.angle * 180 / Math.PI),
+      incline: Math.round(normalizeAngle(v.chassis.angle) * 180 / Math.PI),
       echoCount: this.echoManager.collectedCount,
       echoTotal: this.echoManager.totalCount,
       biomeName: this.terrain.biomeAt(v.chassis.position.x).name,

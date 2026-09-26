@@ -590,6 +590,24 @@ class R0 {
 
       ctx.restore();
     }
+
+    // Render physical rigid-body fracture debris planks
+    if (propManager.debrisList && propManager.debrisList.length > 0) {
+      for (const dItem of propManager.debrisList) {
+        const bBody = dItem.body;
+        if (!bBody) continue;
+        ctx.save();
+        ctx.globalAlpha = Math.min(1, dItem.life / 1.2);
+        ctx.translate(bBody.position.x, bBody.position.y);
+        ctx.rotate(bBody.angle);
+        ctx.fillStyle = dItem.color || "#bca383";
+        ctx.strokeStyle = "#1b1f1d";
+        ctx.lineWidth = 1.4;
+        ctx.fillRect(-dItem.w / 2, -dItem.h / 2, dItem.w, dItem.h);
+        ctx.strokeRect(-dItem.w / 2, -dItem.h / 2, dItem.w, dItem.h);
+        ctx.restore();
+      }
+    }
   }
 
   drawVehicle(vehicle, biome) {
@@ -856,23 +874,48 @@ class R0 {
 
   drawArticulatedDriver(driver, vehicle) {
     const ctx = this.ctx;
-    // Driver seated naturally inside the cockpit
-    const hipX = -26;
-    const hipY = -12 + (driver.jolt || 0);
+    // Driver seated naturally inside the cockpit (or driven by physical Matter.js crash ragdoll)
+    let hipX = -26;
+    let hipY = -12 + (driver.jolt || 0);
 
     const spineAngle = (driver.lean || 0) * 0.72;
     const torsoLen = 17;
-    const shoulderX = hipX + Math.sin(spineAngle) * torsoLen;
-    const shoulderY = hipY - Math.cos(spineAngle) * torsoLen;
+    let shoulderX = hipX + Math.sin(spineAngle) * torsoLen;
+    let shoulderY = hipY - Math.cos(spineAngle) * torsoLen;
 
-    const headX = shoulderX + Math.sin(spineAngle) * 9;
-    const headY = shoulderY - Math.cos(spineAngle) * 9;
+    let headX = shoulderX + Math.sin(spineAngle + (driver.neckAngle || 0) * 0.35) * 9;
+    let headY = shoulderY - Math.cos(spineAngle + (driver.neckAngle || 0) * 0.35) * 9;
 
     const wheelHubX = -9;
     const wheelHubY = -23;
 
-    const handX = wheelHubX;
-    const handY = (driver.victory || 0) > 0.1 ? wheelHubY - 18 : wheelHubY - 2;
+    let handX = wheelHubX;
+    let handY = (driver.victory || 0) > 0.1 ? wheelHubY - 18 : wheelHubY - 2;
+
+    if (driver.ragdollActive && driver.ragdollBodies?.length >= 2 && vehicle?.chassis) {
+      const cPos = vehicle.chassis.position;
+      const cAng = vehicle.chassis.angle;
+      const cos = Math.cos(-cAng);
+      const sin = Math.sin(-cAng);
+      const toLocal = (wPt) => {
+        const dx = wPt.x - cPos.x;
+        const dy = wPt.y - cPos.y;
+        return { x: dx * cos - dy * sin, y: dx * sin + dy * cos };
+      };
+      const tLoc = toLocal(driver.ragdollBodies[0].position);
+      const hLoc = toLocal(driver.ragdollBodies[1].position);
+      shoulderX = tLoc.x;
+      shoulderY = tLoc.y - 6;
+      hipX = tLoc.x - 3;
+      hipY = tLoc.y + 8;
+      headX = hLoc.x;
+      headY = hLoc.y;
+      if (driver.ragdollBodies[2]) {
+        const aLoc = toLocal(driver.ragdollBodies[2].position);
+        handX = aLoc.x;
+        handY = aLoc.y;
+      }
+    }
 
     const footX = -3;
     const footY = -6;

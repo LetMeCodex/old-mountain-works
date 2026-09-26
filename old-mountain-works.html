@@ -541,8 +541,8 @@ var b0=Object.create;var{getPrototypeOf:p0,defineProperty:B0,getOwnPropertyNames
  * THE SOFTWARE.
  */(function(L,U){if(typeof J0==="object"&&typeof E0==="object")E0.exports=U();else if(typeof define==="function"&&define.amd)define("Matter",[],U);else if(typeof J0==="object")J0.Matter=U();else L.Matter=U()})(J0,function(){return function(E){var L={};function U(K){if(L[K])return L[K].exports;var F=L[K]={i:K,l:!1,exports:{}};return E[K].call(F.exports,F,F.exports,U),F.l=!0,F.exports}return U.m=E,U.c=L,U.d=function(K,F,Q){if(!U.o(K,F))Object.defineProperty(K,F,{enumerable:!0,get:Q})},U.r=function(K){if(typeof Symbol<"u"&&Symbol.toStringTag)Object.defineProperty(K,Symbol.toStringTag,{value:"Module"});Object.defineProperty(K,"__esModule",{value:!0})},U.t=function(K,F){if(F&1)K=U(K);if(F&8)return K;if(F&4&&typeof K==="object"&&K&&K.__esModule)return K;var Q=Object.create(null);if(U.r(Q),Object.defineProperty(Q,"default",{enumerable:!0,value:K}),F&2&&typeof K!="string")for(var J in K)U.d(Q,J,function(G){return K[G]}.bind(null,J));return Q},U.n=function(K){var F=K&&K.__esModule?function(){return K.default}:function(){return K};return U.d(F,"a",F),F},U.o=function(K,F){return Object.prototype.hasOwnProperty.call(K,F)},U.p="",U(U.s=20)}([function(E,L){var U={};E.exports=U,function(){U._baseDelta=16.666666666666668,U._nextId=0,U._seed=0,U._nowStartTime=+new Date,U._warnedOnce={},U._decomp=null,U.extend=function(F,Q){var J,G,$;if(typeof Q==="boolean")J=2,$=Q;else J=1,$=!0;for(var W=J;W<arguments.length;W++){var N=arguments[W];if(N)for(var Z in N)if($&&N[Z]&&N[Z].constructor===Object)if(!F[Z]||F[Z].constructor===Object)F[Z]=F[Z]||{},U.extend(F[Z],$,N[Z]);else F[Z]=N[Z];else F[Z]=N[Z]}return F},U.clone=function(F,Q){return U.extend({},Q,F)},U.keys=function(F){if(Object.keys)return Object.keys(F);var Q=[];for(var J in F)Q.push(J);return Q},U.values=function(F){var Q=[];if(Object.keys){var J=Object.keys(F);for(var G=0;G<J.length;G++)Q.push(F[J[G]]);return Q}for(var $ in F)Q.push(F[$]);return Q},U.get=function(F,Q,J,G){Q=Q.split(".").slice(J,G);for(var $=0;$<Q.length;$+=1)F=F[Q[$]];return F},U.set=function(F,Q,J,G,$){var W=Q.split(".").slice(G,$);return U.get(F,Q,0,-1)[W[W.length-1]]=J,J},U.shuffle=function(F){for(var Q=F.length-1;Q>0;Q--){var J=Math.floor(U.random()*(Q+1)),G=F[Q];F[Q]=F[J],F[J]=G}return F},U.choose=function(F){return F[Math.floor(U.random()*F.length)]},U.isElement=function(F){if(typeof HTMLElement<"u")return F instanceof HTMLElement;return!!(F&&F.nodeType&&F.nodeName)},U.isArray=function(F){return Object.prototype.toString.call(F)==="[object Array]"},U.isFunction=function(F){return typeof F==="function"},U.isPlainObject=function(F){return typeof F==="object"&&F.constructor===Object},U.isString=function(F){return toString.call(F)==="[object String]"},U.clamp=function(F,Q,J){if(F<Q)return Q;if(F>J)return J;return F},U.sign=function(F){return F<0?-1:1},U.now=function(){if(typeof window<"u"&&window.performance){if(window.performance.now)return window.performance.now();else if(window.performance.webkitNow)return window.performance.webkitNow()}if(Date.now)return Date.now();return new Date-U._nowStartTime},U.random=function(F,Q){return F=typeof F<"u"?F:0,Q=typeof Q<"u"?Q:1,F+K()*(Q-F)};var K=function(){return U._seed=(U._seed*9301+49297)%233280,U._seed/233280};U.colorToNumber=function(F){if(F=F.replace("#",""),F.length==3)F=F.charAt(0)+F.charAt(0)+F.charAt(1)+F.charAt(1)+F.charAt(2)+F.charAt(2);return parseInt(F,16)},U.logLevel=1,U.log=function(){if(console&&U.logLevel>0&&U.logLevel<=3)console.log.apply(console,["matter-js:"].concat(Array.prototype.slice.call(arguments)))},U.info=function(){if(console&&U.logLevel>0&&U.logLevel<=2)console.info.apply(console,["matter-js:"].concat(Array.prototype.slice.call(arguments)))},U.warn=function(){if(console&&U.logLevel>0&&U.logLevel<=3)console.warn.apply(console,["matter-js:"].concat(Array.prototype.slice.call(arguments)))},U.warnOnce=function(){var F=Array.prototype.slice.call(arguments).join(" ");if(!U._warnedOnce[F])U.warn(F),U._warnedOnce[F]=!0},U.deprecated=function(F,Q,J){F[Q]=U.chain(function(){U.warnOnce("\uD83D\uDD05 deprecated \uD83D\uDD05",J)},F[Q])},U.nextId=function(){return U._nextId++},U.indexOf=function(F,Q){if(F.indexOf)return F.indexOf(Q);for(var J=0;J<F.length;J++)if(F[J]===Q)return J;return-1},U.map=function(F,Q){if(F.map)return F.map(Q);var J=[];for(var G=0;G<F.length;G+=1)J.push(Q(F[G]));return J},U.topologicalSort=function(F){var Q=[],J=[],G=[];for(var $ in F)if(!J[$]&&!G[$])U._topologicalSort($,J,G,F,Q);return Q},U._topologicalSort=function(F,Q,J,G,$){var W=G[F]||[];J[F]=!0;for(var N=0;N<W.length;N+=1){var Z=W[N];if(J[Z])continue;if(!Q[Z])U._topologicalSort(Z,Q,J,G,$)}J[F]=!1,Q[F]=!0,$.push(F)},U.chain=function(){var F=[];for(var Q=0;Q<arguments.length;Q+=1){var J=arguments[Q];if(J._chained)F.push.apply(F,J._chained);else F.push(J)}var G=function(){var $,W=Array(arguments.length);for(var N=0,Z=arguments.length;N<Z;N++)W[N]=arguments[N];for(N=0;N<F.length;N+=1){var z=F[N].apply($,W);if(typeof z<"u")$=z}return $};return G._chained=F,G},U.chainPathBefore=function(F,Q,J){return U.set(F,Q,U.chain(J,U.get(F,Q)))},U.chainPathAfter=function(F,Q,J){return U.set(F,Q,U.chain(U.get(F,Q),J))},U.setDecomp=function(F){U._decomp=F},U.getDecomp=function(){var F=U._decomp;try{if(!F&&typeof window<"u")F=window.decomp;if(!F&&typeof global<"u")F=global.decomp}catch(Q){F=null}return F}}()},function(E,L){var U={};E.exports=U,function(){U.create=function(K){var F={min:{x:0,y:0},max:{x:0,y:0}};if(K)U.update(F,K);return F},U.update=function(K,F,Q){K.min.x=1/0,K.max.x=-1/0,K.min.y=1/0,K.max.y=-1/0;for(var J=0;J<F.length;J++){var G=F[J];if(G.x>K.max.x)K.max.x=G.x;if(G.x<K.min.x)K.min.x=G.x;if(G.y>K.max.y)K.max.y=G.y;if(G.y<K.min.y)K.min.y=G.y}if(Q){if(Q.x>0)K.max.x+=Q.x;else K.min.x+=Q.x;if(Q.y>0)K.max.y+=Q.y;else K.min.y+=Q.y}},U.contains=function(K,F){return F.x>=K.min.x&&F.x<=K.max.x&&F.y>=K.min.y&&F.y<=K.max.y},U.overlaps=function(K,F){return K.min.x<=F.max.x&&K.max.x>=F.min.x&&K.max.y>=F.min.y&&K.min.y<=F.max.y},U.translate=function(K,F){K.min.x+=F.x,K.max.x+=F.x,K.min.y+=F.y,K.max.y+=F.y},U.shift=function(K,F){var Q=K.max.x-K.min.x,J=K.max.y-K.min.y;K.min.x=F.x,K.max.x=F.x+Q,K.min.y=F.y,K.max.y=F.y+J}}()},function(E,L){var U={};E.exports=U,function(){U.create=function(K,F){return{x:K||0,y:F||0}},U.clone=function(K){return{x:K.x,y:K.y}},U.magnitude=function(K){return Math.sqrt(K.x*K.x+K.y*K.y)},U.magnitudeSquared=function(K){return K.x*K.x+K.y*K.y},U.rotate=function(K,F,Q){var J=Math.cos(F),G=Math.sin(F);if(!Q)Q={};var $=K.x*J-K.y*G;return Q.y=K.x*G+K.y*J,Q.x=$,Q},U.rotateAbout=function(K,F,Q,J){var G=Math.cos(F),$=Math.sin(F);if(!J)J={};var W=Q.x+((K.x-Q.x)*G-(K.y-Q.y)*$);return J.y=Q.y+((K.x-Q.x)*$+(K.y-Q.y)*G),J.x=W,J},U.normalise=function(K){var F=U.magnitude(K);if(F===0)return{x:0,y:0};return{x:K.x/F,y:K.y/F}},U.dot=function(K,F){return K.x*F.x+K.y*F.y},U.cross=function(K,F){return K.x*F.y-K.y*F.x},U.cross3=function(K,F,Q){return(F.x-K.x)*(Q.y-K.y)-(F.y-K.y)*(Q.x-K.x)},U.add=function(K,F,Q){if(!Q)Q={};return Q.x=K.x+F.x,Q.y=K.y+F.y,Q},U.sub=function(K,F,Q){if(!Q)Q={};return Q.x=K.x-F.x,Q.y=K.y-F.y,Q},U.mult=function(K,F){return{x:K.x*F,y:K.y*F}},U.div=function(K,F){return{x:K.x/F,y:K.y/F}},U.perp=function(K,F){return F=F===!0?-1:1,{x:F*-K.y,y:F*K.x}},U.neg=function(K){return{x:-K.x,y:-K.y}},U.angle=function(K,F){return Math.atan2(F.y-K.y,F.x-K.x)},U._temp=[U.create(),U.create(),U.create(),U.create(),U.create(),U.create()]}()},function(E,L,U){var K={};E.exports=K;var F=U(2),Q=U(0);(function(){K.create=function(J,G){var $=[];for(var W=0;W<J.length;W++){var N=J[W],Z={x:N.x,y:N.y,index:W,body:G,isInternal:!1};$.push(Z)}return $},K.fromPath=function(J,G){var $=/L?\s*([-\d.e]+)[\s,]*([-\d.e]+)*/ig,W=[];return J.replace($,function(N,Z,z){W.push({x:parseFloat(Z),y:parseFloat(z)})}),K.create(W,G)},K.centre=function(J){var G=K.area(J,!0),$={x:0,y:0},W,N,Z;for(var z=0;z<J.length;z++)Z=(z+1)%J.length,W=F.cross(J[z],J[Z]),N=F.mult(F.add(J[z],J[Z]),W),$=F.add($,N);return F.div($,6*G)},K.mean=function(J){var G={x:0,y:0};for(var $=0;$<J.length;$++)G.x+=J[$].x,G.y+=J[$].y;return F.div(G,J.length)},K.area=function(J,G){var $=0,W=J.length-1;for(var N=0;N<J.length;N++)$+=(J[W].x-J[N].x)*(J[W].y+J[N].y),W=N;if(G)return $/2;return Math.abs($)/2},K.inertia=function(J,G){var $=0,W=0,N=J,Z,z;for(var O=0;O<N.length;O++)z=(O+1)%N.length,Z=Math.abs(F.cross(N[z],N[O])),$+=Z*(F.dot(N[z],N[z])+F.dot(N[z],N[O])+F.dot(N[O],N[O])),W+=Z;return G/6*($/W)},K.translate=function(J,G,$){$=typeof $<"u"?$:1;var W=J.length,N=G.x*$,Z=G.y*$,z;for(z=0;z<W;z++)J[z].x+=N,J[z].y+=Z;return J},K.rotate=function(J,G,$){if(G===0)return;var W=Math.cos(G),N=Math.sin(G),Z=$.x,z=$.y,O=J.length,H,T,S,q;for(q=0;q<O;q++)H=J[q],T=H.x-Z,S=H.y-z,H.x=Z+(T*W-S*N),H.y=z+(T*N+S*W);return J},K.contains=function(J,G){var{x:$,y:W}=G,N=J.length,Z=J[N-1],z;for(var O=0;O<N;O++){if(z=J[O],($-Z.x)*(z.y-Z.y)+(W-Z.y)*(Z.x-z.x)>0)return!1;Z=z}return!0},K.scale=function(J,G,$,W){if(G===1&&$===1)return J;W=W||K.centre(J);var N,Z;for(var z=0;z<J.length;z++)N=J[z],Z=F.sub(N,W),J[z].x=W.x+Z.x*G,J[z].y=W.y+Z.y*$;return J},K.chamfer=function(J,G,$,W,N){if(typeof G==="number")G=[G];else G=G||[8];$=typeof $<"u"?$:-1,W=W||2,N=N||14;var Z=[];for(var z=0;z<J.length;z++){var O=J[z-1>=0?z-1:J.length-1],H=J[z],T=J[(z+1)%J.length],S=G[z<G.length?z:G.length-1];if(S===0){Z.push(H);continue}var q=F.normalise({x:H.y-O.y,y:O.x-H.x}),P=F.normalise({x:T.y-H.y,y:H.x-T.x}),D=Math.sqrt(2*Math.pow(S,2)),X=F.mult(Q.clone(q),S),Y=F.normalise(F.mult(F.add(q,P),0.5)),I=F.sub(H,F.mult(Y,D)),R=$;if($===-1)R=Math.pow(S,0.32)*1.75;if(R=Q.clamp(R,W,N),R%2===1)R+=1;var f=Math.acos(F.dot(q,P)),M=f/R;for(var j=0;j<R;j++)Z.push(F.add(F.rotate(X,M*j),I))}return Z},K.clockwiseSort=function(J){var G=K.mean(J);return J.sort(function($,W){return F.angle(G,$)-F.angle(G,W)}),J},K.isConvex=function(J){var G=0,$=J.length,W,N,Z,z;if($<3)return null;for(W=0;W<$;W++){if(N=(W+1)%$,Z=(W+2)%$,z=(J[N].x-J[W].x)*(J[Z].y-J[N].y),z-=(J[N].y-J[W].y)*(J[Z].x-J[N].x),z<0)G|=1;else if(z>0)G|=2;if(G===3)return!1}if(G!==0)return!0;else return null},K.hull=function(J){var G=[],$=[],W,N;J=J.slice(0),J.sort(function(Z,z){var O=Z.x-z.x;return O!==0?O:Z.y-z.y});for(N=0;N<J.length;N+=1){W=J[N];while($.length>=2&&F.cross3($[$.length-2],$[$.length-1],W)<=0)$.pop();$.push(W)}for(N=J.length-1;N>=0;N-=1){W=J[N];while(G.length>=2&&F.cross3(G[G.length-2],G[G.length-1],W)<=0)G.pop();G.push(W)}return G.pop(),$.pop(),G.concat($)}})()},function(E,L,U){var K={};E.exports=K;var F=U(3),Q=U(2),J=U(7),G=U(0),$=U(1),W=U(11);(function(){K._timeCorrection=!0,K._inertiaScale=4,K._nextCollidingGroupId=1,K._nextNonCollidingGroupId=-1,K._nextCategory=1,K._baseDelta=16.666666666666668,K.create=function(Z){var z={id:G.nextId(),type:"body",label:"Body",parts:[],plugin:{},angle:0,vertices:F.fromPath("L 0 0 L 40 0 L 40 40 L 0 40"),position:{x:0,y:0},force:{x:0,y:0},torque:0,positionImpulse:{x:0,y:0},constraintImpulse:{x:0,y:0,angle:0},totalContacts:0,speed:0,angularSpeed:0,velocity:{x:0,y:0},angularVelocity:0,isSensor:!1,isStatic:!1,isSleeping:!1,motion:0,sleepThreshold:60,density:0.001,restitution:0,friction:0.1,frictionStatic:0.5,frictionAir:0.01,collisionFilter:{category:1,mask:4294967295,group:0},slop:0.05,timeScale:1,render:{visible:!0,opacity:1,strokeStyle:null,fillStyle:null,lineWidth:null,sprite:{xScale:1,yScale:1,xOffset:0,yOffset:0}},events:null,bounds:null,chamfer:null,circleRadius:0,positionPrev:null,anglePrev:0,parent:null,axes:null,area:0,mass:0,inertia:0,deltaTime:16.666666666666668,_original:null},O=G.extend(z,Z);return N(O,Z),O},K.nextGroup=function(Z){if(Z)return K._nextNonCollidingGroupId--;return K._nextCollidingGroupId++},K.nextCategory=function(){return K._nextCategory=K._nextCategory<<1,K._nextCategory};var N=function(Z,z){z=z||{},K.set(Z,{bounds:Z.bounds||$.create(Z.vertices),positionPrev:Z.positionPrev||Q.clone(Z.position),anglePrev:Z.anglePrev||Z.angle,vertices:Z.vertices,parts:Z.parts||[Z],isStatic:Z.isStatic,isSleeping:Z.isSleeping,parent:Z.parent||Z}),F.rotate(Z.vertices,Z.angle,Z.position),W.rotate(Z.axes,Z.angle),$.update(Z.bounds,Z.vertices,Z.velocity),K.set(Z,{axes:z.axes||Z.axes,area:z.area||Z.area,mass:z.mass||Z.mass,inertia:z.inertia||Z.inertia});var O=Z.isStatic?"#14151f":G.choose(["#f19648","#f5d259","#f55a3c","#063e7b","#ececd1"]),H=Z.isStatic?"#555":"#ccc",T=Z.isStatic&&Z.render.fillStyle===null?1:0;Z.render.fillStyle=Z.render.fillStyle||O,Z.render.strokeStyle=Z.render.strokeStyle||H,Z.render.lineWidth=Z.render.lineWidth||T,Z.render.sprite.xOffset+=-(Z.bounds.min.x-Z.position.x)/(Z.bounds.max.x-Z.bounds.min.x),Z.render.sprite.yOffset+=-(Z.bounds.min.y-Z.position.y)/(Z.bounds.max.y-Z.bounds.min.y)};K.set=function(Z,z,O){var H;if(typeof z==="string")H=z,z={},z[H]=O;for(H in z){if(!Object.prototype.hasOwnProperty.call(z,H))continue;switch(O=z[H],H){case"isStatic":K.setStatic(Z,O);break;case"isSleeping":J.set(Z,O);break;case"mass":K.setMass(Z,O);break;case"density":K.setDensity(Z,O);break;case"inertia":K.setInertia(Z,O);break;case"vertices":K.setVertices(Z,O);break;case"position":K.setPosition(Z,O);break;case"angle":K.setAngle(Z,O);break;case"velocity":K.setVelocity(Z,O);break;case"angularVelocity":K.setAngularVelocity(Z,O);break;case"speed":K.setSpeed(Z,O);break;case"angularSpeed":K.setAngularSpeed(Z,O);break;case"parts":K.setParts(Z,O);break;case"centre":K.setCentre(Z,O);break;default:Z[H]=O}}},K.setStatic=function(Z,z){for(var O=0;O<Z.parts.length;O++){var H=Z.parts[O];if(z){if(!H.isStatic)H._original={restitution:H.restitution,friction:H.friction,mass:H.mass,inertia:H.inertia,density:H.density,inverseMass:H.inverseMass,inverseInertia:H.inverseInertia};H.restitution=0,H.friction=1,H.mass=H.inertia=H.density=1/0,H.inverseMass=H.inverseInertia=0,H.positionPrev.x=H.position.x,H.positionPrev.y=H.position.y,H.anglePrev=H.angle,H.angularVelocity=0,H.speed=0,H.angularSpeed=0,H.motion=0}else if(H._original)H.restitution=H._original.restitution,H.friction=H._original.friction,H.mass=H._original.mass,H.inertia=H._original.inertia,H.density=H._original.density,H.inverseMass=H._original.inverseMass,H.inverseInertia=H._original.inverseInertia,H._original=null;H.isStatic=z}},K.setMass=function(Z,z){var O=Z.inertia/(Z.mass/6);Z.inertia=O*(z/6),Z.inverseInertia=1/Z.inertia,Z.mass=z,Z.inverseMass=1/Z.mass,Z.density=Z.mass/Z.area},K.setDensity=function(Z,z){K.setMass(Z,z*Z.area),Z.density=z},K.setInertia=function(Z,z){Z.inertia=z,Z.inverseInertia=1/Z.inertia},K.setVertices=function(Z,z){if(z[0].body===Z)Z.vertices=z;else Z.vertices=F.create(z,Z);Z.axes=W.fromVertices(Z.vertices),Z.area=F.area(Z.vertices),K.setMass(Z,Z.density*Z.area);var O=F.centre(Z.vertices);F.translate(Z.vertices,O,-1),K.setInertia(Z,K._inertiaScale*F.inertia(Z.vertices,Z.mass)),F.translate(Z.vertices,Z.position),$.update(Z.bounds,Z.vertices,Z.velocity)},K.setParts=function(Z,z,O){var H;z=z.slice(0),Z.parts.length=0,Z.parts.push(Z),Z.parent=Z;for(H=0;H<z.length;H++){var T=z[H];if(T!==Z)T.parent=Z,Z.parts.push(T)}if(Z.parts.length===1)return;if(O=typeof O<"u"?O:!0,O){var S=[];for(H=0;H<z.length;H++)S=S.concat(z[H].vertices);F.clockwiseSort(S);var q=F.hull(S),P=F.centre(q);K.setVertices(Z,q),F.translate(Z.vertices,P)}var D=K._totalProperties(Z);Z.area=D.area,Z.parent=Z,Z.position.x=D.centre.x,Z.position.y=D.centre.y,Z.positionPrev.x=D.centre.x,Z.positionPrev.y=D.centre.y,K.setMass(Z,D.mass),K.setInertia(Z,D.inertia),K.setPosition(Z,D.centre)},K.setCentre=function(Z,z,O){if(!O)Z.positionPrev.x=z.x-(Z.position.x-Z.positionPrev.x),Z.positionPrev.y=z.y-(Z.position.y-Z.positionPrev.y),Z.position.x=z.x,Z.position.y=z.y;else Z.positionPrev.x+=z.x,Z.positionPrev.y+=z.y,Z.position.x+=z.x,Z.position.y+=z.y},K.setPosition=function(Z,z,O){var H=Q.sub(z,Z.position);if(O)Z.positionPrev.x=Z.position.x,Z.positionPrev.y=Z.position.y,Z.velocity.x=H.x,Z.velocity.y=H.y,Z.speed=Q.magnitude(H);else Z.positionPrev.x+=H.x,Z.positionPrev.y+=H.y;for(var T=0;T<Z.parts.length;T++){var S=Z.parts[T];S.position.x+=H.x,S.position.y+=H.y,F.translate(S.vertices,H),$.update(S.bounds,S.vertices,Z.velocity)}},K.setAngle=function(Z,z,O){var H=z-Z.angle;if(O)Z.anglePrev=Z.angle,Z.angularVelocity=H,Z.angularSpeed=Math.abs(H);else Z.anglePrev+=H;for(var T=0;T<Z.parts.length;T++){var S=Z.parts[T];if(S.angle+=H,F.rotate(S.vertices,H,Z.position),W.rotate(S.axes,H),$.update(S.bounds,S.vertices,Z.velocity),T>0)Q.rotateAbout(S.position,H,Z.position,S.position)}},K.setVelocity=function(Z,z){var O=Z.deltaTime/K._baseDelta;Z.positionPrev.x=Z.position.x-z.x*O,Z.positionPrev.y=Z.position.y-z.y*O,Z.velocity.x=(Z.position.x-Z.positionPrev.x)/O,Z.velocity.y=(Z.position.y-Z.positionPrev.y)/O,Z.speed=Q.magnitude(Z.velocity)},K.getVelocity=function(Z){var z=K._baseDelta/Z.deltaTime;return{x:(Z.position.x-Z.positionPrev.x)*z,y:(Z.position.y-Z.positionPrev.y)*z}},K.getSpeed=function(Z){return Q.magnitude(K.getVelocity(Z))},K.setSpeed=function(Z,z){K.setVelocity(Z,Q.mult(Q.normalise(K.getVelocity(Z)),z))},K.setAngularVelocity=function(Z,z){var O=Z.deltaTime/K._baseDelta;Z.anglePrev=Z.angle-z*O,Z.angularVelocity=(Z.angle-Z.anglePrev)/O,Z.angularSpeed=Math.abs(Z.angularVelocity)},K.getAngularVelocity=function(Z){return(Z.angle-Z.anglePrev)*K._baseDelta/Z.deltaTime},K.getAngularSpeed=function(Z){return Math.abs(K.getAngularVelocity(Z))},K.setAngularSpeed=function(Z,z){K.setAngularVelocity(Z,G.sign(K.getAngularVelocity(Z))*z)},K.translate=function(Z,z,O){K.setPosition(Z,Q.add(Z.position,z),O)},K.rotate=function(Z,z,O,H){if(!O)K.setAngle(Z,Z.angle+z,H);else{var T=Math.cos(z),S=Math.sin(z),q=Z.position.x-O.x,P=Z.position.y-O.y;K.setPosition(Z,{x:O.x+(q*T-P*S),y:O.y+(q*S+P*T)},H),K.setAngle(Z,Z.angle+z,H)}},K.scale=function(Z,z,O,H){var T=0,S=0;H=H||Z.position;for(var q=0;q<Z.parts.length;q++){var P=Z.parts[q];if(F.scale(P.vertices,z,O,H),P.axes=W.fromVertices(P.vertices),P.area=F.area(P.vertices),K.setMass(P,Z.density*P.area),F.translate(P.vertices,{x:-P.position.x,y:-P.position.y}),K.setInertia(P,K._inertiaScale*F.inertia(P.vertices,P.mass)),F.translate(P.vertices,{x:P.position.x,y:P.position.y}),q>0)T+=P.area,S+=P.inertia;P.position.x=H.x+(P.position.x-H.x)*z,P.position.y=H.y+(P.position.y-H.y)*O,$.update(P.bounds,P.vertices,Z.velocity)}if(Z.parts.length>1){if(Z.area=T,!Z.isStatic)K.setMass(Z,Z.density*T),K.setInertia(Z,S)}if(Z.circleRadius)if(z===O)Z.circleRadius*=z;else Z.circleRadius=null},K.update=function(Z,z){z=(typeof z<"u"?z:16.666666666666668)*Z.timeScale;var O=z*z,H=K._timeCorrection?z/(Z.deltaTime||z):1,T=1-Z.frictionAir*(z/G._baseDelta),S=(Z.position.x-Z.positionPrev.x)*H,q=(Z.position.y-Z.positionPrev.y)*H;Z.velocity.x=S*T+Z.force.x/Z.mass*O,Z.velocity.y=q*T+Z.force.y/Z.mass*O,Z.positionPrev.x=Z.position.x,Z.positionPrev.y=Z.position.y,Z.position.x+=Z.velocity.x,Z.position.y+=Z.velocity.y,Z.deltaTime=z,Z.angularVelocity=(Z.angle-Z.anglePrev)*T*H+Z.torque/Z.inertia*O,Z.anglePrev=Z.angle,Z.angle+=Z.angularVelocity;for(var P=0;P<Z.parts.length;P++){var D=Z.parts[P];if(F.translate(D.vertices,Z.velocity),P>0)D.position.x+=Z.velocity.x,D.position.y+=Z.velocity.y;if(Z.angularVelocity!==0){if(F.rotate(D.vertices,Z.angularVelocity,Z.position),W.rotate(D.axes,Z.angularVelocity),P>0)Q.rotateAbout(D.position,Z.angularVelocity,Z.position,D.position)}$.update(D.bounds,D.vertices,Z.velocity)}},K.updateVelocities=function(Z){var z=K._baseDelta/Z.deltaTime,O=Z.velocity;O.x=(Z.position.x-Z.positionPrev.x)*z,O.y=(Z.position.y-Z.positionPrev.y)*z,Z.speed=Math.sqrt(O.x*O.x+O.y*O.y),Z.angularVelocity=(Z.angle-Z.anglePrev)*z,Z.angularSpeed=Math.abs(Z.angularVelocity)},K.applyForce=function(Z,z,O){var H={x:z.x-Z.position.x,y:z.y-Z.position.y};Z.force.x+=O.x,Z.force.y+=O.y,Z.torque+=H.x*O.y-H.y*O.x},K._totalProperties=function(Z){var z={mass:0,area:0,inertia:0,centre:{x:0,y:0}};for(var O=Z.parts.length===1?0:1;O<Z.parts.length;O++){var H=Z.parts[O],T=H.mass!==1/0?H.mass:1;z.mass+=T,z.area+=H.area,z.inertia+=H.inertia,z.centre=Q.add(z.centre,Q.mult(H.position,T))}return z.centre=Q.div(z.centre,z.mass),z}})()},function(E,L,U){var K={};E.exports=K;var F=U(0);(function(){K.on=function(Q,J,G){var $=J.split(" "),W;for(var N=0;N<$.length;N++)W=$[N],Q.events=Q.events||{},Q.events[W]=Q.events[W]||[],Q.events[W].push(G);return G},K.off=function(Q,J,G){if(!J){Q.events={};return}if(typeof J==="function")G=J,J=F.keys(Q.events).join(" ");var $=J.split(" ");for(var W=0;W<$.length;W++){var N=Q.events[$[W]],Z=[];if(G&&N){for(var z=0;z<N.length;z++)if(N[z]!==G)Z.push(N[z])}Q.events[$[W]]=Z}},K.trigger=function(Q,J,G){var $,W,N,Z,z=Q.events;if(z&&F.keys(z).length>0){if(!G)G={};$=J.split(" ");for(var O=0;O<$.length;O++)if(W=$[O],N=z[W],N){Z=F.clone(G,!1),Z.name=W,Z.source=Q;for(var H=0;H<N.length;H++)N[H].apply(Q,[Z])}}}})()},function(E,L,U){var K={};E.exports=K;var F=U(5),Q=U(0),J=U(1),G=U(4);(function(){K.create=function($){return Q.extend({id:Q.nextId(),type:"composite",parent:null,isModified:!1,bodies:[],constraints:[],composites:[],label:"Composite",plugin:{},cache:{allBodies:null,allConstraints:null,allComposites:null}},$)},K.setModified=function($,W,N,Z){if($.isModified=W,W&&$.cache)$.cache.allBodies=null,$.cache.allConstraints=null,$.cache.allComposites=null;if(N&&$.parent)K.setModified($.parent,W,N,Z);if(Z)for(var z=0;z<$.composites.length;z++){var O=$.composites[z];K.setModified(O,W,N,Z)}},K.add=function($,W){var N=[].concat(W);F.trigger($,"beforeAdd",{object:W});for(var Z=0;Z<N.length;Z++){var z=N[Z];switch(z.type){case"body":if(z.parent!==z){Q.warn("Composite.add: skipped adding a compound body part (you must add its parent instead)");break}K.addBody($,z);break;case"constraint":K.addConstraint($,z);break;case"composite":K.addComposite($,z);break;case"mouseConstraint":K.addConstraint($,z.constraint);break}}return F.trigger($,"afterAdd",{object:W}),$},K.remove=function($,W,N){var Z=[].concat(W);F.trigger($,"beforeRemove",{object:W});for(var z=0;z<Z.length;z++){var O=Z[z];switch(O.type){case"body":K.removeBody($,O,N);break;case"constraint":K.removeConstraint($,O,N);break;case"composite":K.removeComposite($,O,N);break;case"mouseConstraint":K.removeConstraint($,O.constraint);break}}return F.trigger($,"afterRemove",{object:W}),$},K.addComposite=function($,W){return $.composites.push(W),W.parent=$,K.setModified($,!0,!0,!1),$},K.removeComposite=function($,W,N){var Z=Q.indexOf($.composites,W);if(Z!==-1){var z=K.allBodies(W);K.removeCompositeAt($,Z);for(var O=0;O<z.length;O++)z[O].sleepCounter=0}if(N)for(var O=0;O<$.composites.length;O++)K.removeComposite($.composites[O],W,!0);return $},K.removeCompositeAt=function($,W){return $.composites.splice(W,1),K.setModified($,!0,!0,!1),$},K.addBody=function($,W){return $.bodies.push(W),K.setModified($,!0,!0,!1),$},K.removeBody=function($,W,N){var Z=Q.indexOf($.bodies,W);if(Z!==-1)K.removeBodyAt($,Z),W.sleepCounter=0;if(N)for(var z=0;z<$.composites.length;z++)K.removeBody($.composites[z],W,!0);return $},K.removeBodyAt=function($,W){return $.bodies.splice(W,1),K.setModified($,!0,!0,!1),$},K.addConstraint=function($,W){return $.constraints.push(W),K.setModified($,!0,!0,!1),$},K.removeConstraint=function($,W,N){var Z=Q.indexOf($.constraints,W);if(Z!==-1)K.removeConstraintAt($,Z);if(N)for(var z=0;z<$.composites.length;z++)K.removeConstraint($.composites[z],W,!0);return $},K.removeConstraintAt=function($,W){return $.constraints.splice(W,1),K.setModified($,!0,!0,!1),$},K.clear=function($,W,N){if(N)for(var Z=0;Z<$.composites.length;Z++)K.clear($.composites[Z],W,!0);if(W)$.bodies=$.bodies.filter(function(z){return z.isStatic});else $.bodies.length=0;return $.constraints.length=0,$.composites.length=0,K.setModified($,!0,!0,!1),$},K.allBodies=function($){if($.cache&&$.cache.allBodies)return $.cache.allBodies;var W=[].concat($.bodies);for(var N=0;N<$.composites.length;N++)W=W.concat(K.allBodies($.composites[N]));if($.cache)$.cache.allBodies=W;return W},K.allConstraints=function($){if($.cache&&$.cache.allConstraints)return $.cache.allConstraints;var W=[].concat($.constraints);for(var N=0;N<$.composites.length;N++)W=W.concat(K.allConstraints($.composites[N]));if($.cache)$.cache.allConstraints=W;return W},K.allComposites=function($){if($.cache&&$.cache.allComposites)return $.cache.allComposites;var W=[].concat($.composites);for(var N=0;N<$.composites.length;N++)W=W.concat(K.allComposites($.composites[N]));if($.cache)$.cache.allComposites=W;return W},K.get=function($,W,N){var Z,z;switch(N){case"body":Z=K.allBodies($);break;case"constraint":Z=K.allConstraints($);break;case"composite":Z=K.allComposites($).concat($);break}if(!Z)return null;return z=Z.filter(function(O){return O.id.toString()===W.toString()}),z.length===0?null:z[0]},K.move=function($,W,N){return K.remove($,W),K.add(N,W),$},K.rebase=function($){var W=K.allBodies($).concat(K.allConstraints($)).concat(K.allComposites($));for(var N=0;N<W.length;N++)W[N].id=Q.nextId();return $},K.translate=function($,W,N){var Z=N?K.allBodies($):$.bodies;for(var z=0;z<Z.length;z++)G.translate(Z[z],W);return $},K.rotate=function($,W,N,Z){var z=Math.cos(W),O=Math.sin(W),H=Z?K.allBodies($):$.bodies;for(var T=0;T<H.length;T++){var S=H[T],q=S.position.x-N.x,P=S.position.y-N.y;G.setPosition(S,{x:N.x+(q*z-P*O),y:N.y+(q*O+P*z)}),G.rotate(S,W)}return $},K.scale=function($,W,N,Z,z){var O=z?K.allBodies($):$.bodies;for(var H=0;H<O.length;H++){var T=O[H],S=T.position.x-Z.x,q=T.position.y-Z.y;G.setPosition(T,{x:Z.x+S*W,y:Z.y+q*N}),G.scale(T,W,N)}return $},K.bounds=function($){var W=K.allBodies($),N=[];for(var Z=0;Z<W.length;Z+=1){var z=W[Z];N.push(z.bounds.min,z.bounds.max)}return J.create(N)}})()},function(E,L,U){var K={};E.exports=K;var F=U(4),Q=U(5),J=U(0);(function(){K._motionWakeThreshold=0.18,K._motionSleepThreshold=0.08,K._minBias=0.9,K.update=function(G,$){var W=$/J._baseDelta,N=K._motionSleepThreshold;for(var Z=0;Z<G.length;Z++){var z=G[Z],O=F.getSpeed(z),H=F.getAngularSpeed(z),T=O*O+H*H;if(z.force.x!==0||z.force.y!==0){K.set(z,!1);continue}var S=Math.min(z.motion,T),q=Math.max(z.motion,T);if(z.motion=K._minBias*S+(1-K._minBias)*q,z.sleepThreshold>0&&z.motion<N){if(z.sleepCounter+=1,z.sleepCounter>=z.sleepThreshold/W)K.set(z,!0)}else if(z.sleepCounter>0)z.sleepCounter-=1}},K.afterCollisions=function(G){var $=K._motionSleepThreshold;for(var W=0;W<G.length;W++){var N=G[W];if(!N.isActive)continue;var Z=N.collision,z=Z.bodyA.parent,O=Z.bodyB.parent;if(z.isSleeping&&O.isSleeping||z.isStatic||O.isStatic)continue;if(z.isSleeping||O.isSleeping){var H=z.isSleeping&&!z.isStatic?z:O,T=H===z?O:z;if(!H.isStatic&&T.motion>$)K.set(H,!1)}}},K.set=function(G,$){var W=G.isSleeping;if($){if(G.isSleeping=!0,G.sleepCounter=G.sleepThreshold,G.positionImpulse.x=0,G.positionImpulse.y=0,G.positionPrev.x=G.position.x,G.positionPrev.y=G.position.y,G.anglePrev=G.angle,G.speed=0,G.angularSpeed=0,G.motion=0,!W)Q.trigger(G,"sleepStart")}else if(G.isSleeping=!1,G.sleepCounter=0,W)Q.trigger(G,"sleepEnd")}})()},function(E,L,U){var K={};E.exports=K;var F=U(3),Q=U(9);(function(){var J=[],G={overlap:0,axis:null},$={overlap:0,axis:null};K.create=function(W,N){return{pair:null,collided:!1,bodyA:W,bodyB:N,parentA:W.parent,parentB:N.parent,depth:0,normal:{x:0,y:0},tangent:{x:0,y:0},penetration:{x:0,y:0},supports:[null,null],supportCount:0}},K.collides=function(W,N,Z){if(K._overlapAxes(G,W.vertices,N.vertices,W.axes),G.overlap<=0)return null;if(K._overlapAxes($,N.vertices,W.vertices,N.axes),$.overlap<=0)return null;var z=Z&&Z.table[Q.id(W,N)],O;if(!z)O=K.create(W,N),O.collided=!0,O.bodyA=W.id<N.id?W:N,O.bodyB=W.id<N.id?N:W,O.parentA=O.bodyA.parent,O.parentB=O.bodyB.parent;else O=z.collision;W=O.bodyA,N=O.bodyB;var H;if(G.overlap<$.overlap)H=G;else H=$;var{normal:T,tangent:S,penetration:q,supports:P}=O,D=H.overlap,X=H.axis,Y=X.x,I=X.y,R=N.position.x-W.position.x,f=N.position.y-W.position.y;if(Y*R+I*f>=0)Y=-Y,I=-I;T.x=Y,T.y=I,S.x=-I,S.y=Y,q.x=Y*D,q.y=I*D,O.depth=D;var M=K._findSupports(W,N,T,1),j=0;if(F.contains(W.vertices,M[0]))P[j++]=M[0];if(F.contains(W.vertices,M[1]))P[j++]=M[1];if(j<2){var V=K._findSupports(N,W,T,-1);if(F.contains(N.vertices,V[0]))P[j++]=V[0];if(j<2&&F.contains(N.vertices,V[1]))P[j++]=V[1]}if(j===0)P[j++]=M[0];return O.supportCount=j,O},K._overlapAxes=function(W,N,Z,z){var O=N.length,H=Z.length,T=N[0].x,S=N[0].y,q=Z[0].x,P=Z[0].y,D=z.length,X=Number.MAX_VALUE,Y=0,I,R,f,M,j,V;for(j=0;j<D;j++){var k=z[j],h=k.x,w=k.y,C=T*h+S*w,A=q*h+P*w,B=C,g=A;for(V=1;V<O;V+=1)if(M=N[V].x*h+N[V].y*w,M>B)B=M;else if(M<C)C=M;for(V=1;V<H;V+=1)if(M=Z[V].x*h+Z[V].y*w,M>g)g=M;else if(M<A)A=M;if(R=B-A,f=g-C,I=R<f?R:f,I<X){if(X=I,Y=j,I<=0)break}}W.axis=z[Y],W.overlap=X},K._findSupports=function(W,N,Z,z){var O=N.vertices,H=O.length,T=W.position.x,S=W.position.y,q=Z.x*z,P=Z.y*z,D=O[0],X=D,Y=q*(T-X.x)+P*(S-X.y),I,R,f;for(f=1;f<H;f+=1)if(X=O[f],R=q*(T-X.x)+P*(S-X.y),R<Y)Y=R,D=X;if(I=O[(H+D.index-1)%H],Y=q*(T-I.x)+P*(S-I.y),X=O[(D.index+1)%H],q*(T-X.x)+P*(S-X.y)<Y)return J[0]=D,J[1]=X,J;return J[0]=D,J[1]=I,J}})()},function(E,L,U){var K={};E.exports=K;var F=U(16);(function(){K.create=function(Q,J){var{bodyA:G,bodyB:$}=Q,W={id:K.id(G,$),bodyA:G,bodyB:$,collision:Q,contacts:[F.create(),F.create()],contactCount:0,separation:0,isActive:!0,isSensor:G.isSensor||$.isSensor,timeCreated:J,timeUpdated:J,inverseMass:0,friction:0,frictionStatic:0,restitution:0,slop:0};return K.update(W,Q,J),W},K.update=function(Q,J,G){var{supports:$,supportCount:W}=J,N=Q.contacts,Z=J.parentA,z=J.parentB;Q.isActive=!0,Q.timeUpdated=G,Q.collision=J,Q.separation=J.depth,Q.inverseMass=Z.inverseMass+z.inverseMass,Q.friction=Z.friction<z.friction?Z.friction:z.friction,Q.frictionStatic=Z.frictionStatic>z.frictionStatic?Z.frictionStatic:z.frictionStatic,Q.restitution=Z.restitution>z.restitution?Z.restitution:z.restitution,Q.slop=Z.slop>z.slop?Z.slop:z.slop,Q.contactCount=W,J.pair=Q;var O=$[0],H=N[0],T=$[1],S=N[1];if(S.vertex===O||H.vertex===T)N[1]=H,N[0]=H=S,S=N[1];H.vertex=O,S.vertex=T},K.setActive=function(Q,J,G){if(J)Q.isActive=!0,Q.timeUpdated=G;else Q.isActive=!1,Q.contactCount=0},K.id=function(Q,J){return Q.id<J.id?Q.id.toString(36)+":"+J.id.toString(36):J.id.toString(36)+":"+Q.id.toString(36)}})()},function(E,L,U){var K={};E.exports=K;var F=U(3),Q=U(2),J=U(7),G=U(1),$=U(11),W=U(0);(function(){K._warming=0.4,K._torqueDampen=1,K._minLength=0.000001,K.create=function(N){var Z=N;if(Z.bodyA&&!Z.pointA)Z.pointA={x:0,y:0};if(Z.bodyB&&!Z.pointB)Z.pointB={x:0,y:0};var z=Z.bodyA?Q.add(Z.bodyA.position,Z.pointA):Z.pointA,O=Z.bodyB?Q.add(Z.bodyB.position,Z.pointB):Z.pointB,H=Q.magnitude(Q.sub(z,O));Z.length=typeof Z.length<"u"?Z.length:H,Z.id=Z.id||W.nextId(),Z.label=Z.label||"Constraint",Z.type="constraint",Z.stiffness=Z.stiffness||(Z.length>0?1:0.7),Z.damping=Z.damping||0,Z.angularStiffness=Z.angularStiffness||0,Z.angleA=Z.bodyA?Z.bodyA.angle:Z.angleA,Z.angleB=Z.bodyB?Z.bodyB.angle:Z.angleB,Z.plugin={};var T={visible:!0,lineWidth:2,strokeStyle:"#ffffff",type:"line",anchors:!0};if(Z.length===0&&Z.stiffness>0.1)T.type="pin",T.anchors=!1;else if(Z.stiffness<0.9)T.type="spring";return Z.render=W.extend(T,Z.render),Z},K.preSolveAll=function(N){for(var Z=0;Z<N.length;Z+=1){var z=N[Z],O=z.constraintImpulse;if(z.isStatic||O.x===0&&O.y===0&&O.angle===0)continue;z.position.x+=O.x,z.position.y+=O.y,z.angle+=O.angle}},K.solveAll=function(N,Z){var z=W.clamp(Z/W._baseDelta,0,1);for(var O=0;O<N.length;O+=1){var H=N[O],T=!H.bodyA||H.bodyA&&H.bodyA.isStatic,S=!H.bodyB||H.bodyB&&H.bodyB.isStatic;if(T||S)K.solve(N[O],z)}for(O=0;O<N.length;O+=1)if(H=N[O],T=!H.bodyA||H.bodyA&&H.bodyA.isStatic,S=!H.bodyB||H.bodyB&&H.bodyB.isStatic,!T&&!S)K.solve(N[O],z)},K.solve=function(N,Z){var{bodyA:z,bodyB:O,pointA:H,pointB:T}=N;if(!z&&!O)return;if(z&&!z.isStatic)Q.rotate(H,z.angle-N.angleA,H),N.angleA=z.angle;if(O&&!O.isStatic)Q.rotate(T,O.angle-N.angleB,T),N.angleB=O.angle;var S=H,q=T;if(z)S=Q.add(z.position,H);if(O)q=Q.add(O.position,T);if(!S||!q)return;var P=Q.sub(S,q),D=Q.magnitude(P);if(D<K._minLength)D=K._minLength;var X=(D-N.length)/D,Y=N.stiffness>=1||N.length===0,I=Y?N.stiffness*Z:N.stiffness*Z*Z,R=N.damping*Z,f=Q.mult(P,X*I),M=(z?z.inverseMass:0)+(O?O.inverseMass:0),j=(z?z.inverseInertia:0)+(O?O.inverseInertia:0),V=M+j,k,h,w,C,A;if(R>0){var B=Q.create();w=Q.div(P,D),A=Q.sub(O&&Q.sub(O.position,O.positionPrev)||B,z&&Q.sub(z.position,z.positionPrev)||B),C=Q.dot(w,A)}if(z&&!z.isStatic){if(h=z.inverseMass/M,z.constraintImpulse.x-=f.x*h,z.constraintImpulse.y-=f.y*h,z.position.x-=f.x*h,z.position.y-=f.y*h,R>0)z.positionPrev.x-=R*w.x*C*h,z.positionPrev.y-=R*w.y*C*h;k=Q.cross(H,f)/V*K._torqueDampen*z.inverseInertia*(1-N.angularStiffness),z.constraintImpulse.angle-=k,z.angle-=k}if(O&&!O.isStatic){if(h=O.inverseMass/M,O.constraintImpulse.x+=f.x*h,O.constraintImpulse.y+=f.y*h,O.position.x+=f.x*h,O.position.y+=f.y*h,R>0)O.positionPrev.x+=R*w.x*C*h,O.positionPrev.y+=R*w.y*C*h;k=Q.cross(T,f)/V*K._torqueDampen*O.inverseInertia*(1-N.angularStiffness),O.constraintImpulse.angle+=k,O.angle+=k}},K.postSolveAll=function(N){for(var Z=0;Z<N.length;Z++){var z=N[Z],O=z.constraintImpulse;if(z.isStatic||O.x===0&&O.y===0&&O.angle===0)continue;J.set(z,!1);for(var H=0;H<z.parts.length;H++){var T=z.parts[H];if(F.translate(T.vertices,O),H>0)T.position.x+=O.x,T.position.y+=O.y;if(O.angle!==0){if(F.rotate(T.vertices,O.angle,z.position),$.rotate(T.axes,O.angle),H>0)Q.rotateAbout(T.position,O.angle,z.position,T.position)}G.update(T.bounds,T.vertices,z.velocity)}O.angle*=K._warming,O.x*=K._warming,O.y*=K._warming}},K.pointAWorld=function(N){return{x:(N.bodyA?N.bodyA.position.x:0)+(N.pointA?N.pointA.x:0),y:(N.bodyA?N.bodyA.position.y:0)+(N.pointA?N.pointA.y:0)}},K.pointBWorld=function(N){return{x:(N.bodyB?N.bodyB.position.x:0)+(N.pointB?N.pointB.x:0),y:(N.bodyB?N.bodyB.position.y:0)+(N.pointB?N.pointB.y:0)}},K.currentLength=function(N){var Z=(N.bodyA?N.bodyA.position.x:0)+(N.pointA?N.pointA.x:0),z=(N.bodyA?N.bodyA.position.y:0)+(N.pointA?N.pointA.y:0),O=(N.bodyB?N.bodyB.position.x:0)+(N.pointB?N.pointB.x:0),H=(N.bodyB?N.bodyB.position.y:0)+(N.pointB?N.pointB.y:0),T=Z-O,S=z-H;return Math.sqrt(T*T+S*S)}})()},function(E,L,U){var K={};E.exports=K;var F=U(2),Q=U(0);(function(){K.fromVertices=function(J){var G={};for(var $=0;$<J.length;$++){var W=($+1)%J.length,N=F.normalise({x:J[W].y-J[$].y,y:J[$].x-J[W].x}),Z=N.y===0?1/0:N.x/N.y;Z=Z.toFixed(3).toString(),G[Z]=N}return Q.values(G)},K.rotate=function(J,G){if(G===0)return;var $=Math.cos(G),W=Math.sin(G);for(var N=0;N<J.length;N++){var Z=J[N],z;z=Z.x*$-Z.y*W,Z.y=Z.x*W+Z.y*$,Z.x=z}}})()},function(E,L,U){var K={};E.exports=K;var F=U(3),Q=U(0),J=U(4),G=U(1),$=U(2);(function(){K.rectangle=function(W,N,Z,z,O){O=O||{};var H={label:"Rectangle Body",position:{x:W,y:N},vertices:F.fromPath("L 0 0 L "+Z+" 0 L "+Z+" "+z+" L 0 "+z)};if(O.chamfer){var T=O.chamfer;H.vertices=F.chamfer(H.vertices,T.radius,T.quality,T.qualityMin,T.qualityMax),delete O.chamfer}return J.create(Q.extend({},H,O))},K.trapezoid=function(W,N,Z,z,O,H){if(H=H||{},O>=1)Q.warn("Bodies.trapezoid: slope parameter must be < 1.");O*=0.5;var T=(1-O*2)*Z,S=Z*O,q=S+T,P=q+S,D;if(O<0.5)D="L 0 0 L "+S+" "+-z+" L "+q+" "+-z+" L "+P+" 0";else D="L 0 0 L "+q+" "+-z+" L "+P+" 0";var X={label:"Trapezoid Body",position:{x:W,y:N},vertices:F.fromPath(D)};if(H.chamfer){var Y=H.chamfer;X.vertices=F.chamfer(X.vertices,Y.radius,Y.quality,Y.qualityMin,Y.qualityMax),delete H.chamfer}return J.create(Q.extend({},X,H))},K.circle=function(W,N,Z,z,O){z=z||{};var H={label:"Circle Body",circleRadius:Z};O=O||25;var T=Math.ceil(Math.max(10,Math.min(O,Z)));if(T%2===1)T+=1;return K.polygon(W,N,T,Z,Q.extend({},H,z))},K.polygon=function(W,N,Z,z,O){if(O=O||{},Z<3)return K.circle(W,N,z,O);var H=2*Math.PI/Z,T="",S=H*0.5;for(var q=0;q<Z;q+=1){var P=S+q*H,D=Math.cos(P)*z,X=Math.sin(P)*z;T+="L "+D.toFixed(3)+" "+X.toFixed(3)+" "}var Y={label:"Polygon Body",position:{x:W,y:N},vertices:F.fromPath(T)};if(O.chamfer){var I=O.chamfer;Y.vertices=F.chamfer(Y.vertices,I.radius,I.quality,I.qualityMin,I.qualityMax),delete O.chamfer}return J.create(Q.extend({},Y,O))},K.fromVertices=function(W,N,Z,z,O,H,T,S){var q=Q.getDecomp(),P,D,X,Y,I,R,f,M,j,V,k;if(P=Boolean(q&&q.quickDecomp),z=z||{},X=[],O=typeof O<"u"?O:!1,H=typeof H<"u"?H:0.01,T=typeof T<"u"?T:10,S=typeof S<"u"?S:0.01,!Q.isArray(Z[0]))Z=[Z];for(V=0;V<Z.length;V+=1){if(R=Z[V],Y=F.isConvex(R),I=!Y,I&&!P)Q.warnOnce("Bodies.fromVertices: Install the 'poly-decomp' library and use Common.setDecomp or provide 'decomp' as a global to decompose concave vertices.");if(Y||!P){if(Y)R=F.clockwiseSort(R);else R=F.hull(R);X.push({position:{x:W,y:N},vertices:R})}else{var h=R.map(function(v){return[v.x,v.y]});if(q.makeCCW(h),H!==!1)q.removeCollinearPoints(h,H);if(S!==!1&&q.removeDuplicatePoints)q.removeDuplicatePoints(h,S);var w=q.quickDecomp(h);for(f=0;f<w.length;f++){var C=w[f],A=C.map(function(v){return{x:v[0],y:v[1]}});if(T>0&&F.area(A)<T)continue;X.push({position:F.centre(A),vertices:A})}}}for(f=0;f<X.length;f++)X[f]=J.create(Q.extend(X[f],z));if(O){var B=5;for(f=0;f<X.length;f++){var g=X[f];for(M=f+1;M<X.length;M++){var y=X[M];if(G.overlaps(g.bounds,y.bounds)){var m=g.vertices,p=y.vertices;for(j=0;j<g.vertices.length;j++)for(k=0;k<y.vertices.length;k++){var o=$.magnitudeSquared($.sub(m[(j+1)%m.length],p[k])),s=$.magnitudeSquared($.sub(m[j],p[(k+1)%p.length]));if(o<B&&s<B)m[j].isInternal=!0,p[k].isInternal=!0}}}}}if(X.length>1)return D=J.create(Q.extend({parts:X.slice(0)},z)),J.setPosition(D,{x:W,y:N}),D;else return X[0]}})()},function(E,L,U){var K={};E.exports=K;var F=U(0),Q=U(8);(function(){K.create=function(J){var G={bodies:[],collisions:[],pairs:null};return F.extend(G,J)},K.setBodies=function(J,G){J.bodies=G.slice(0)},K.clear=function(J){J.bodies=[],J.collisions=[]},K.collisions=function(J){var{pairs:G,bodies:$}=J,W=$.length,N=K.canCollide,Z=Q.collides,z=J.collisions,O=0,H,T;$.sort(K._compareBoundsX);for(H=0;H<W;H++){var S=$[H],q=S.bounds,P=S.bounds.max.x,D=S.bounds.max.y,X=S.bounds.min.y,Y=S.isStatic||S.isSleeping,I=S.parts.length,R=I===1;for(T=H+1;T<W;T++){var f=$[T],M=f.bounds;if(M.min.x>P)break;if(D<M.min.y||X>M.max.y)continue;if(Y&&(f.isStatic||f.isSleeping))continue;if(!N(S.collisionFilter,f.collisionFilter))continue;var j=f.parts.length;if(R&&j===1){var V=Z(S,f,G);if(V)z[O++]=V}else{var k=I>1?1:0,h=j>1?1:0;for(var w=k;w<I;w++){var C=S.parts[w],q=C.bounds;for(var A=h;A<j;A++){var B=f.parts[A],M=B.bounds;if(q.min.x>M.max.x||q.max.x<M.min.x||q.max.y<M.min.y||q.min.y>M.max.y)continue;var V=Z(C,B,G);if(V)z[O++]=V}}}}}if(z.length!==O)z.length=O;return z},K.canCollide=function(J,G){if(J.group===G.group&&J.group!==0)return J.group>0;return(J.mask&G.category)!==0&&(G.mask&J.category)!==0},K._compareBoundsX=function(J,G){return J.bounds.min.x-G.bounds.min.x}})()},function(E,L,U){var K={};E.exports=K;var F=U(0);(function(){K.create=function(Q){var J={};if(!Q)F.log("Mouse.create: element was undefined, defaulting to document.body","warn");return J.element=Q||document.body,J.absolute={x:0,y:0},J.position={x:0,y:0},J.mousedownPosition={x:0,y:0},J.mouseupPosition={x:0,y:0},J.offset={x:0,y:0},J.scale={x:1,y:1},J.wheelDelta=0,J.button=-1,J.pixelRatio=parseInt(J.element.getAttribute("data-pixel-ratio"),10)||1,J.sourceEvents={mousemove:null,mousedown:null,mouseup:null,mousewheel:null},J.mousemove=function(G){var $=K._getRelativeMousePosition(G,J.element,J.pixelRatio),W=G.changedTouches;if(W)J.button=0,G.preventDefault();J.absolute.x=$.x,J.absolute.y=$.y,J.position.x=J.absolute.x*J.scale.x+J.offset.x,J.position.y=J.absolute.y*J.scale.y+J.offset.y,J.sourceEvents.mousemove=G},J.mousedown=function(G){var $=K._getRelativeMousePosition(G,J.element,J.pixelRatio),W=G.changedTouches;if(W)J.button=0,G.preventDefault();else J.button=G.button;J.absolute.x=$.x,J.absolute.y=$.y,J.position.x=J.absolute.x*J.scale.x+J.offset.x,J.position.y=J.absolute.y*J.scale.y+J.offset.y,J.mousedownPosition.x=J.position.x,J.mousedownPosition.y=J.position.y,J.sourceEvents.mousedown=G},J.mouseup=function(G){var $=K._getRelativeMousePosition(G,J.element,J.pixelRatio),W=G.changedTouches;if(W)G.preventDefault();J.button=-1,J.absolute.x=$.x,J.absolute.y=$.y,J.position.x=J.absolute.x*J.scale.x+J.offset.x,J.position.y=J.absolute.y*J.scale.y+J.offset.y,J.mouseupPosition.x=J.position.x,J.mouseupPosition.y=J.position.y,J.sourceEvents.mouseup=G},J.mousewheel=function(G){J.wheelDelta=Math.max(-1,Math.min(1,G.wheelDelta||-G.detail)),G.preventDefault(),J.sourceEvents.mousewheel=G},K.setElement(J,J.element),J},K.setElement=function(Q,J){Q.element=J,J.addEventListener("mousemove",Q.mousemove,{passive:!0}),J.addEventListener("mousedown",Q.mousedown,{passive:!0}),J.addEventListener("mouseup",Q.mouseup,{passive:!0}),J.addEventListener("wheel",Q.mousewheel,{passive:!1}),J.addEventListener("touchmove",Q.mousemove,{passive:!1}),J.addEventListener("touchstart",Q.mousedown,{passive:!1}),J.addEventListener("touchend",Q.mouseup,{passive:!1})},K.clearSourceEvents=function(Q){Q.sourceEvents.mousemove=null,Q.sourceEvents.mousedown=null,Q.sourceEvents.mouseup=null,Q.sourceEvents.mousewheel=null,Q.wheelDelta=0},K.setOffset=function(Q,J){Q.offset.x=J.x,Q.offset.y=J.y,Q.position.x=Q.absolute.x*Q.scale.x+Q.offset.x,Q.position.y=Q.absolute.y*Q.scale.y+Q.offset.y},K.setScale=function(Q,J){Q.scale.x=J.x,Q.scale.y=J.y,Q.position.x=Q.absolute.x*Q.scale.x+Q.offset.x,Q.position.y=Q.absolute.y*Q.scale.y+Q.offset.y},K._getRelativeMousePosition=function(Q,J,G){var $=J.getBoundingClientRect(),W=document.documentElement||document.body.parentNode||document.body,N=window.pageXOffset!==void 0?window.pageXOffset:W.scrollLeft,Z=window.pageYOffset!==void 0?window.pageYOffset:W.scrollTop,z=Q.changedTouches,O,H;if(z)O=z[0].pageX-$.left-N,H=z[0].pageY-$.top-Z;else O=Q.pageX-$.left-N,H=Q.pageY-$.top-Z;return{x:O/(J.clientWidth/(J.width||J.clientWidth)*G),y:H/(J.clientHeight/(J.height||J.clientHeight)*G)}}})()},function(E,L,U){var K={};E.exports=K;var F=U(0);(function(){K._registry={},K.register=function(Q){if(!K.isPlugin(Q))F.warn("Plugin.register:",K.toString(Q),"does not implement all required fields.");if(Q.name in K._registry){var J=K._registry[Q.name],G=K.versionParse(Q.version).number,$=K.versionParse(J.version).number;if(G>$)F.warn("Plugin.register:",K.toString(J),"was upgraded to",K.toString(Q)),K._registry[Q.name]=Q;else if(G<$)F.warn("Plugin.register:",K.toString(J),"can not be downgraded to",K.toString(Q));else if(Q!==J)F.warn("Plugin.register:",K.toString(Q),"is already registered to different plugin object")}else K._registry[Q.name]=Q;return Q},K.resolve=function(Q){return K._registry[K.dependencyParse(Q).name]},K.toString=function(Q){return typeof Q==="string"?Q:(Q.name||"anonymous")+"@"+(Q.version||Q.range||"0.0.0")},K.isPlugin=function(Q){return Q&&Q.name&&Q.version&&Q.install},K.isUsed=function(Q,J){return Q.used.indexOf(J)>-1},K.isFor=function(Q,J){var G=Q.for&&K.dependencyParse(Q.for);return!Q.for||J.name===G.name&&K.versionSatisfies(J.version,G.range)},K.use=function(Q,J){if(Q.uses=(Q.uses||[]).concat(J||[]),Q.uses.length===0){F.warn("Plugin.use:",K.toString(Q),"does not specify any dependencies to install.");return}var G=K.dependencies(Q),$=F.topologicalSort(G),W=[];for(var N=0;N<$.length;N+=1){if($[N]===Q.name)continue;var Z=K.resolve($[N]);if(!Z){W.push("❌ "+$[N]);continue}if(K.isUsed(Q,Z.name))continue;if(!K.isFor(Z,Q))F.warn("Plugin.use:",K.toString(Z),"is for",Z.for,"but installed on",K.toString(Q)+"."),Z._warned=!0;if(Z.install)Z.install(Q);else F.warn("Plugin.use:",K.toString(Z),"does not specify an install function."),Z._warned=!0;if(Z._warned)W.push("\uD83D\uDD36 "+K.toString(Z)),delete Z._warned;else W.push("✅ "+K.toString(Z));Q.used.push(Z.name)}if(W.length>0)F.info(W.join("  "))},K.dependencies=function(Q,J){var G=K.dependencyParse(Q),$=G.name;if(J=J||{},$ in J)return;Q=K.resolve(Q)||Q,J[$]=F.map(Q.uses||[],function(N){if(K.isPlugin(N))K.register(N);var Z=K.dependencyParse(N),z=K.resolve(N);if(z&&!K.versionSatisfies(z.version,Z.range))F.warn("Plugin.dependencies:",K.toString(z),"does not satisfy",K.toString(Z),"used by",K.toString(G)+"."),z._warned=!0,Q._warned=!0;else if(!z)F.warn("Plugin.dependencies:",K.toString(N),"used by",K.toString(G),"could not be resolved."),Q._warned=!0;return Z.name});for(var W=0;W<J[$].length;W+=1)K.dependencies(J[$][W],J);return J},K.dependencyParse=function(Q){if(F.isString(Q)){var J=/^[\w-]+(@(\*|[\^~]?\d+\.\d+\.\d+(-[0-9A-Za-z-+]+)?))?$/;if(!J.test(Q))F.warn("Plugin.dependencyParse:",Q,"is not a valid dependency string.");return{name:Q.split("@")[0],range:Q.split("@")[1]||"*"}}return{name:Q.name,range:Q.range||Q.version}},K.versionParse=function(Q){var J=/^(\*)|(\^|~|>=|>)?\s*((\d+)\.(\d+)\.(\d+))(-[0-9A-Za-z-+]+)?$/;if(!J.test(Q))F.warn("Plugin.versionParse:",Q,"is not a valid version or range.");var G=J.exec(Q),$=Number(G[4]),W=Number(G[5]),N=Number(G[6]);return{isRange:Boolean(G[1]||G[2]),version:G[3],range:Q,operator:G[1]||G[2]||"",major:$,minor:W,patch:N,parts:[$,W,N],prerelease:G[7],number:$*1e8+W*1e4+N}},K.versionSatisfies=function(Q,J){J=J||"*";var G=K.versionParse(J),$=K.versionParse(Q);if(G.isRange){if(G.operator==="*"||Q==="*")return!0;if(G.operator===">")return $.number>G.number;if(G.operator===">=")return $.number>=G.number;if(G.operator==="~")return $.major===G.major&&$.minor===G.minor&&$.patch>=G.patch;if(G.operator==="^"){if(G.major>0)return $.major===G.major&&$.number>=G.number;if(G.minor>0)return $.minor===G.minor&&$.patch>=G.patch;return $.patch===G.patch}}return Q===J||Q==="*"}})()},function(E,L){var U={};E.exports=U,function(){U.create=function(K){return{vertex:K,normalImpulse:0,tangentImpulse:0}}}()},function(E,L,U){var K={};E.exports=K;var F=U(7),Q=U(18),J=U(13),G=U(19),$=U(5),W=U(6),N=U(10),Z=U(0),z=U(4);(function(){K._deltaMax=16.666666666666668,K.create=function(O){O=O||{};var H={positionIterations:6,velocityIterations:4,constraintIterations:2,enableSleeping:!1,events:[],plugin:{},gravity:{x:0,y:1,scale:0.001},timing:{timestamp:0,timeScale:1,lastDelta:0,lastElapsed:0,lastUpdatesPerFrame:0}},T=Z.extend(H,O);return T.world=O.world||W.create({label:"World"}),T.pairs=O.pairs||G.create(),T.detector=O.detector||J.create(),T.detector.pairs=T.pairs,T.grid={buckets:[]},T.world.gravity=T.gravity,T.broadphase=T.grid,T.metrics={},T},K.update=function(O,H){var T=Z.now(),S=O.world,q=O.detector,P=O.pairs,D=O.timing,X=D.timestamp,Y;if(H>K._deltaMax)Z.warnOnce("Matter.Engine.update: delta argument is recommended to be less than or equal to",K._deltaMax.toFixed(3),"ms.");H=typeof H<"u"?H:Z._baseDelta,H*=D.timeScale,D.timestamp+=H,D.lastDelta=H;var I={timestamp:D.timestamp,delta:H};$.trigger(O,"beforeUpdate",I);var R=W.allBodies(S),f=W.allConstraints(S);if(S.isModified)J.setBodies(q,R),W.setModified(S,!1,!1,!0);if(O.enableSleeping)F.update(R,H);if(K._bodiesApplyGravity(R,O.gravity),H>0)K._bodiesUpdate(R,H);$.trigger(O,"beforeSolve",I),N.preSolveAll(R);for(Y=0;Y<O.constraintIterations;Y++)N.solveAll(f,H);N.postSolveAll(R);var M=J.collisions(q);if(G.update(P,M,X),O.enableSleeping)F.afterCollisions(P.list);if(P.collisionStart.length>0)$.trigger(O,"collisionStart",{pairs:P.collisionStart,timestamp:D.timestamp,delta:H});var j=Z.clamp(20/O.positionIterations,0,1);Q.preSolvePosition(P.list);for(Y=0;Y<O.positionIterations;Y++)Q.solvePosition(P.list,H,j);Q.postSolvePosition(R),N.preSolveAll(R);for(Y=0;Y<O.constraintIterations;Y++)N.solveAll(f,H);N.postSolveAll(R),Q.preSolveVelocity(P.list);for(Y=0;Y<O.velocityIterations;Y++)Q.solveVelocity(P.list,H);if(K._bodiesUpdateVelocities(R),P.collisionActive.length>0)$.trigger(O,"collisionActive",{pairs:P.collisionActive,timestamp:D.timestamp,delta:H});if(P.collisionEnd.length>0)$.trigger(O,"collisionEnd",{pairs:P.collisionEnd,timestamp:D.timestamp,delta:H});return K._bodiesClearForces(R),$.trigger(O,"afterUpdate",I),O.timing.lastElapsed=Z.now()-T,O},K.merge=function(O,H){if(Z.extend(O,H),H.world){O.world=H.world,K.clear(O);var T=W.allBodies(O.world);for(var S=0;S<T.length;S++){var q=T[S];F.set(q,!1),q.id=Z.nextId()}}},K.clear=function(O){G.clear(O.pairs),J.clear(O.detector)},K._bodiesClearForces=function(O){var H=O.length;for(var T=0;T<H;T++){var S=O[T];S.force.x=0,S.force.y=0,S.torque=0}},K._bodiesApplyGravity=function(O,H){var T=typeof H.scale<"u"?H.scale:0.001,S=O.length;if(H.x===0&&H.y===0||T===0)return;for(var q=0;q<S;q++){var P=O[q];if(P.isStatic||P.isSleeping)continue;P.force.y+=P.mass*H.y*T,P.force.x+=P.mass*H.x*T}},K._bodiesUpdate=function(O,H){var T=O.length;for(var S=0;S<T;S++){var q=O[S];if(q.isStatic||q.isSleeping)continue;z.update(q,H)}},K._bodiesUpdateVelocities=function(O){var H=O.length;for(var T=0;T<H;T++)z.updateVelocities(O[T])}})()},function(E,L,U){var K={};E.exports=K;var F=U(3),Q=U(0),J=U(1);(function(){K._restingThresh=2,K._restingThreshTangent=Math.sqrt(6),K._positionDampen=0.9,K._positionWarming=0.8,K._frictionNormalMultiplier=5,K._frictionMaxStatic=Number.MAX_VALUE,K.preSolvePosition=function(G){var $,W,N,Z=G.length;for($=0;$<Z;$++){if(W=G[$],!W.isActive)continue;N=W.contactCount,W.collision.parentA.totalContacts+=N,W.collision.parentB.totalContacts+=N}},K.solvePosition=function(G,$,W){var N,Z,z,O,H,T,S,q,P=K._positionDampen*(W||1),D=Q.clamp($/Q._baseDelta,0,1),X=G.length;for(N=0;N<X;N++){if(Z=G[N],!Z.isActive||Z.isSensor)continue;z=Z.collision,O=z.parentA,H=z.parentB,T=z.normal,Z.separation=z.depth+T.x*(H.positionImpulse.x-O.positionImpulse.x)+T.y*(H.positionImpulse.y-O.positionImpulse.y)}for(N=0;N<X;N++){if(Z=G[N],!Z.isActive||Z.isSensor)continue;if(z=Z.collision,O=z.parentA,H=z.parentB,T=z.normal,q=Z.separation-Z.slop*D,O.isStatic||H.isStatic)q*=2;if(!(O.isStatic||O.isSleeping))S=P/O.totalContacts,O.positionImpulse.x+=T.x*q*S,O.positionImpulse.y+=T.y*q*S;if(!(H.isStatic||H.isSleeping))S=P/H.totalContacts,H.positionImpulse.x-=T.x*q*S,H.positionImpulse.y-=T.y*q*S}},K.postSolvePosition=function(G){var $=K._positionWarming,W=G.length,N=F.translate,Z=J.update;for(var z=0;z<W;z++){var O=G[z],H=O.positionImpulse,T=H.x,S=H.y,q=O.velocity;if(O.totalContacts=0,T!==0||S!==0){for(var P=0;P<O.parts.length;P++){var D=O.parts[P];N(D.vertices,H),Z(D.bounds,D.vertices,q),D.position.x+=T,D.position.y+=S}if(O.positionPrev.x+=T,O.positionPrev.y+=S,T*q.x+S*q.y<0)H.x=0,H.y=0;else H.x*=$,H.y*=$}}},K.preSolveVelocity=function(G){var $=G.length,W,N;for(W=0;W<$;W++){var Z=G[W];if(!Z.isActive||Z.isSensor)continue;var{contacts:z,contactCount:O,collision:H}=Z,T=H.parentA,S=H.parentB,q=H.normal,P=H.tangent;for(N=0;N<O;N++){var D=z[N],X=D.vertex,Y=D.normalImpulse,I=D.tangentImpulse;if(Y!==0||I!==0){var R=q.x*Y+P.x*I,f=q.y*Y+P.y*I;if(!(T.isStatic||T.isSleeping))T.positionPrev.x+=R*T.inverseMass,T.positionPrev.y+=f*T.inverseMass,T.anglePrev+=T.inverseInertia*((X.x-T.position.x)*f-(X.y-T.position.y)*R);if(!(S.isStatic||S.isSleeping))S.positionPrev.x-=R*S.inverseMass,S.positionPrev.y-=f*S.inverseMass,S.anglePrev-=S.inverseInertia*((X.x-S.position.x)*f-(X.y-S.position.y)*R)}}}},K.solveVelocity=function(G,$){var W=$/Q._baseDelta,N=W*W,Z=N*W,z=-K._restingThresh*W,O=K._restingThreshTangent,H=K._frictionNormalMultiplier*W,T=K._frictionMaxStatic,S=G.length,q,P,D,X;for(D=0;D<S;D++){var Y=G[D];if(!Y.isActive||Y.isSensor)continue;var I=Y.collision,R=I.parentA,f=I.parentB,M=I.normal.x,j=I.normal.y,V=I.tangent.x,k=I.tangent.y,h=Y.inverseMass,w=Y.friction*Y.frictionStatic*H,C=Y.contacts,A=Y.contactCount,B=1/A,g=R.position.x-R.positionPrev.x,y=R.position.y-R.positionPrev.y,m=R.angle-R.anglePrev,p=f.position.x-f.positionPrev.x,o=f.position.y-f.positionPrev.y,s=f.angle-f.anglePrev;for(X=0;X<A;X++){var v=C[X],n=v.vertex,l=n.x-R.position.x,$0=n.y-R.position.y,r=n.x-f.position.x,i=n.y-f.position.y,c=g-$0*m,_0=y+l*m,u0=p-i*s,y0=o+r*s,V0=c-u0,j0=_0-y0,H0=M*V0+j*j0,t=V*V0+k*j0,k0=Y.separation+H0,D0=Math.min(k0,1);D0=k0<0?0:D0;var h0=D0*w;if(t<-h0||t>h0){if(P=t>0?t:-t,q=Y.friction*(t>0?1:-1)*Z,q<-P)q=-P;else if(q>P)q=P}else q=t,P=T;var C0=l*j-$0*M,w0=r*j-i*M,A0=B/(h+R.inverseInertia*C0*C0+f.inverseInertia*w0*w0),F0=(1+Y.restitution)*H0*A0;if(q*=A0,H0<z)v.normalImpulse=0;else{var m0=v.normalImpulse;if(v.normalImpulse+=F0,v.normalImpulse>0)v.normalImpulse=0;F0=v.normalImpulse-m0}if(t<-O||t>O)v.tangentImpulse=0;else{var l0=v.tangentImpulse;if(v.tangentImpulse+=q,v.tangentImpulse<-P)v.tangentImpulse=-P;if(v.tangentImpulse>P)v.tangentImpulse=P;q=v.tangentImpulse-l0}var Q0=M*F0+V*q,U0=j*F0+k*q;if(!(R.isStatic||R.isSleeping))R.positionPrev.x+=Q0*R.inverseMass,R.positionPrev.y+=U0*R.inverseMass,R.anglePrev+=(l*U0-$0*Q0)*R.inverseInertia;if(!(f.isStatic||f.isSleeping))f.positionPrev.x-=Q0*f.inverseMass,f.positionPrev.y-=U0*f.inverseMass,f.anglePrev-=(r*U0-i*Q0)*f.inverseInertia}}}})()},function(E,L,U){var K={};E.exports=K;var F=U(9),Q=U(0);(function(){K.create=function(J){return Q.extend({table:{},list:[],collisionStart:[],collisionActive:[],collisionEnd:[]},J)},K.update=function(J,G,$){var{update:W,create:N,setActive:Z}=F,z=J.table,O=J.list,H=O.length,T=H,S=J.collisionStart,q=J.collisionEnd,P=J.collisionActive,D=G.length,X=0,Y=0,I=0,R,f,M;for(M=0;M<D;M++)if(R=G[M],f=R.pair,f){if(f.isActive)P[I++]=f;W(f,R,$)}else f=N(R,$),z[f.id]=f,S[X++]=f,O[T++]=f;T=0,H=O.length;for(M=0;M<H;M++)if(f=O[M],f.timeUpdated>=$)O[T++]=f;else if(Z(f,!1,$),f.collision.bodyA.sleepCounter>0&&f.collision.bodyB.sleepCounter>0)O[T++]=f;else q[Y++]=f,delete z[f.id];if(O.length!==T)O.length=T;if(S.length!==X)S.length=X;if(q.length!==Y)q.length=Y;if(P.length!==I)P.length=I},K.clear=function(J){return J.table={},J.list.length=0,J.collisionStart.length=0,J.collisionActive.length=0,J.collisionEnd.length=0,J}})()},function(E,L,U){var K=E.exports=U(21);K.Axes=U(11),K.Bodies=U(12),K.Body=U(4),K.Bounds=U(1),K.Collision=U(8),K.Common=U(0),K.Composite=U(6),K.Composites=U(22),K.Constraint=U(10),K.Contact=U(16),K.Detector=U(13),K.Engine=U(17),K.Events=U(5),K.Grid=U(23),K.Mouse=U(14),K.MouseConstraint=U(24),K.Pair=U(9),K.Pairs=U(19),K.Plugin=U(15),K.Query=U(25),K.Render=U(26),K.Resolver=U(18),K.Runner=U(27),K.SAT=U(28),K.Sleeping=U(7),K.Svg=U(29),K.Vector=U(2),K.Vertices=U(3),K.World=U(30),K.Engine.run=K.Runner.run,K.Common.deprecated(K.Engine,"run","Engine.run ➤ use Matter.Runner.run(engine) instead")},function(E,L,U){var K={};E.exports=K;var F=U(15),Q=U(0);(function(){K.name="matter-js",K.version="0.20.0",K.uses=[],K.used=[],K.use=function(){F.use(K,Array.prototype.slice.call(arguments))},K.before=function(J,G){return J=J.replace(/^Matter./,""),Q.chainPathBefore(K,J,G)},K.after=function(J,G){return J=J.replace(/^Matter./,""),Q.chainPathAfter(K,J,G)}})()},function(E,L,U){var K={};E.exports=K;var F=U(6),Q=U(10),J=U(0),G=U(4),$=U(12),W=J.deprecated;(function(){K.stack=function(N,Z,z,O,H,T,S){var q=F.create({label:"Stack"}),P=N,D=Z,X,Y=0;for(var I=0;I<O;I++){var R=0;for(var f=0;f<z;f++){var M=S(P,D,f,I,X,Y);if(M){var j=M.bounds.max.y-M.bounds.min.y,V=M.bounds.max.x-M.bounds.min.x;if(j>R)R=j;G.translate(M,{x:V*0.5,y:j*0.5}),P=M.bounds.max.x+H,F.addBody(q,M),X=M,Y+=1}else P+=H}D+=R+T,P=N}return q},K.chain=function(N,Z,z,O,H,T){var S=N.bodies;for(var q=1;q<S.length;q++){var P=S[q-1],D=S[q],X=P.bounds.max.y-P.bounds.min.y,Y=P.bounds.max.x-P.bounds.min.x,I=D.bounds.max.y-D.bounds.min.y,R=D.bounds.max.x-D.bounds.min.x,f={bodyA:P,pointA:{x:Y*Z,y:X*z},bodyB:D,pointB:{x:R*O,y:I*H}},M=J.extend(f,T);F.addConstraint(N,Q.create(M))}return N.label+=" Chain",N},K.mesh=function(N,Z,z,O,H){var T=N.bodies,S,q,P,D,X;for(S=0;S<z;S++){for(q=1;q<Z;q++)P=T[q-1+S*Z],D=T[q+S*Z],F.addConstraint(N,Q.create(J.extend({bodyA:P,bodyB:D},H)));if(S>0)for(q=0;q<Z;q++){if(P=T[q+(S-1)*Z],D=T[q+S*Z],F.addConstraint(N,Q.create(J.extend({bodyA:P,bodyB:D},H))),O&&q>0)X=T[q-1+(S-1)*Z],F.addConstraint(N,Q.create(J.extend({bodyA:X,bodyB:D},H)));if(O&&q<Z-1)X=T[q+1+(S-1)*Z],F.addConstraint(N,Q.create(J.extend({bodyA:X,bodyB:D},H)))}}return N.label+=" Mesh",N},K.pyramid=function(N,Z,z,O,H,T,S){return K.stack(N,Z,z,O,H,T,function(q,P,D,X,Y,I){var R=Math.min(O,Math.ceil(z/2)),f=Y?Y.bounds.max.x-Y.bounds.min.x:0;if(X>R)return;X=R-X;var M=X,j=z-1-X;if(D<M||D>j)return;if(I===1)G.translate(Y,{x:(D+(z%2===1?1:-1))*f,y:0});var V=Y?D*f:0;return S(N+V+D*H,P,D,X,Y,I)})},K.newtonsCradle=function(N,Z,z,O,H){var T=F.create({label:"Newtons Cradle"});for(var S=0;S<z;S++){var q=1.9,P=$.circle(N+S*(O*q),Z+H,O,{inertia:1/0,restitution:1,friction:0,frictionAir:0.0001,slop:1}),D=Q.create({pointA:{x:N+S*(O*q),y:Z},bodyB:P});F.addBody(T,P),F.addConstraint(T,D)}return T},W(K,"newtonsCradle","Composites.newtonsCradle ➤ moved to newtonsCradle example"),K.car=function(N,Z,z,O,H){var T=G.nextGroup(!0),S=20,q=-z*0.5+S,P=z*0.5-S,D=0,X=F.create({label:"Car"}),Y=$.rectangle(N,Z,z,O,{collisionFilter:{group:T},chamfer:{radius:O*0.5},density:0.0002}),I=$.circle(N+q,Z+D,H,{collisionFilter:{group:T},friction:0.8}),R=$.circle(N+P,Z+D,H,{collisionFilter:{group:T},friction:0.8}),f=Q.create({bodyB:Y,pointB:{x:q,y:D},bodyA:I,stiffness:1,length:0}),M=Q.create({bodyB:Y,pointB:{x:P,y:D},bodyA:R,stiffness:1,length:0});return F.addBody(X,Y),F.addBody(X,I),F.addBody(X,R),F.addConstraint(X,f),F.addConstraint(X,M),X},W(K,"car","Composites.car ➤ moved to car example"),K.softBody=function(N,Z,z,O,H,T,S,q,P,D){P=J.extend({inertia:1/0},P),D=J.extend({stiffness:0.2,render:{type:"line",anchors:!1}},D);var X=K.stack(N,Z,z,O,H,T,function(Y,I){return $.circle(Y,I,q,P)});return K.mesh(X,z,O,S,D),X.label="Soft Body",X},W(K,"softBody","Composites.softBody ➤ moved to softBody and cloth examples")})()},function(E,L,U){var K={};E.exports=K;var F=U(9),Q=U(0),J=Q.deprecated;(function(){K.create=function(G){var $={buckets:{},pairs:{},pairsList:[],bucketWidth:48,bucketHeight:48};return Q.extend($,G)},K.update=function(G,$,W,N){var Z,z,O,H=W.world,T=G.buckets,S,q,P=!1;for(Z=0;Z<$.length;Z++){var D=$[Z];if(D.isSleeping&&!N)continue;if(H.bounds&&(D.bounds.max.x<H.bounds.min.x||D.bounds.min.x>H.bounds.max.x||D.bounds.max.y<H.bounds.min.y||D.bounds.min.y>H.bounds.max.y))continue;var X=K._getRegion(G,D);if(!D.region||X.id!==D.region.id||N){if(!D.region||N)D.region=X;var Y=K._regionUnion(X,D.region);for(z=Y.startCol;z<=Y.endCol;z++)for(O=Y.startRow;O<=Y.endRow;O++){q=K._getBucketId(z,O),S=T[q];var I=z>=X.startCol&&z<=X.endCol&&O>=X.startRow&&O<=X.endRow,R=z>=D.region.startCol&&z<=D.region.endCol&&O>=D.region.startRow&&O<=D.region.endRow;if(!I&&R){if(R){if(S)K._bucketRemoveBody(G,S,D)}}if(D.region===X||I&&!R||N){if(!S)S=K._createBucket(T,q);K._bucketAddBody(G,S,D)}}D.region=X,P=!0}}if(P)G.pairsList=K._createActivePairsList(G)},J(K,"update","Grid.update ➤ replaced by Matter.Detector"),K.clear=function(G){G.buckets={},G.pairs={},G.pairsList=[]},J(K,"clear","Grid.clear ➤ replaced by Matter.Detector"),K._regionUnion=function(G,$){var W=Math.min(G.startCol,$.startCol),N=Math.max(G.endCol,$.endCol),Z=Math.min(G.startRow,$.startRow),z=Math.max(G.endRow,$.endRow);return K._createRegion(W,N,Z,z)},K._getRegion=function(G,$){var W=$.bounds,N=Math.floor(W.min.x/G.bucketWidth),Z=Math.floor(W.max.x/G.bucketWidth),z=Math.floor(W.min.y/G.bucketHeight),O=Math.floor(W.max.y/G.bucketHeight);return K._createRegion(N,Z,z,O)},K._createRegion=function(G,$,W,N){return{id:G+","+$+","+W+","+N,startCol:G,endCol:$,startRow:W,endRow:N}},K._getBucketId=function(G,$){return"C"+G+"R"+$},K._createBucket=function(G,$){var W=G[$]=[];return W},K._bucketAddBody=function(G,$,W){var N=G.pairs,Z=F.id,z=$.length,O;for(O=0;O<z;O++){var H=$[O];if(W.id===H.id||W.isStatic&&H.isStatic)continue;var T=Z(W,H),S=N[T];if(S)S[2]+=1;else N[T]=[W,H,1]}$.push(W)},K._bucketRemoveBody=function(G,$,W){var N=G.pairs,Z=F.id,z;$.splice(Q.indexOf($,W),1);var O=$.length;for(z=0;z<O;z++){var H=N[Z(W,$[z])];if(H)H[2]-=1}},K._createActivePairsList=function(G){var $,W=G.pairs,N=Q.keys(W),Z=N.length,z=[],O;for(O=0;O<Z;O++)if($=W[N[O]],$[2]>0)z.push($);else delete W[N[O]];return z}})()},function(E,L,U){var K={};E.exports=K;var F=U(3),Q=U(7),J=U(14),G=U(5),$=U(13),W=U(10),N=U(6),Z=U(0),z=U(1);(function(){K.create=function(O,H){var T=(O?O.mouse:null)||(H?H.mouse:null);if(!T)if(O&&O.render&&O.render.canvas)T=J.create(O.render.canvas);else if(H&&H.element)T=J.create(H.element);else T=J.create(),Z.warn("MouseConstraint.create: options.mouse was undefined, options.element was undefined, may not function as expected");var S=W.create({label:"Mouse Constraint",pointA:T.position,pointB:{x:0,y:0},length:0.01,stiffness:0.1,angularStiffness:1,render:{strokeStyle:"#90EE90",lineWidth:3}}),q={type:"mouseConstraint",mouse:T,element:null,body:null,constraint:S,collisionFilter:{category:1,mask:4294967295,group:0}},P=Z.extend(q,H);return G.on(O,"beforeUpdate",function(){var D=N.allBodies(O.world);K.update(P,D),K._triggerEvents(P)}),P},K.update=function(O,H){var{mouse:T,constraint:S,body:q}=O;if(T.button===0)if(!S.bodyB){for(var P=0;P<H.length;P++)if(q=H[P],z.contains(q.bounds,T.position)&&$.canCollide(q.collisionFilter,O.collisionFilter))for(var D=q.parts.length>1?1:0;D<q.parts.length;D++){var X=q.parts[D];if(F.contains(X.vertices,T.position)){S.pointA=T.position,S.bodyB=O.body=q,S.pointB={x:T.position.x-q.position.x,y:T.position.y-q.position.y},S.angleB=q.angle,Q.set(q,!1),G.trigger(O,"startdrag",{mouse:T,body:q});break}}}else Q.set(S.bodyB,!1),S.pointA=T.position;else if(S.bodyB=O.body=null,S.pointB=null,q)G.trigger(O,"enddrag",{mouse:T,body:q})},K._triggerEvents=function(O){var H=O.mouse,T=H.sourceEvents;if(T.mousemove)G.trigger(O,"mousemove",{mouse:H});if(T.mousedown)G.trigger(O,"mousedown",{mouse:H});if(T.mouseup)G.trigger(O,"mouseup",{mouse:H});J.clearSourceEvents(H)}})()},function(E,L,U){var K={};E.exports=K;var F=U(2),Q=U(8),J=U(1),G=U(12),$=U(3);(function(){K.collides=function(W,N){var Z=[],z=N.length,O=W.bounds,H=Q.collides,T=J.overlaps;for(var S=0;S<z;S++){var q=N[S],P=q.parts.length,D=P===1?0:1;if(T(q.bounds,O))for(var X=D;X<P;X++){var Y=q.parts[X];if(T(Y.bounds,O)){var I=H(Y,W);if(I){Z.push(I);break}}}}return Z},K.ray=function(W,N,Z,z){z=z||0.0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001;var O=F.angle(N,Z),H=F.magnitude(F.sub(N,Z)),T=(Z.x+N.x)*0.5,S=(Z.y+N.y)*0.5,q=G.rectangle(T,S,H,z,{angle:O}),P=K.collides(q,W);for(var D=0;D<P.length;D+=1){var X=P[D];X.body=X.bodyB=X.bodyA}return P},K.region=function(W,N,Z){var z=[];for(var O=0;O<W.length;O++){var H=W[O],T=J.overlaps(H.bounds,N);if(T&&!Z||!T&&Z)z.push(H)}return z},K.point=function(W,N){var Z=[];for(var z=0;z<W.length;z++){var O=W[z];if(J.contains(O.bounds,N))for(var H=O.parts.length===1?0:1;H<O.parts.length;H++){var T=O.parts[H];if(J.contains(T.bounds,N)&&$.contains(T.vertices,N)){Z.push(O);break}}}return Z}})()},function(E,L,U){var K={};E.exports=K;var F=U(4),Q=U(0),J=U(6),G=U(1),$=U(5),W=U(2),N=U(14);(function(){var Z,z;if(typeof window<"u")Z=window.requestAnimationFrame||window.webkitRequestAnimationFrame||window.mozRequestAnimationFrame||window.msRequestAnimationFrame||function(D){window.setTimeout(function(){D(Q.now())},16.666666666666668)},z=window.cancelAnimationFrame||window.mozCancelAnimationFrame||window.webkitCancelAnimationFrame||window.msCancelAnimationFrame;K._goodFps=30,K._goodDelta=16.666666666666668,K.create=function(D){var X={engine:null,element:null,canvas:null,mouse:null,frameRequestId:null,timing:{historySize:60,delta:0,deltaHistory:[],lastTime:0,lastTimestamp:0,lastElapsed:0,timestampElapsed:0,timestampElapsedHistory:[],engineDeltaHistory:[],engineElapsedHistory:[],engineUpdatesHistory:[],elapsedHistory:[]},options:{width:800,height:600,pixelRatio:1,background:"#14151f",wireframeBackground:"#14151f",wireframeStrokeStyle:"#bbb",hasBounds:!!D.bounds,enabled:!0,wireframes:!0,showSleeping:!0,showDebug:!1,showStats:!1,showPerformance:!1,showBounds:!1,showVelocity:!1,showCollisions:!1,showSeparations:!1,showAxes:!1,showPositions:!1,showAngleIndicator:!1,showIds:!1,showVertexNumbers:!1,showConvexHulls:!1,showInternalEdges:!1,showMousePosition:!1}},Y=Q.extend(X,D);if(Y.canvas)Y.canvas.width=Y.options.width||Y.canvas.width,Y.canvas.height=Y.options.height||Y.canvas.height;if(Y.mouse=D.mouse,Y.engine=D.engine,Y.canvas=Y.canvas||T(Y.options.width,Y.options.height),Y.context=Y.canvas.getContext("2d"),Y.textures={},Y.bounds=Y.bounds||{min:{x:0,y:0},max:{x:Y.canvas.width,y:Y.canvas.height}},Y.controller=K,Y.options.showBroadphase=!1,Y.options.pixelRatio!==1)K.setPixelRatio(Y,Y.options.pixelRatio);if(Q.isElement(Y.element))Y.element.appendChild(Y.canvas);return Y},K.run=function(D){(function X(Y){if(D.frameRequestId=Z(X),O(D,Y),K.world(D,Y),D.context.setTransform(D.options.pixelRatio,0,0,D.options.pixelRatio,0,0),D.options.showStats||D.options.showDebug)K.stats(D,D.context,Y);if(D.options.showPerformance||D.options.showDebug)K.performance(D,D.context,Y);D.context.setTransform(1,0,0,1,0,0)})()},K.stop=function(D){z(D.frameRequestId)},K.setPixelRatio=function(D,X){var{options:Y,canvas:I}=D;if(X==="auto")X=S(I);Y.pixelRatio=X,I.setAttribute("data-pixel-ratio",X),I.width=Y.width*X,I.height=Y.height*X,I.style.width=Y.width+"px",I.style.height=Y.height+"px"},K.setSize=function(D,X,Y){if(D.options.width=X,D.options.height=Y,D.bounds.max.x=D.bounds.min.x+X,D.bounds.max.y=D.bounds.min.y+Y,D.options.pixelRatio!==1)K.setPixelRatio(D,D.options.pixelRatio);else D.canvas.width=X,D.canvas.height=Y},K.lookAt=function(D,X,Y,I){I=typeof I<"u"?I:!0,X=Q.isArray(X)?X:[X],Y=Y||{x:0,y:0};var R={min:{x:1/0,y:1/0},max:{x:-1/0,y:-1/0}};for(var f=0;f<X.length;f+=1){var M=X[f],j=M.bounds?M.bounds.min:M.min||M.position||M,V=M.bounds?M.bounds.max:M.max||M.position||M;if(j&&V){if(j.x<R.min.x)R.min.x=j.x;if(V.x>R.max.x)R.max.x=V.x;if(j.y<R.min.y)R.min.y=j.y;if(V.y>R.max.y)R.max.y=V.y}}var k=R.max.x-R.min.x+2*Y.x,h=R.max.y-R.min.y+2*Y.y,w=D.canvas.height,C=D.canvas.width,A=C/w,B=k/h,g=1,y=1;if(B>A)y=B/A;else g=A/B;if(D.options.hasBounds=!0,D.bounds.min.x=R.min.x,D.bounds.max.x=R.min.x+k*g,D.bounds.min.y=R.min.y,D.bounds.max.y=R.min.y+h*y,I)D.bounds.min.x+=k*0.5-k*g*0.5,D.bounds.max.x+=k*0.5-k*g*0.5,D.bounds.min.y+=h*0.5-h*y*0.5,D.bounds.max.y+=h*0.5-h*y*0.5;if(D.bounds.min.x-=Y.x,D.bounds.max.x-=Y.x,D.bounds.min.y-=Y.y,D.bounds.max.y-=Y.y,D.mouse)N.setScale(D.mouse,{x:(D.bounds.max.x-D.bounds.min.x)/D.canvas.width,y:(D.bounds.max.y-D.bounds.min.y)/D.canvas.height}),N.setOffset(D.mouse,D.bounds.min)},K.startViewTransform=function(D){var X=D.bounds.max.x-D.bounds.min.x,Y=D.bounds.max.y-D.bounds.min.y,I=X/D.options.width,R=Y/D.options.height;D.context.setTransform(D.options.pixelRatio/I,0,0,D.options.pixelRatio/R,0,0),D.context.translate(-D.bounds.min.x,-D.bounds.min.y)},K.endViewTransform=function(D){D.context.setTransform(D.options.pixelRatio,0,0,D.options.pixelRatio,0,0)},K.world=function(D,X){var Y=Q.now(),I=D.engine,R=I.world,f=D.canvas,M=D.context,j=D.options,V=D.timing,k=J.allBodies(R),h=J.allConstraints(R),w=j.wireframes?j.wireframeBackground:j.background,C=[],A=[],B,g={timestamp:I.timing.timestamp};if($.trigger(D,"beforeRender",g),D.currentBackground!==w)P(D,w);if(M.globalCompositeOperation="source-in",M.fillStyle="transparent",M.fillRect(0,0,f.width,f.height),M.globalCompositeOperation="source-over",j.hasBounds){for(B=0;B<k.length;B++){var y=k[B];if(G.overlaps(y.bounds,D.bounds))C.push(y)}for(B=0;B<h.length;B++){var m=h[B],p=m.bodyA,o=m.bodyB,s=m.pointA,v=m.pointB;if(p)s=W.add(p.position,m.pointA);if(o)v=W.add(o.position,m.pointB);if(!s||!v)continue;if(G.contains(D.bounds,s)||G.contains(D.bounds,v))A.push(m)}if(K.startViewTransform(D),D.mouse)N.setScale(D.mouse,{x:(D.bounds.max.x-D.bounds.min.x)/D.options.width,y:(D.bounds.max.y-D.bounds.min.y)/D.options.height}),N.setOffset(D.mouse,D.bounds.min)}else if(A=h,C=k,D.options.pixelRatio!==1)D.context.setTransform(D.options.pixelRatio,0,0,D.options.pixelRatio,0,0);if(!j.wireframes||I.enableSleeping&&j.showSleeping)K.bodies(D,C,M);else{if(j.showConvexHulls)K.bodyConvexHulls(D,C,M);K.bodyWireframes(D,C,M)}if(j.showBounds)K.bodyBounds(D,C,M);if(j.showAxes||j.showAngleIndicator)K.bodyAxes(D,C,M);if(j.showPositions)K.bodyPositions(D,C,M);if(j.showVelocity)K.bodyVelocity(D,C,M);if(j.showIds)K.bodyIds(D,C,M);if(j.showSeparations)K.separations(D,I.pairs.list,M);if(j.showCollisions)K.collisions(D,I.pairs.list,M);if(j.showVertexNumbers)K.vertexNumbers(D,C,M);if(j.showMousePosition)K.mousePosition(D,D.mouse,M);if(K.constraints(A,M),j.hasBounds)K.endViewTransform(D);$.trigger(D,"afterRender",g),V.lastElapsed=Q.now()-Y},K.stats=function(D,X,Y){var I=D.engine,R=I.world,f=J.allBodies(R),M=0,j=55,V=44,k=0,h=0;for(var w=0;w<f.length;w+=1)M+=f[w].parts.length;var C={Part:M,Body:f.length,Cons:J.allConstraints(R).length,Comp:J.allComposites(R).length,Pair:I.pairs.list.length};X.fillStyle="#0e0f19",X.fillRect(k,h,j*5.5,V),X.font="12px Arial",X.textBaseline="top",X.textAlign="right";for(var A in C){var B=C[A];X.fillStyle="#aaa",X.fillText(A,k+j,h+8),X.fillStyle="#eee",X.fillText(B,k+j,h+26),k+=j}},K.performance=function(D,X){var{engine:Y,timing:I}=D,R=I.deltaHistory,f=I.elapsedHistory,M=I.timestampElapsedHistory,j=I.engineDeltaHistory,V=I.engineUpdatesHistory,k=I.engineElapsedHistory,h=Y.timing.lastUpdatesPerFrame,w=Y.timing.lastDelta,C=H(R),A=H(f),B=H(j),g=H(V),y=H(k),m=H(M),p=m/C||0,o=Math.round(C/w),s=1000/C||0,v=4,n=12,l=60,$0=34,r=10,i=69;X.fillStyle="#0e0f19",X.fillRect(0,50,n*5+l*6+22,$0),K.status(X,r,i,l,v,R.length,Math.round(s)+" fps",s/K._goodFps,function(c){return R[c]/C-1}),K.status(X,r+n+l,i,l,v,j.length,w.toFixed(2)+" dt",K._goodDelta/w,function(c){return j[c]/B-1}),K.status(X,r+(n+l)*2,i,l,v,V.length,h+" upf",Math.pow(Q.clamp(g/o||1,0,1),4),function(c){return V[c]/g-1}),K.status(X,r+(n+l)*3,i,l,v,k.length,y.toFixed(2)+" ut",1-h*y/K._goodFps,function(c){return k[c]/y-1}),K.status(X,r+(n+l)*4,i,l,v,f.length,A.toFixed(2)+" rt",1-A/K._goodFps,function(c){return f[c]/A-1}),K.status(X,r+(n+l)*5,i,l,v,M.length,p.toFixed(2)+" x",p*p*p,function(c){return(M[c]/R[c]/p||0)-1})},K.status=function(D,X,Y,I,R,f,M,j,V){D.strokeStyle="#888",D.fillStyle="#444",D.lineWidth=1,D.fillRect(X,Y+7,I,1),D.beginPath(),D.moveTo(X,Y+7-R*Q.clamp(0.4*V(0),-2,2));for(var k=0;k<I;k+=1)D.lineTo(X+k,Y+7-(k<f?R*Q.clamp(0.4*V(k),-2,2):0));D.stroke(),D.fillStyle="hsl("+Q.clamp(25+95*j,0,120)+",100%,60%)",D.fillRect(X,Y-7,4,4),D.font="12px Arial",D.textBaseline="middle",D.textAlign="right",D.fillStyle="#eee",D.fillText(M,X+I,Y-5)},K.constraints=function(D,X){var Y=X;for(var I=0;I<D.length;I++){var R=D[I];if(!R.render.visible||!R.pointA||!R.pointB)continue;var{bodyA:f,bodyB:M}=R,j,V;if(f)j=W.add(f.position,R.pointA);else j=R.pointA;if(R.render.type==="pin")Y.beginPath(),Y.arc(j.x,j.y,3,0,2*Math.PI),Y.closePath();else{if(M)V=W.add(M.position,R.pointB);else V=R.pointB;if(Y.beginPath(),Y.moveTo(j.x,j.y),R.render.type==="spring"){var k=W.sub(V,j),h=W.perp(W.normalise(k)),w=Math.ceil(Q.clamp(R.length/5,12,20)),C;for(var A=1;A<w;A+=1)C=A%2===0?1:-1,Y.lineTo(j.x+k.x*(A/w)+h.x*C*4,j.y+k.y*(A/w)+h.y*C*4)}Y.lineTo(V.x,V.y)}if(R.render.lineWidth)Y.lineWidth=R.render.lineWidth,Y.strokeStyle=R.render.strokeStyle,Y.stroke();if(R.render.anchors)Y.fillStyle=R.render.strokeStyle,Y.beginPath(),Y.arc(j.x,j.y,3,0,2*Math.PI),Y.arc(V.x,V.y,3,0,2*Math.PI),Y.closePath(),Y.fill()}},K.bodies=function(D,X,Y){var I=Y,R=D.engine,f=D.options,M=f.showInternalEdges||!f.wireframes,j,V,k,h;for(k=0;k<X.length;k++){if(j=X[k],!j.render.visible)continue;for(h=j.parts.length>1?1:0;h<j.parts.length;h++){if(V=j.parts[h],!V.render.visible)continue;if(f.showSleeping&&j.isSleeping)I.globalAlpha=0.5*V.render.opacity;else if(V.render.opacity!==1)I.globalAlpha=V.render.opacity;if(V.render.sprite&&V.render.sprite.texture&&!f.wireframes){var w=V.render.sprite,C=q(D,w.texture);I.translate(V.position.x,V.position.y),I.rotate(V.angle),I.drawImage(C,C.width*-w.xOffset*w.xScale,C.height*-w.yOffset*w.yScale,C.width*w.xScale,C.height*w.yScale),I.rotate(-V.angle),I.translate(-V.position.x,-V.position.y)}else{if(V.circleRadius)I.beginPath(),I.arc(V.position.x,V.position.y,V.circleRadius,0,2*Math.PI);else{I.beginPath(),I.moveTo(V.vertices[0].x,V.vertices[0].y);for(var A=1;A<V.vertices.length;A++){if(!V.vertices[A-1].isInternal||M)I.lineTo(V.vertices[A].x,V.vertices[A].y);else I.moveTo(V.vertices[A].x,V.vertices[A].y);if(V.vertices[A].isInternal&&!M)I.moveTo(V.vertices[(A+1)%V.vertices.length].x,V.vertices[(A+1)%V.vertices.length].y)}I.lineTo(V.vertices[0].x,V.vertices[0].y),I.closePath()}if(!f.wireframes){if(I.fillStyle=V.render.fillStyle,V.render.lineWidth)I.lineWidth=V.render.lineWidth,I.strokeStyle=V.render.strokeStyle,I.stroke();I.fill()}else I.lineWidth=1,I.strokeStyle=D.options.wireframeStrokeStyle,I.stroke()}I.globalAlpha=1}}},K.bodyWireframes=function(D,X,Y){var I=Y,R=D.options.showInternalEdges,f,M,j,V,k;I.beginPath();for(j=0;j<X.length;j++){if(f=X[j],!f.render.visible)continue;for(k=f.parts.length>1?1:0;k<f.parts.length;k++){M=f.parts[k],I.moveTo(M.vertices[0].x,M.vertices[0].y);for(V=1;V<M.vertices.length;V++){if(!M.vertices[V-1].isInternal||R)I.lineTo(M.vertices[V].x,M.vertices[V].y);else I.moveTo(M.vertices[V].x,M.vertices[V].y);if(M.vertices[V].isInternal&&!R)I.moveTo(M.vertices[(V+1)%M.vertices.length].x,M.vertices[(V+1)%M.vertices.length].y)}I.lineTo(M.vertices[0].x,M.vertices[0].y)}}I.lineWidth=1,I.strokeStyle=D.options.wireframeStrokeStyle,I.stroke()},K.bodyConvexHulls=function(D,X,Y){var I=Y,R,f,M,j,V;I.beginPath();for(M=0;M<X.length;M++){if(R=X[M],!R.render.visible||R.parts.length===1)continue;I.moveTo(R.vertices[0].x,R.vertices[0].y);for(j=1;j<R.vertices.length;j++)I.lineTo(R.vertices[j].x,R.vertices[j].y);I.lineTo(R.vertices[0].x,R.vertices[0].y)}I.lineWidth=1,I.strokeStyle="rgba(255,255,255,0.2)",I.stroke()},K.vertexNumbers=function(D,X,Y){var I=Y,R,f,M;for(R=0;R<X.length;R++){var j=X[R].parts;for(M=j.length>1?1:0;M<j.length;M++){var V=j[M];for(f=0;f<V.vertices.length;f++)I.fillStyle="rgba(255,255,255,0.2)",I.fillText(R+"_"+f,V.position.x+(V.vertices[f].x-V.position.x)*0.8,V.position.y+(V.vertices[f].y-V.position.y)*0.8)}}},K.mousePosition=function(D,X,Y){var I=Y;I.fillStyle="rgba(255,255,255,0.8)",I.fillText(X.position.x+"  "+X.position.y,X.position.x+5,X.position.y-5)},K.bodyBounds=function(D,X,Y){var I=Y,R=D.engine,f=D.options;I.beginPath();for(var M=0;M<X.length;M++){var j=X[M];if(j.render.visible){var V=X[M].parts;for(var k=V.length>1?1:0;k<V.length;k++){var h=V[k];I.rect(h.bounds.min.x,h.bounds.min.y,h.bounds.max.x-h.bounds.min.x,h.bounds.max.y-h.bounds.min.y)}}}if(f.wireframes)I.strokeStyle="rgba(255,255,255,0.08)";else I.strokeStyle="rgba(0,0,0,0.1)";I.lineWidth=1,I.stroke()},K.bodyAxes=function(D,X,Y){var I=Y,R=D.engine,f=D.options,M,j,V,k;I.beginPath();for(j=0;j<X.length;j++){var h=X[j],w=h.parts;if(!h.render.visible)continue;if(f.showAxes)for(V=w.length>1?1:0;V<w.length;V++){M=w[V];for(k=0;k<M.axes.length;k++){var C=M.axes[k];I.moveTo(M.position.x,M.position.y),I.lineTo(M.position.x+C.x*20,M.position.y+C.y*20)}}else for(V=w.length>1?1:0;V<w.length;V++){M=w[V];for(k=0;k<M.axes.length;k++)I.moveTo(M.position.x,M.position.y),I.lineTo((M.vertices[0].x+M.vertices[M.vertices.length-1].x)/2,(M.vertices[0].y+M.vertices[M.vertices.length-1].y)/2)}}if(f.wireframes)I.strokeStyle="indianred",I.lineWidth=1;else I.strokeStyle="rgba(255, 255, 255, 0.4)",I.globalCompositeOperation="overlay",I.lineWidth=2;I.stroke(),I.globalCompositeOperation="source-over"},K.bodyPositions=function(D,X,Y){var I=Y,R=D.engine,f=D.options,M,j,V,k;I.beginPath();for(V=0;V<X.length;V++){if(M=X[V],!M.render.visible)continue;for(k=0;k<M.parts.length;k++)j=M.parts[k],I.arc(j.position.x,j.position.y,3,0,2*Math.PI,!1),I.closePath()}if(f.wireframes)I.fillStyle="indianred";else I.fillStyle="rgba(0,0,0,0.5)";I.fill(),I.beginPath();for(V=0;V<X.length;V++)if(M=X[V],M.render.visible)I.arc(M.positionPrev.x,M.positionPrev.y,2,0,2*Math.PI,!1),I.closePath();I.fillStyle="rgba(255,165,0,0.8)",I.fill()},K.bodyVelocity=function(D,X,Y){var I=Y;I.beginPath();for(var R=0;R<X.length;R++){var f=X[R];if(!f.render.visible)continue;var M=F.getVelocity(f);I.moveTo(f.position.x,f.position.y),I.lineTo(f.position.x+M.x,f.position.y+M.y)}I.lineWidth=3,I.strokeStyle="cornflowerblue",I.stroke()},K.bodyIds=function(D,X,Y){var I=Y,R,f;for(R=0;R<X.length;R++){if(!X[R].render.visible)continue;var M=X[R].parts;for(f=M.length>1?1:0;f<M.length;f++){var j=M[f];I.font="12px Arial",I.fillStyle="rgba(255,255,255,0.5)",I.fillText(j.id,j.position.x+10,j.position.y-10)}}},K.collisions=function(D,X,Y){var I=Y,R=D.options,f,M,j,V,k,h,w;I.beginPath();for(h=0;h<X.length;h++){if(f=X[h],!f.isActive)continue;M=f.collision;for(w=0;w<f.contactCount;w++){var C=f.contacts[w],A=C.vertex;I.rect(A.x-1.5,A.y-1.5,3.5,3.5)}}if(R.wireframes)I.fillStyle="rgba(255,255,255,0.7)";else I.fillStyle="orange";I.fill(),I.beginPath();for(h=0;h<X.length;h++){if(f=X[h],!f.isActive)continue;if(M=f.collision,f.contactCount>0){var B=f.contacts[0].vertex.x,g=f.contacts[0].vertex.y;if(f.contactCount===2)B=(f.contacts[0].vertex.x+f.contacts[1].vertex.x)/2,g=(f.contacts[0].vertex.y+f.contacts[1].vertex.y)/2;if(M.bodyB===M.supports[0].body||M.bodyA.isStatic===!0)I.moveTo(B-M.normal.x*8,g-M.normal.y*8);else I.moveTo(B+M.normal.x*8,g+M.normal.y*8);I.lineTo(B,g)}}if(R.wireframes)I.strokeStyle="rgba(255,165,0,0.7)";else I.strokeStyle="orange";I.lineWidth=1,I.stroke()},K.separations=function(D,X,Y){var I=Y,R=D.options,f,M,j,V,k,h,w;I.beginPath();for(h=0;h<X.length;h++){if(f=X[h],!f.isActive)continue;M=f.collision,V=M.bodyA,k=M.bodyB;var C=1;if(!k.isStatic&&!V.isStatic)C=0.5;if(k.isStatic)C=0;if(I.moveTo(k.position.x,k.position.y),I.lineTo(k.position.x-M.penetration.x*C,k.position.y-M.penetration.y*C),C=1,!k.isStatic&&!V.isStatic)C=0.5;if(V.isStatic)C=0;I.moveTo(V.position.x,V.position.y),I.lineTo(V.position.x+M.penetration.x*C,V.position.y+M.penetration.y*C)}if(R.wireframes)I.strokeStyle="rgba(255,165,0,0.5)";else I.strokeStyle="orange";I.stroke()},K.inspector=function(D,X){var{engine:Y,selected:I,render:R}=D,f=R.options,M;if(f.hasBounds){var j=R.bounds.max.x-R.bounds.min.x,V=R.bounds.max.y-R.bounds.min.y,k=j/R.options.width,h=V/R.options.height;X.scale(1/k,1/h),X.translate(-R.bounds.min.x,-R.bounds.min.y)}for(var w=0;w<I.length;w++){var C=I[w].data;switch(X.translate(0.5,0.5),X.lineWidth=1,X.strokeStyle="rgba(255,165,0,0.9)",X.setLineDash([1,2]),C.type){case"body":M=C.bounds,X.beginPath(),X.rect(Math.floor(M.min.x-3),Math.floor(M.min.y-3),Math.floor(M.max.x-M.min.x+6),Math.floor(M.max.y-M.min.y+6)),X.closePath(),X.stroke();break;case"constraint":var A=C.pointA;if(C.bodyA)A=C.pointB;X.beginPath(),X.arc(A.x,A.y,10,0,2*Math.PI),X.closePath(),X.stroke();break}X.setLineDash([]),X.translate(-0.5,-0.5)}if(D.selectStart!==null)X.translate(0.5,0.5),X.lineWidth=1,X.strokeStyle="rgba(255,165,0,0.6)",X.fillStyle="rgba(255,165,0,0.1)",M=D.selectBounds,X.beginPath(),X.rect(Math.floor(M.min.x),Math.floor(M.min.y),Math.floor(M.max.x-M.min.x),Math.floor(M.max.y-M.min.y)),X.closePath(),X.stroke(),X.fill(),X.translate(-0.5,-0.5);if(f.hasBounds)X.setTransform(1,0,0,1,0,0)};var O=function(D,X){var{engine:Y,timing:I}=D,R=I.historySize,f=Y.timing.timestamp;I.delta=X-I.lastTime||K._goodDelta,I.lastTime=X,I.timestampElapsed=f-I.lastTimestamp||0,I.lastTimestamp=f,I.deltaHistory.unshift(I.delta),I.deltaHistory.length=Math.min(I.deltaHistory.length,R),I.engineDeltaHistory.unshift(Y.timing.lastDelta),I.engineDeltaHistory.length=Math.min(I.engineDeltaHistory.length,R),I.timestampElapsedHistory.unshift(I.timestampElapsed),I.timestampElapsedHistory.length=Math.min(I.timestampElapsedHistory.length,R),I.engineUpdatesHistory.unshift(Y.timing.lastUpdatesPerFrame),I.engineUpdatesHistory.length=Math.min(I.engineUpdatesHistory.length,R),I.engineElapsedHistory.unshift(Y.timing.lastElapsed),I.engineElapsedHistory.length=Math.min(I.engineElapsedHistory.length,R),I.elapsedHistory.unshift(I.lastElapsed),I.elapsedHistory.length=Math.min(I.elapsedHistory.length,R)},H=function(D){var X=0;for(var Y=0;Y<D.length;Y+=1)X+=D[Y];return X/D.length||0},T=function(D,X){var Y=document.createElement("canvas");return Y.width=D,Y.height=X,Y.oncontextmenu=function(){return!1},Y.onselectstart=function(){return!1},Y},S=function(D){var X=D.getContext("2d"),Y=window.devicePixelRatio||1,I=X.webkitBackingStorePixelRatio||X.mozBackingStorePixelRatio||X.msBackingStorePixelRatio||X.oBackingStorePixelRatio||X.backingStorePixelRatio||1;return Y/I},q=function(D,X){var Y=D.textures[X];if(Y)return Y;return Y=D.textures[X]=new Image,Y.src=X,Y},P=function(D,X){var Y=X;if(/(jpg|gif|png)$/.test(X))Y="url("+X+")";D.canvas.style.background=Y,D.canvas.style.backgroundSize="contain",D.currentBackground=X}})()},function(E,L,U){var K={};E.exports=K;var F=U(5),Q=U(17),J=U(0);(function(){K._maxFrameDelta=66.66666666666667,K._frameDeltaFallback=16.666666666666668,K._timeBufferMargin=1.5,K._elapsedNextEstimate=1,K._smoothingLowerBound=0.1,K._smoothingUpperBound=0.9,K.create=function($){var W={delta:16.666666666666668,frameDelta:null,frameDeltaSmoothing:!0,frameDeltaSnapping:!0,frameDeltaHistory:[],frameDeltaHistorySize:100,frameRequestId:null,timeBuffer:0,timeLastTick:null,maxUpdates:null,maxFrameTime:33.333333333333336,lastUpdatesDeferred:0,enabled:!0},N=J.extend(W,$);return N.fps=0,N},K.run=function($,W){return $.timeBuffer=K._frameDeltaFallback,function N(Z){if($.frameRequestId=K._onNextFrame($,N),Z&&$.enabled)K.tick($,W,Z)}(),$},K.tick=function($,W,N){var Z=J.now(),z=$.delta,O=0,H=N-$.timeLastTick;if(!H||!$.timeLastTick||H>Math.max(K._maxFrameDelta,$.maxFrameTime))H=$.frameDelta||K._frameDeltaFallback;if($.frameDeltaSmoothing){$.frameDeltaHistory.push(H),$.frameDeltaHistory=$.frameDeltaHistory.slice(-$.frameDeltaHistorySize);var T=$.frameDeltaHistory.slice(0).sort(),S=$.frameDeltaHistory.slice(T.length*K._smoothingLowerBound,T.length*K._smoothingUpperBound),q=G(S);H=q||H}if($.frameDeltaSnapping)H=1000/Math.round(1000/H);$.frameDelta=H,$.timeLastTick=N,$.timeBuffer+=$.frameDelta,$.timeBuffer=J.clamp($.timeBuffer,0,$.frameDelta+z*K._timeBufferMargin),$.lastUpdatesDeferred=0;var P=$.maxUpdates||Math.ceil($.maxFrameTime/z),D={timestamp:W.timing.timestamp};F.trigger($,"beforeTick",D),F.trigger($,"tick",D);var X=J.now();while(z>0&&$.timeBuffer>=z*K._timeBufferMargin){F.trigger($,"beforeUpdate",D),Q.update(W,z),F.trigger($,"afterUpdate",D),$.timeBuffer-=z,O+=1;var Y=J.now()-Z,I=J.now()-X,R=Y+K._elapsedNextEstimate*I/O;if(O>=P||R>$.maxFrameTime){$.lastUpdatesDeferred=Math.round(Math.max(0,$.timeBuffer/z-K._timeBufferMargin));break}}if(W.timing.lastUpdatesPerFrame=O,F.trigger($,"afterTick",D),$.frameDeltaHistory.length>=100){if($.lastUpdatesDeferred&&Math.round($.frameDelta/z)>P)J.warnOnce("Matter.Runner: runner reached runner.maxUpdates, see docs.");else if($.lastUpdatesDeferred)J.warnOnce("Matter.Runner: runner reached runner.maxFrameTime, see docs.");if(typeof $.isFixed<"u")J.warnOnce("Matter.Runner: runner.isFixed is now redundant, see docs.");if($.deltaMin||$.deltaMax)J.warnOnce("Matter.Runner: runner.deltaMin and runner.deltaMax were removed, see docs.");if($.fps!==0)J.warnOnce("Matter.Runner: runner.fps was replaced by runner.delta, see docs.")}},K.stop=function($){K._cancelNextFrame($)},K._onNextFrame=function($,W){if(typeof window<"u"&&window.requestAnimationFrame)$.frameRequestId=window.requestAnimationFrame(W);else throw Error("Matter.Runner: missing required global window.requestAnimationFrame.");return $.frameRequestId},K._cancelNextFrame=function($){if(typeof window<"u"&&window.cancelAnimationFrame)window.cancelAnimationFrame($.frameRequestId);else throw Error("Matter.Runner: missing required global window.cancelAnimationFrame.")};var G=function($){var W=0,N=$.length;for(var Z=0;Z<N;Z+=1)W+=$[Z];return W/N||0}})()},function(E,L,U){var K={};E.exports=K;var F=U(8),Q=U(0),J=Q.deprecated;(function(){K.collides=function(G,$){return F.collides(G,$)},J(K,"collides","SAT.collides ➤ replaced by Collision.collides")})()},function(E,L,U){var K={};E.exports=K;var F=U(1),Q=U(0);(function(){K.pathToVertices=function(J,G){if(typeof window<"u"&&!("SVGPathSeg"in window))Q.warn("Svg.pathToVertices: SVGPathSeg not defined, a polyfill is required.");var $,W,N,Z,z,O,H,T,S,q,P=[],D,X,Y=0,I=0,R=0;G=G||15;var f=function(j,V,k){var h=k%2===1&&k>1;if(!S||j!=S.x||V!=S.y){if(S&&h)D=S.x,X=S.y;else D=0,X=0;var w={x:D+j,y:X+V};if(h||!S)S=w;P.push(w),I=D+j,R=X+V}},M=function(j){var V=j.pathSegTypeAsLetter.toUpperCase();if(V==="Z")return;switch(V){case"M":case"L":case"T":case"C":case"S":case"Q":I=j.x,R=j.y;break;case"H":I=j.x;break;case"V":R=j.y;break}f(I,R,j.pathSegType)};K._svgPathToAbsolute(J),N=J.getTotalLength(),O=[];for($=0;$<J.pathSegList.numberOfItems;$+=1)O.push(J.pathSegList.getItem($));H=O.concat();while(Y<N){if(q=J.getPathSegAtLength(Y),z=O[q],z!=T){while(H.length&&H[0]!=z)M(H.shift());T=z}switch(z.pathSegTypeAsLetter.toUpperCase()){case"C":case"T":case"S":case"Q":case"A":Z=J.getPointAtLength(Y),f(Z.x,Z.y,0);break}Y+=G}for($=0,W=H.length;$<W;++$)M(H[$]);return P},K._svgPathToAbsolute=function(J){var G,$,W,N,Z,z,O=J.pathSegList,H=0,T=0,S=O.numberOfItems;for(var q=0;q<S;++q){var P=O.getItem(q),D=P.pathSegTypeAsLetter;if(/[MLHVCSQTA]/.test(D)){if("x"in P)H=P.x;if("y"in P)T=P.y}else{if("x1"in P)W=H+P.x1;if("x2"in P)Z=H+P.x2;if("y1"in P)N=T+P.y1;if("y2"in P)z=T+P.y2;if("x"in P)H+=P.x;if("y"in P)T+=P.y;switch(D){case"m":O.replaceItem(J.createSVGPathSegMovetoAbs(H,T),q);break;case"l":O.replaceItem(J.createSVGPathSegLinetoAbs(H,T),q);break;case"h":O.replaceItem(J.createSVGPathSegLinetoHorizontalAbs(H),q);break;case"v":O.replaceItem(J.createSVGPathSegLinetoVerticalAbs(T),q);break;case"c":O.replaceItem(J.createSVGPathSegCurvetoCubicAbs(H,T,W,N,Z,z),q);break;case"s":O.replaceItem(J.createSVGPathSegCurvetoCubicSmoothAbs(H,T,Z,z),q);break;case"q":O.replaceItem(J.createSVGPathSegCurvetoQuadraticAbs(H,T,W,N),q);break;case"t":O.replaceItem(J.createSVGPathSegCurvetoQuadraticSmoothAbs(H,T),q);break;case"a":O.replaceItem(J.createSVGPathSegArcAbs(H,T,P.r1,P.r2,P.angle,P.largeArcFlag,P.sweepFlag),q);break;case"z":case"Z":H=G,T=$;break}}if(D=="M"||D=="m")G=H,$=T}}})()},function(E,L,U){var K={};E.exports=K;var F=U(6),Q=U(0);(function(){K.create=F.create,K.add=F.add,K.remove=F.remove,K.clear=F.clear,K.addComposite=F.addComposite,K.addBody=F.addBody,K.addConstraint=F.addConstraint})()}])})});var u=L0(z0(),1);
 // ============================================================================
-// THE OLD MOUNTAIN WORKS - MASTER GAME ENGINE OVERHAUL V2
-// Handcrafted Illustrated Mountain Expedition & Physics Simulation
+// THE OLD MOUNTAIN WORKS - MASTER GAME ENGINE OVERHAUL V3
+// Constrained Rigid-Body Physics, Prismatic Suspension, Ragdoll & Destruction
 // ============================================================================
 
 const Matter = u.default || u;
@@ -576,29 +576,29 @@ function K0(seed) {
 const I0 = (p) => Number.isFinite(p.x) && Number.isFinite(p.y);
 
 // ----------------------------------------------------------------------------
-// Vehicle Archetypes (Authentic Physics Differences)
+// Vehicle Archetypes (Natural-Frequency Matched Prismatic Suspension)
 // ----------------------------------------------------------------------------
 const VEHICLE_ARCHETYPES = {
   buggy: {
     id: "buggy",
     name: "Trail Buggy",
-    desc: "Balanced agile expedition chassis with progressive suspension.",
-    chassisWidth: 104,
+    desc: "Balanced agile expedition chassis with progressive prismatic suspension.",
+    chassisWidth: 108,
     chassisHeight: 24,
     chassisMass: 7.4,
-    wheelRadius: 21,
-    wheelMass: 1.1,
-    wheelBase: 108,
+    wheelRadius: 22,
+    wheelMass: 1.25,
+    wheelBase: 112,
     wheelOffsetY: 36,
-    engineTorque: 0.075,
-    brakeTorque: 0.095,
+    engineTorque: 0.082,
+    brakeTorque: 0.105,
     maxWheelSpeed: 1.45,
-    suspensionStiffness: 0.15,
-    suspensionDamping: 0.045,
-    suspensionTravel: 26,
-    tireGrip: 1.45,
-    airControl: 0.045,
-    angularDamping: 0.022,
+    suspensionStiffness: 0.16,
+    suspensionDamping: 0.065,
+    suspensionTravel: 24,
+    tireGrip: 1.55,
+    airControl: 0.042,
+    angularDamping: 0.035,
     centerOfMassOffsetY: 6.0,
     accentColor: "#d4622a",
     chassisColor: "#c8bda6",
@@ -607,22 +607,22 @@ const VEHICLE_ARCHETYPES = {
     id: "crawler",
     name: "Mountain Crawler",
     desc: "Heavy reinforced frame, oversized tires, supreme grip and hill climbing torque.",
-    chassisWidth: 112,
+    chassisWidth: 116,
     chassisHeight: 26,
     chassisMass: 9.8,
-    wheelRadius: 24,
-    wheelMass: 1.5,
-    wheelBase: 116,
+    wheelRadius: 25,
+    wheelMass: 1.65,
+    wheelBase: 120,
     wheelOffsetY: 40,
-    engineTorque: 0.095,
-    brakeTorque: 0.120,
-    maxWheelSpeed: 1.25,
-    suspensionStiffness: 0.18,
-    suspensionDamping: 0.050,
-    suspensionTravel: 30,
-    tireGrip: 1.55,
-    airControl: 0.038,
-    angularDamping: 0.026,
+    engineTorque: 0.105,
+    brakeTorque: 0.130,
+    maxWheelSpeed: 1.28,
+    suspensionStiffness: 0.19,
+    suspensionDamping: 0.075,
+    suspensionTravel: 28,
+    tireGrip: 1.75,
+    airControl: 0.036,
+    angularDamping: 0.042,
     centerOfMassOffsetY: 8.0,
     accentColor: "#357a62",
     chassisColor: "#b5a88f",
@@ -631,22 +631,22 @@ const VEHICLE_ARCHETYPES = {
     id: "rally",
     name: "Alpine Rally",
     desc: "Lightweight tuned racer with explosive acceleration and high airborne pitch authority.",
-    chassisWidth: 98,
+    chassisWidth: 102,
     chassisHeight: 22,
     chassisMass: 5.8,
-    wheelRadius: 19,
-    wheelMass: 0.9,
-    wheelBase: 102,
+    wheelRadius: 20,
+    wheelMass: 1.0,
+    wheelBase: 106,
     wheelOffsetY: 34,
-    engineTorque: 0.085,
-    brakeTorque: 0.100,
-    maxWheelSpeed: 1.70,
-    suspensionStiffness: 0.14,
-    suspensionDamping: 0.040,
+    engineTorque: 0.090,
+    brakeTorque: 0.110,
+    maxWheelSpeed: 1.72,
+    suspensionStiffness: 0.15,
+    suspensionDamping: 0.058,
     suspensionTravel: 22,
-    tireGrip: 1.40,
-    airControl: 0.055,
-    angularDamping: 0.020,
+    tireGrip: 1.50,
+    airControl: 0.048,
+    angularDamping: 0.030,
     centerOfMassOffsetY: 5.0,
     accentColor: "#c23a3a",
     chassisColor: "#d2c7b5",
@@ -654,9 +654,9 @@ const VEHICLE_ARCHETYPES = {
 };
 
 const n0 = {
-  gravity: 1.55,
-  fixedDelta: 1000 / 120, // 8.333ms high-precision timestep
-  maxSubSteps: 5,
+  gravity: 1.65,
+  fixedDelta: 1000 / 120, // 8.333ms high-precision substep
+  maxSubSteps: 6,
 };
 
 const r0 = {
@@ -803,7 +803,7 @@ const MATERIALS = {
   },
   dirt: {
     name: "dirt",
-    friction: 0.92,
+    friction: 0.94,
     rollingResistance: 0.002,
     roughness: 0.12,
     dustKind: "dust",
@@ -812,7 +812,7 @@ const MATERIALS = {
   },
   rock: {
     name: "rock",
-    friction: 1.05,
+    friction: 1.08,
     rollingResistance: 0.001,
     roughness: 0.32,
     dustKind: "stone",
@@ -821,7 +821,7 @@ const MATERIALS = {
   },
   gravel: {
     name: "gravel",
-    friction: 0.78,
+    friction: 0.84,
     rollingResistance: 0.004,
     roughness: 0.22,
     dustKind: "grit",
@@ -830,7 +830,7 @@ const MATERIALS = {
   },
   snow: {
     name: "snow",
-    friction: 0.55,
+    friction: 0.65,
     rollingResistance: 0.003,
     roughness: 0.10,
     dustKind: "snow",
@@ -839,7 +839,7 @@ const MATERIALS = {
   },
   ice: {
     name: "ice",
-    friction: 0.30,
+    friction: 0.42,
     rollingResistance: 0.0005,
     roughness: 0.04,
     dustKind: "snow",
@@ -1607,7 +1607,7 @@ class X0 {
 
 
 // ----------------------------------------------------------------------------
-// Interactive Physics Props & Destruction Manager (PropManager)
+// Interactive Physics Props & Multi-Body Fracture Destruction Manager (PropManager)
 // ----------------------------------------------------------------------------
 class PropManager {
   world;
@@ -1616,6 +1616,7 @@ class PropManager {
   bus;
   defs = [];
   activeProps = new Map(); // id -> { bodies, def, smashed }
+  debrisList = []; // Physical rigid-body wooden planks & stone fragments
 
   constructor(world, audio, particles, bus) {
     this.world = world;
@@ -1629,11 +1630,11 @@ class PropManager {
     this.defs = [];
     const noise = K0(seed + 999);
 
-    // 1. Trail signs at scenic spots (starting after 2800m to keep opening track clear)
-    const signDistances = [2800, 5100, 8500, 13800, 18400, 24200, 31500];
+    // 1. Trail signs at scenic spots & early expedition markers
+    const signDistances = [820, 2800, 5100, 8500, 13800, 18400, 24200, 31500];
     for (let i = 0; i < signDistances.length; i++) {
       const sx = signDistances[i];
-      const sy = terrain.heightAt(sx) - 18;
+      const sy = terrain.heightAt(sx) - 15;
       this.defs.push({
         id: `sign_${i}`,
         type: "sign",
@@ -1644,12 +1645,12 @@ class PropManager {
     }
 
     // 2. Breakable wooden fences along ridges & bridges
-    const fenceClusters = [3200, 7200, 12200, 19100, 27400];
+    const fenceClusters = [1320, 3200, 7200, 12200, 19100, 27400];
     for (let c = 0; c < fenceClusters.length; c++) {
       const cx = fenceClusters[c];
       for (let f = 0; f < 4; f++) {
         const fx = cx + f * 24;
-        const fy = terrain.heightAt(fx) - 14;
+        const fy = terrain.heightAt(fx) - 13;
         this.defs.push({
           id: `fence_${c}_${f}`,
           type: "fence",
@@ -1660,11 +1661,11 @@ class PropManager {
       }
     }
 
-    // 3. Supply crates at outposts and industrial zones (placed on plateaus, away from slopes)
-    const crateStations = [3800, 7800, 14800, 25800, 26300];
+    // 3. Breakable Wooden Supply Crates & Stacked Outpost Caches
+    const crateStations = [2250, 2650, 3800, 6200, 7800, 11200, 14800, 21500, 25800, 26300];
     for (let c = 0; c < crateStations.length; c++) {
       const cx = crateStations[c];
-      const cy = terrain.heightAt(cx) - 16;
+      const cy = terrain.heightAt(cx) - 14;
       this.defs.push({
         id: `crate_${c}`,
         type: "crate",
@@ -1690,7 +1691,7 @@ class PropManager {
     }
   }
 
-  updateChunking(camX) {
+  updateChunking(camX, dt = 16.666) {
     const minX = camX - 1200;
     const maxX = camX + 1200;
 
@@ -1705,16 +1706,25 @@ class PropManager {
         this.despawnProp(def.id);
       }
     }
+
+    // Update physical fracture debris lifecycle
+    for (let i = this.debrisList.length - 1; i >= 0; i--) {
+      const dItem = this.debrisList[i];
+      dItem.life -= dt / 1000;
+      if (dItem.life <= 0 || Math.abs(dItem.body.position.x - camX) > 1600 || dItem.body.position.y > 4000) {
+        try { Matter.Composite.remove(this.world, dItem.body); } catch (e) {}
+        this.debrisList.splice(i, 1);
+      }
+    }
   }
 
   spawnProp(def) {
     if (def.type === "sign") {
       const body = Matter.Bodies.rectangle(def.x, def.y, 14, 26, {
         label: "prop_sign",
-        friction: 0.05,
-        density: 0.00005,
-        restitution: 0.05,
-        collisionFilter: { group: -1 },
+        friction: 0.25,
+        density: 0.00004,
+        restitution: 0.02,
       });
       body.propDef = def;
       Matter.Composite.add(this.world, body);
@@ -1722,20 +1732,19 @@ class PropManager {
     } else if (def.type === "fence") {
       const body = Matter.Bodies.rectangle(def.x, def.y, 8, 22, {
         label: "prop_fence",
-        friction: 0.05,
-        density: 0.00005,
-        restitution: 0.05,
-        collisionFilter: { group: -1 },
+        friction: 0.25,
+        density: 0.00004,
+        restitution: 0.02,
       });
       body.propDef = def;
       Matter.Composite.add(this.world, body);
       this.activeProps.set(def.id, { bodies: [body], def, smashed: false });
     } else if (def.type === "crate") {
-      const body = Matter.Bodies.rectangle(def.x, def.y, 22, 22, {
+      const body = Matter.Bodies.rectangle(def.x, def.y, 24, 24, {
         label: "prop_crate",
-        friction: 0.3,
-        density: 0.0002,
-        restitution: 0.10,
+        friction: 0.35,
+        density: 0.00012,
+        restitution: 0.05,
         chamfer: { radius: 2 },
       });
       body.propDef = def;
@@ -1747,8 +1756,8 @@ class PropManager {
         label: "prop_rock",
         friction: 0.7,
         frictionStatic: 0.9,
-        density: 0.002,
-        restitution: 0.15,
+        density: 0.0018,
+        restitution: 0.12,
       });
       body.propDef = def;
       Matter.Composite.add(this.world, body);
@@ -1759,13 +1768,60 @@ class PropManager {
   despawnProp(id) {
     const item = this.activeProps.get(id);
     if (!item) return;
-    for (const b of item.bodies) {
-      Matter.Composite.remove(this.world, b);
+    if (!item.smashed && item.def) {
+      item.def.spawned = false;
+    }
+    for (const bBody of item.bodies) {
+      Matter.Composite.remove(this.world, bBody);
     }
     this.activeProps.delete(id);
   }
 
-  onHit(propBody, hitEnergy, hitPt) {
+  spawnFractureDebris(originX, originY, kind, hitEnergy, baseVel = { x: 4, y: -2 }) {
+    const count = kind === "crate" ? 5 : 3;
+    // Enforce debris pool limit (max 42 rigid bodies)
+    while (this.debrisList.length + count > 42 && this.debrisList.length > 0) {
+      const oldest = this.debrisList.shift();
+      try { Matter.Composite.remove(this.world, oldest.body); } catch (e) {}
+    }
+
+    for (let i = 0; i < count; i++) {
+      const w = kind === "crate" ? 14 + (i % 2) * 6 : 12;
+      const h = 4.5;
+      const angle = (i / count) * Math.PI + (Math.random() - 0.5) * 0.6;
+      const ox = originX + (Math.random() - 0.5) * 14;
+      const oy = originY - 4 + (Math.random() - 0.5) * 14;
+
+      // Group -1 so debris collides with terrain (group 0) and tumbles realistically without colliding with vehicle (group -1)
+      const frag = Matter.Bodies.rectangle(ox, oy, w, h, {
+        label: "debris_plank",
+        collisionFilter: { group: -1 },
+        density: 0.0004,
+        friction: 0.45,
+        restitution: 0.28,
+        angle: angle,
+      });
+
+      const burstSpeed = b(2.5 + hitEnergy * 1.8, 3.0, 11.0);
+      const vx = (baseVel.x * 0.65) + (Math.random() - 0.25) * burstSpeed;
+      const vy = -Math.abs(burstSpeed * (0.45 + Math.random() * 0.65));
+      Matter.Body.setVelocity(frag, { x: vx, y: vy });
+      Matter.Body.setAngularVelocity(frag, (Math.random() - 0.5) * 0.24);
+
+      Matter.Composite.add(this.world, frag);
+      this.debrisList.push({
+        body: frag,
+        w,
+        h,
+        kind,
+        color: i % 2 === 0 ? "#bca383" : "#8a6d4d",
+        life: 4.5,
+        maxLife: 4.5,
+      });
+    }
+  }
+
+  onHit(propBody, hitEnergy, hitPt, impactVel = { x: 6, y: -2 }) {
     const def = propBody.propDef;
     if (!def) return;
     const item = this.activeProps.get(def.id);
@@ -1774,7 +1830,8 @@ class PropManager {
     if (def.type === "sign" || def.type === "fence" || def.type === "crate") {
       item.smashed = true;
       this.audio.destruct("wood");
-      this.particles.spawnSplinters(hitPt.x, hitPt.y, 16);
+      this.particles.spawnSplinters(hitPt.x, hitPt.y, 18);
+      this.spawnFractureDebris(propBody.position.x, propBody.position.y, def.type, hitEnergy, impactVel);
       this.bus.emit("prop:destroyed", { type: def.type, score: 75 });
       try { Matter.Composite.remove(this.world, propBody); } catch (e) {}
     } else if (def.type === "rock") {
@@ -1785,10 +1842,14 @@ class PropManager {
 
   clear() {
     for (const item of this.activeProps.values()) {
-      for (const b of item.bodies) {
-        Matter.Composite.remove(this.world, b);
+      for (const bBody of item.bodies) {
+        try { Matter.Composite.remove(this.world, bBody); } catch (e) {}
       }
     }
+    for (const dItem of this.debrisList) {
+      try { Matter.Composite.remove(this.world, dItem.body); } catch (e) {}
+    }
+    this.debrisList = [];
     this.activeProps.clear();
     this.defs = [];
   }
@@ -1985,7 +2046,6 @@ class P0 {
       });
 
       // Sample along Cubic Hermite Spline
-      // P(u) = (2u^3 - 3u^2 + 1)y0 + (u^3 - 2u^2 + u)L*m0 + (-2u^3 + 3u^2)y1 + (u^3 - u^2)L*m1
       const L = x1 - x0;
       for (let q = x0 + this.step; q <= x1; q += this.step) {
         const u = (q - x0) / L;
@@ -2064,7 +2124,7 @@ class P0 {
           angle: angle,
           friction: mat.friction,
           frictionStatic: mat.friction * 1.35,
-          restitution: 0.02,
+          restitution: 0.0,
           label: "terrain",
           chamfer: { radius: 2 },
         }
@@ -2106,31 +2166,29 @@ class P0 {
     };
   }
 
-  materialAt(xPos) {
-    const firstX = this.samples[0].x;
-    const idx = Math.floor((xPos - firstX) / this.step);
-    const sample = this.samples[Math.max(0, Math.min(this.samples.length - 1, idx))];
-    return sample ? MATERIALS[sample.material] ?? MATERIALS.dirt : MATERIALS.dirt;
+  biomeAt(xPos) {
+    const dist = Math.max(0, (xPos - x.world.startX) / 40);
+    return this.getBiomeAtDist(dist);
   }
 
-  biomeAt(xPos) {
-    const distMeters = Math.max(0, (xPos - x.world.startX) / 40);
-    return this.getBiomeAtDist(distMeters);
+  materialAt(xPos) {
+    const firstX = this.samples[0].x;
+    const idx = Math.max(0, Math.min(this.samples.length - 1, Math.floor((xPos - firstX) / this.step)));
+    const kind = this.samples[idx]?.material ?? "grass";
+    return MATERIALS[kind] ?? MATERIALS.grass;
   }
 
   segmentAt(xPos) {
     for (const seg of this.segments) {
-      if (xPos >= seg.startX && xPos < seg.endX) {
-        return seg;
-      }
+      if (xPos >= seg.startX && xPos <= seg.endX) return seg;
     }
-    return this.segments[this.segments.length - 1] ?? { name: "Trail", type: "rollers" };
+    return { name: "Starting Apron", type: "flat" };
   }
 }
 
 
 // ----------------------------------------------------------------------------
-// Articulated Procedural Driver
+// Multi-Segment Articulated Ragdoll Driver (Coupled Pendulum + Crash Ragdoll)
 // ----------------------------------------------------------------------------
 class Driver {
   lean = 0;
@@ -2138,62 +2196,180 @@ class Driver {
   leanVel = 0;
   jolt = 0;
   joltVel = 0;
+  neckAngle = 0;
+  neckVel = 0;
   helmetAngle = 0;
+  armAngle = 0;
   victory = 0;
   tuck = 0;
+  ragdollActive = false;
+  ragdollBodies = [];
+  ragdollConstraints = [];
 
   update(vehicle, input, dt) {
-    const dtSec = dt / 1000;
-    const accel = vehicle.forwardSpeed - (vehicle.lastForwardSpeed ?? vehicle.forwardSpeed);
+    const dtSec = Math.min(0.033, Math.max(0.001, dt / 1000));
+    const accel = (vehicle.forwardSpeed - (vehicle.lastForwardSpeed ?? vehicle.forwardSpeed)) / Math.max(0.004, dtSec);
     vehicle.lastForwardSpeed = vehicle.forwardSpeed;
 
-    const throttleLean = -input.throttle * 0.24;
-    const brakeLean = input.brake * 0.28;
-    const accelLean = -b(accel * 0.38, -0.32, 0.32);
-    const slopeLean = -b(vehicle.chassis.angle * 0.25, -0.25, 0.25);
-    const airLean = vehicle.airborne ? -0.12 : 0;
+    const angAccel = (vehicle.chassis.angularVelocity - (vehicle.lastAngVel ?? vehicle.chassis.angularVelocity)) / Math.max(0.004, dtSec);
+    vehicle.lastAngVel = vehicle.chassis.angularVelocity;
 
-    // Rollover protection tuck reaction
-    const isInverted = Math.abs(Math.sin(vehicle.chassis.angle)) > 0.82;
+    // Rollover protection tuck reaction (cos(angle) < -0.2 means chassis is inverted upside-down)
+    const isInverted = Math.cos(vehicle.chassis.angle) < -0.2;
     if (isInverted) {
-      this.tuck = G0(this.tuck, 1.0, 14, dt);
+      this.tuck = G0(this.tuck, 1.0, 18, dt);
     } else {
-      this.tuck = G0(this.tuck, 0.0, 8, dt);
+      this.tuck = G0(this.tuck, 0.0, 9, dt);
     }
 
-    this.targetLean = (throttleLean + brakeLean + accelLean + slopeLean + airLean) * (1 - this.tuck * 0.5);
+    // D'Alembert inertial forces on upper torso + active driver bracing
+    const throttleLean = -input.throttle * 0.22;
+    const brakeLean = input.brake * 0.26;
+    const inertialLean = -b(accel * 0.012, -0.38, 0.38) - b(angAccel * 0.08, -0.25, 0.25);
+    const slopeLean = -b(normalizeAngle(vehicle.chassis.angle) * 0.22, -0.25, 0.25);
+    const airLean = vehicle.airborne ? b(-vehicle.chassis.angularVelocity * 2.5, -0.28, 0.28) : 0;
 
-    const springK = 20.0;
-    const damping = 0.70;
-    const force = (this.targetLean - this.lean) * springK;
-    this.leanVel = (this.leanVel + force * dtSec) * Math.pow(damping, dtSec * 60);
+    this.targetLean = (throttleLean + brakeLean + inertialLean + slopeLean + airLean) * (1 - this.tuck * 0.45);
+
+    // 2nd-Order Coupled Torso Spine Spring-Damper
+    const spineK = 26.0;
+    const spineDamp = 0.68;
+    const spineTorque = (this.targetLean - this.lean) * spineK;
+    this.leanVel = (this.leanVel + spineTorque * dtSec) * Math.pow(spineDamp, dtSec * 60);
     this.lean += this.leanVel * dtSec;
-    this.lean = b(this.lean, -0.45, 0.45);
+    this.lean = b(this.lean, -0.52, 0.52);
 
-    const joltForce = -this.jolt * 28.0;
-    this.joltVel = (this.joltVel + joltForce * dtSec) * Math.pow(0.62, dtSec * 60);
+    // 2nd-Order Seat Cushion Vertical Suspension Jolt
+    const joltForce = -this.jolt * 32.0;
+    this.joltVel = (this.joltVel + joltForce * dtSec) * Math.pow(0.60, dtSec * 60);
     this.jolt += this.joltVel * dtSec;
-    this.jolt = b(this.jolt, -3.5, 3.5);
+    this.jolt = b(this.jolt, -4.5, 4.5);
 
-    const targetHelmet = this.lean * 0.72 + vehicle.chassis.angularVelocity * 0.35 + (this.tuck * 0.4);
-    this.helmetAngle = G0(this.helmetAngle, targetHelmet, 14, dt);
+    // Secondary Articulated Neck & Helmet Whip-Lash Pendulum
+    const targetNeck = this.lean * 0.85 - b(accel * 0.018, -0.45, 0.45) + vehicle.chassis.angularVelocity * 1.8 + (this.tuck * 0.45);
+    const neckK = 34.0;
+    const neckDamp = 0.58;
+    const neckTorque = (targetNeck - this.neckAngle) * neckK;
+    this.neckVel = (this.neckVel + neckTorque * dtSec) * Math.pow(neckDamp, dtSec * 60);
+    this.neckAngle += this.neckVel * dtSec;
+    this.neckAngle = b(this.neckAngle, -0.75, 0.75);
+    this.helmetAngle = this.neckAngle;
 
-    this.victory = Math.max(0, this.victory - dtSec * 0.45);
+    this.victory = Math.max(0, this.victory - dtSec * 0.5);
   }
 
   applyShock(energy) {
-    this.jolt += b(energy * 0.35, 0.4, 2.0);
-    this.jolt = b(this.jolt, -3.5, 3.5);
-    this.lean += (Math.random() - 0.5) * 0.20;
+    const impulse = b(energy * 0.45, 0.4, 3.2);
+    this.jolt += impulse;
+    this.joltVel += impulse * 8.5;
+    this.jolt = b(this.jolt, -4.5, 4.5);
+    const whip = (Math.random() - 0.35) * b(energy * 0.25, 0.15, 0.65);
+    this.leanVel += whip * 6.0;
+    this.neckVel += whip * 12.0;
   }
 
   triggerVictory() {
     this.victory = 1.2;
   }
+
+  spawnCrashRagdoll(world, chassis) {
+    if (this.ragdollActive || !world || !chassis) return;
+    this.ragdollActive = true;
+    const cx = chassis.position.x;
+    const cy = chassis.position.y;
+    const ang = chassis.angle;
+    const cos = Math.cos(ang);
+    const sin = Math.sin(ang);
+
+    const toWorld = (lx, ly) => ({
+      x: cx + lx * cos - ly * sin,
+      y: cy + lx * sin + ly * cos,
+    });
+
+    const torsoPos = toWorld(-20, -20);
+    const headPos = toWorld(-20, -36);
+    const armPos = toWorld(-8, -24);
+
+    const torso = Matter.Bodies.rectangle(torsoPos.x, torsoPos.y, 10, 18, {
+      label: "ragdoll_torso",
+      collisionFilter: { group: -3 },
+      density: 0.0008,
+      friction: 0.4,
+      restitution: 0.15,
+      angle: ang + this.lean,
+    });
+    const head = Matter.Bodies.circle(headPos.x, headPos.y, 7.5, {
+      label: "ragdoll_head",
+      collisionFilter: { group: -3 },
+      density: 0.0006,
+      friction: 0.3,
+      restitution: 0.25,
+    });
+    const arm = Matter.Bodies.rectangle(armPos.x, armPos.y, 14, 5, {
+      label: "ragdoll_arm",
+      collisionFilter: { group: -3 },
+      density: 0.0004,
+      friction: 0.3,
+      restitution: 0.1,
+      angle: ang,
+    });
+
+    const vx = b(chassis.velocity.x * 1.15, -18, 18);
+    const vy = b(chassis.velocity.y - 3.5, -18, 12);
+    Matter.Body.setVelocity(torso, { x: vx, y: vy });
+    Matter.Body.setVelocity(head, { x: vx + (Math.random() - 0.5) * 2, y: vy - 1.5 });
+    Matter.Body.setVelocity(arm, { x: vx, y: vy });
+    Matter.Body.setAngularVelocity(torso, (Math.random() - 0.5) * 0.08);
+
+    const seatLap = Matter.Constraint.create({
+      bodyA: chassis,
+      pointA: { x: -22, y: -10 },
+      bodyB: torso,
+      pointB: { x: 0, y: 7 },
+      length: 4,
+      stiffness: 0.35,
+      damping: 0.1,
+    });
+    const neckJoint = Matter.Constraint.create({
+      bodyA: torso,
+      pointA: { x: 0, y: -9 },
+      bodyB: head,
+      pointB: { x: 0, y: 6 },
+      length: 2,
+      stiffness: 0.75,
+      damping: 0.1,
+    });
+    const shoulderJoint = Matter.Constraint.create({
+      bodyA: torso,
+      pointA: { x: 2, y: -6 },
+      bodyB: arm,
+      pointB: { x: -6, y: 0 },
+      length: 2,
+      stiffness: 0.65,
+      damping: 0.1,
+    });
+
+    this.ragdollBodies = [torso, head, arm];
+    this.ragdollConstraints = [seatLap, neckJoint, shoulderJoint];
+    Matter.Composite.add(world, [...this.ragdollBodies, ...this.ragdollConstraints]);
+  }
+
+  clearRagdoll(world) {
+    if (!world) return;
+    for (const c of this.ragdollConstraints) {
+      try { Matter.Composite.remove(world, c); } catch (e) {}
+    }
+    for (const bBody of this.ragdollBodies) {
+      try { Matter.Composite.remove(world, bBody); } catch (e) {}
+    }
+    this.ragdollBodies = [];
+    this.ragdollConstraints = [];
+    this.ragdollActive = false;
+  }
 }
 
 // ----------------------------------------------------------------------------
-// Expedition Vehicle (f0)
+// Expedition Vehicle (f0) - Prismatic Suspension & Surface-Tangent Traction
 // ----------------------------------------------------------------------------
 class f0 {
   archetype;
@@ -2204,6 +2380,7 @@ class f0 {
   driver = new Driver();
   audio = null;
   airborneTimer = 0;
+  groundClearance = 0;
 
   constructor(xPos, yPos, archetypeId = "buggy", audio = null) {
     this.audio = audio;
@@ -2217,7 +2394,7 @@ class f0 {
     x.vehicle = vCfg;
 
     const posX = xPos ?? this.chassis?.position.x ?? x.world.startX;
-    const posY = yPos ?? this.chassis?.position.y ?? x.world.groundBase - 58;
+    const posY = yPos ?? this.chassis?.position.y ?? x.world.groundBase - (vCfg.wheelOffsetY + vCfg.wheelRadius);
 
     this.chassis = d.default.Bodies.rectangle(
       posX,
@@ -2228,23 +2405,23 @@ class f0 {
         label: "chassis",
         collisionFilter: { group: -3 },
         density: vCfg.chassisMass / (vCfg.chassisWidth * vCfg.chassisHeight),
-        friction: 0.10,
-        frictionAir: 0.003,
-        restitution: 0.12,
+        friction: 0.12,
+        frictionAir: 0.004,
+        restitution: 0.02,
         chamfer: { radius: [6, 6, 12, 12] },
       }
     );
 
-    // Calculate polar moment of inertia for responsive, agile HCR handling
+    // High polar moment of inertia prevents twitchy pitching and gives weighty stability
     const defInertia = (vCfg.chassisMass * (vCfg.chassisWidth * vCfg.chassisWidth + vCfg.chassisHeight * vCfg.chassisHeight)) / 12;
-    Matter.Body.setInertia(this.chassis, defInertia * 1.6);
+    Matter.Body.setInertia(this.chassis, defInertia * 2.4);
 
-    // Lower Center of Mass slightly for natural stability
-    Matter.Body.setCentre(this.chassis, { x: 0, y: 2 }, true);
+    // Low Center of Mass for natural hill-climbing balance
+    Matter.Body.setCentre(this.chassis, { x: 0, y: 4 }, true);
 
     const wheelOffsets = [
-      { x: -vCfg.wheelBase / 2, y: vCfg.wheelOffsetY }, // Rear wheel
-      { x: vCfg.wheelBase / 2, y: vCfg.wheelOffsetY },  // Front wheel
+      { x: -vCfg.wheelBase / 2, y: vCfg.wheelOffsetY }, // Rear wheel (0)
+      { x: vCfg.wheelBase / 2, y: vCfg.wheelOffsetY },  // Front wheel (1)
     ];
 
     this.wheels = [];
@@ -2261,31 +2438,14 @@ class f0 {
           collisionFilter: { group: -3 },
           density: vCfg.wheelMass / (Math.PI * vCfg.wheelRadius * vCfg.wheelRadius),
           friction: vCfg.tireGrip,
-          frictionStatic: vCfg.tireGrip * 1.4,
-          frictionAir: 0.0025,
-          restitution: 0.18, // Bouncy, energetic HCR tires!
-          slop: 0.02,
+          frictionStatic: vCfg.tireGrip * 1.5,
+          frictionAir: 0.003,
+          restitution: 0.0, // Zero superball bounce on terrain polygon seams!
+          slop: 0.01,
         }
       );
 
-      // Authentic Trailing/Leading Swingarm + Strut Architecture:
-      // Radius arm constrains the wheel to a smooth circular travel arc,
-      // while the spring strut provides authentic Hooke compression and rebound.
-      // Geometrically immune to inversion.
-      const isRear = i === 0;
-      const armSpread = isRear ? 28 : -28;
-      const armAnchor = { x: off.x + armSpread, y: 8 };
-      const armLen = Math.hypot(armSpread, vCfg.wheelOffsetY - armAnchor.y);
-
-      const swingArm = d.default.Constraint.create({
-        bodyA: this.chassis,
-        pointA: armAnchor,
-        bodyB: wheel,
-        length: armLen,
-        stiffness: 0.90,
-        damping: 0.06,
-      });
-
+      // Symmetric Wishbone + Primary Coilover Strut (paired with exact 1D Prismatic Axis projection)
       const springStrut = d.default.Constraint.create({
         bodyA: this.chassis,
         pointA: { x: off.x, y: 0 },
@@ -2295,15 +2455,36 @@ class f0 {
         damping: vCfg.suspensionDamping,
       });
 
-      this.constraints.push(swingArm, springStrut);
+      const guideSpread = 22;
+      const guideLen = Math.hypot(guideSpread, vCfg.wheelOffsetY);
+      const guideLeft = d.default.Constraint.create({
+        bodyA: this.chassis,
+        pointA: { x: off.x - guideSpread, y: 0 },
+        bodyB: wheel,
+        length: guideLen,
+        stiffness: vCfg.suspensionStiffness * 0.85,
+        damping: vCfg.suspensionDamping,
+      });
+      const guideRight = d.default.Constraint.create({
+        bodyA: this.chassis,
+        pointA: { x: off.x + guideSpread, y: 0 },
+        bodyB: wheel,
+        length: guideLen,
+        stiffness: vCfg.suspensionStiffness * 0.85,
+        damping: vCfg.suspensionDamping,
+      });
+
+      this.constraints.push(springStrut, guideLeft, guideRight);
 
       this.wheels.push({
         body: wheel,
         restOffset: off,
         compression: 0,
         lastCompression: 0,
-        contact: true, // start grounded
+        contact: true,
+        contactGrace: 100,
         slip: 0,
+        slipRatio: 0,
         material: "grass",
       });
     }
@@ -2340,10 +2521,86 @@ class f0 {
     return !this.wheels.some((w) => w.contact);
   }
 
+  // --------------------------------------------------------------------------
+  // PRISMATIC LINE CONSTRAINT SOLVER (Inspired by AngeTheGreat line_constraint)
+  // Projects wheel strictly onto the chassis local suspension strut axis (C_perp = 0)
+  // and enforces physical bump-stop & droop-stop travel limits [minY, maxY].
+  // --------------------------------------------------------------------------
+  solvePrismaticSuspension() {
+    const vCfg = this.archetype;
+    const cPos = this.chassis.position;
+    const cVel = this.chassis.velocity;
+    const theta = this.chassis.angle;
+    const omega = this.chassis.angularVelocity;
+    const cos = Math.cos(theta);
+    const sin = Math.sin(theta);
+
+    // Local chassis basis vectors: tHat = forward, nHat = downward strut axis
+    const tHat = { x: cos, y: sin };
+    const nHat = { x: -sin, y: cos };
+
+    const minAxialY = Math.max(16, vCfg.wheelOffsetY - vCfg.suspensionTravel * 0.72);
+    const maxAxialY = vCfg.wheelOffsetY + vCfg.suspensionTravel * 0.42;
+
+    for (let i = 0; i < this.wheels.length; i++) {
+      const w = this.wheels[i];
+      const wPos = w.body.position;
+      const wVel = w.body.velocity;
+
+      const dx = wPos.x - cPos.x;
+      const dy = wPos.y - cPos.y;
+
+      // Wheel coordinates in chassis local frame
+      const localX = dx * tHat.x + dy * tHat.y;
+      const localY = dx * nHat.x + dy * nHat.y;
+
+      const targetX = w.restOffset.x;
+      const clampedY = b(localY, minAxialY, maxAxialY);
+
+      const errX = localX - targetX;
+      const errY = localY - clampedY;
+
+      // Project position onto prismatic strut line if lateral drift or travel limit exceeded
+      if (Math.abs(errX) > 0.15 || Math.abs(errY) > 0.05) {
+        const newWorldX = cPos.x + targetX * tHat.x + clampedY * nHat.x;
+        const newWorldY = cPos.y + targetX * tHat.y + clampedY * nHat.y;
+
+        // Mount velocity in world space: v_mount = v_c + omega x r_mount
+        const mountVx = cVel.x - omega * (targetX * sin + clampedY * cos);
+        const mountVy = cVel.y + omega * (targetX * cos - clampedY * sin);
+
+        // Preserve axial velocity along nHat while damping lateral error velocity along tHat
+        const relVx = wVel.x - mountVx;
+        const relVy = wVel.y - mountVy;
+        let axialVel = relVx * nHat.x + relVy * nHat.y;
+        if (localY <= minAxialY && axialVel < 0) axialVel = 0;
+        if (localY >= maxAxialY && axialVel > 0) axialVel = 0;
+
+        const lateralVel = (relVx * tHat.x + relVy * tHat.y) * 0.15;
+
+        const nextVx = mountVx + tHat.x * lateralVel + nHat.x * axialVel;
+        const nextVy = mountVy + tHat.y * lateralVel + nHat.y * axialVel;
+
+        Matter.Body.setPosition(w.body, { x: newWorldX, y: newWorldY });
+        Matter.Body.setVelocity(w.body, { x: nextVx, y: nextVy });
+      }
+
+      // Compute normalized suspension compression [-1, 1]
+      w.compression = b(
+        (vCfg.wheelOffsetY - clampedY) / vCfg.suspensionTravel,
+        -1,
+        1
+      );
+    }
+  }
+
   update(input, dt, terrain = null) {
     const vCfg = this.archetype;
     const throttleBrake = input.throttle - input.brake;
     const dtSec = Math.max(0.001, dt / 1000);
+
+    // 1. Enforce 1D Prismatic Strut Axis & Travel Limits before applying forces
+    this.solvePrismaticSuspension();
 
     if (this.airborne) {
       this.airborneTimer += dt;
@@ -2351,28 +2608,40 @@ class f0 {
       this.airborneTimer = 0;
     }
 
+    // Compute true ground clearance under the tires
+    if (terrain) {
+      const groundY = terrain.heightAt(this.chassis.position.x);
+      const lowestTireY = Math.max(
+        this.wheels[0].body.position.y + vCfg.wheelRadius,
+        this.wheels[1].body.position.y + vCfg.wheelRadius
+      );
+      this.groundClearance = Math.max(0, groundY - lowestTireY);
+    } else {
+      this.groundClearance = this.airborne ? 200 : 0;
+    }
+
     // Dynamic Normal Load Distribution (Spec #03):
-    // N_front = [mg(b cos theta - h sin theta) - m h a_x] / L
-    // N_rear  = [mg(a cos theta + h sin theta) + m h a_x] / L
-    const theta = this.chassis.angle;
-    const ax = (this.forwardSpeed - (this.lastForwardSpeed ?? this.forwardSpeed)) / dtSec;
+    const theta = normalizeAngle(this.chassis.angle);
+    const ax = b((this.forwardSpeed - (this.lastForwardSpeed ?? this.forwardSpeed)) / dtSec, -45, 45);
     const m = this.chassis.mass;
     const g = 9.81 * 8.0;
     const W = m * g;
     const L = vCfg.wheelBase;
     const b_dist = L / 2;
     const a_dist = L / 2;
-    const h = vCfg.centerOfMassOffsetY ?? 8.0;
+    const h = vCfg.centerOfMassOffsetY ?? 6.0;
 
-    const nFront = Math.max(0.1, (W * (b_dist * Math.cos(theta) - h * Math.sin(theta)) - m * h * ax) / L);
-    const nRear = Math.max(0.1, (W * (a_dist * Math.cos(theta) + h * Math.sin(theta)) + m * h * ax) / L);
+    const nFront = Math.max(0.15, (W * (b_dist * Math.cos(theta) - h * Math.sin(theta)) - m * h * ax * 0.25) / L);
+    const nRear = Math.max(0.15, (W * (a_dist * Math.cos(theta) + h * Math.sin(theta)) + m * h * ax * 0.25) / L);
     this.normalLoads = { front: nFront, rear: nRear };
+
+    // Local terrain slope under chassis
+    const groundSlope = terrain ? terrain.slopeAt(this.chassis.position.x) : 0;
 
     for (let i = 0; i < this.wheels.length; i++) {
       const w = this.wheels[i];
       const isRear = i === 0;
-      const torqueShare = isRear ? 0.55 : 0.45;
-      const normalLoad = isRear ? nRear : nFront;
+      const torqueShare = isRear ? 0.54 : 0.46;
       const spin = w.body.angularVelocity;
       const speedRatio = b(1 - Math.abs(spin) / vCfg.maxWheelSpeed, 0, 1);
 
@@ -2383,54 +2652,42 @@ class f0 {
       const denom = Math.max(Math.abs(rw), Math.abs(vx), 0.1);
       w.slipRatio = b((rw - vx) / denom, -1.5, 1.5);
 
-      let sKappa = 0;
-      const absK = Math.abs(w.slipRatio);
-      if (absK < 0.18) {
-        sKappa = (absK / 0.18) * Math.sign(w.slipRatio);
-      } else {
-        sKappa = (1.0 - 0.22 * Math.min(1.0, (absK - 0.18) / 0.82)) * Math.sign(w.slipRatio);
-      }
-
       if (throttleBrake !== 0) {
         const isDriving = Math.sign(throttleBrake) === Math.sign(spin) || Math.abs(spin) < 0.03;
         const torque = isDriving
-          ? vCfg.engineTorque * speedRatio * throttleBrake
+          ? vCfg.engineTorque * (0.25 + 0.75 * speedRatio) * throttleBrake
           : vCfg.brakeTorque * throttleBrake;
 
-        w.body.torque += torque * torqueShare * w.body.mass * 24;
+        // Spin wheel smoothly within maxWheelSpeed
+        const targetSpinDelta = torque * torqueShare * 0.32 * (dt / 8.333);
+        const nextSpin = b(spin + targetSpinDelta, -vCfg.maxWheelSpeed, vCfg.maxWheelSpeed);
+        d.default.Body.setAngularVelocity(w.body, nextSpin);
 
-        if (w.contact) {
+        // True Surface-Tangent Rolling Traction (only when wheel is on ground & car is upright!)
+        if (w.contact && Math.cos(theta) > 0.25) {
           const mat = MATERIALS[w.material] ?? MATERIALS.dirt;
-          const forwardDir = {
-            x: Math.cos(this.chassis.angle),
-            y: Math.sin(this.chassis.angle),
+          const wheelSlope = terrain ? terrain.slopeAt(w.body.position.x) : theta;
+          const tangentDir = {
+            x: Math.cos(wheelSlope),
+            y: Math.sin(wheelSlope),
           };
-          const tractiveMag = torque * torqueShare * mat.friction * 0.24;
+          const normalDir = {
+            x: -Math.sin(wheelSlope),
+            y: Math.cos(wheelSlope),
+          };
+
+          const topSpeedLimiter = b(1 - Math.abs(this.forwardSpeed) / 16.5, 0.08, 1.0);
+          const tractiveMag = torque * torqueShare * mat.friction * 0.18 * topSpeedLimiter;
+
+          // Apply propulsion along the terrain tangent + subtle tire-ground normal grip
           Matter.Body.applyForce(this.chassis, this.chassis.position, {
-            x: forwardDir.x * tractiveMag,
-            y: forwardDir.y * tractiveMag,
+            x: tangentDir.x * tractiveMag,
+            y: tangentDir.y * tractiveMag + normalDir.y * Math.abs(tractiveMag) * 0.12,
           });
         }
       } else {
-        d.default.Body.setAngularVelocity(w.body, spin * 0.992);
+        d.default.Body.setAngularVelocity(w.body, spin * 0.985);
       }
-
-      // Suspension travel & Hooke spring-damper compression
-      const mountWorld = d.default.Vector.add(
-        this.chassis.position,
-        d.default.Vector.rotate(
-          { x: w.restOffset.x, y: 0 },
-          this.chassis.angle
-        )
-      );
-      const curDist = d.default.Vector.magnitude(
-        d.default.Vector.sub(w.body.position, mountWorld)
-      );
-      w.compression = b(
-        (vCfg.wheelOffsetY - curDist) / vCfg.suspensionTravel,
-        -1,
-        1
-      );
 
       const deltaComp = w.compression - w.lastCompression;
       if (deltaComp > 0.26 && w.compression > 0.35 && this.audio) {
@@ -2441,60 +2698,90 @@ class f0 {
     }
 
     // -------------------------------------------------------------------------
-    // GENUINE HILL CLIMB RACING PITCH CONTROL (GROUND & AIR)
-    // Gas (D) -> Tilts Nose UP (CCW)
-    // Brake (A) -> Tilts Nose DOWN (CW)
+    // GROUND STABILITY & GENUINE HILL CLIMB RACING PITCH CONTROL
     // -------------------------------------------------------------------------
-    if (throttleBrake !== 0) {
-      const dir = -Math.sign(throttleBrake); // throttle = -1 (CCW / Nose UP), brake = +1 (CW / Nose DOWN)
-      if (this.airborne && this.airborneTimer >= 60) {
+    const relPitch = normalizeAngle(theta - groundSlope);
+
+    if (!this.airborne) {
+      // ON GROUND: Keep vehicle planted and stable!
+      // Subtle weight-transfer pitch feel (wheelie lift on gas, nose dive on brake),
+      // strictly bounded to +-16 degrees relative to the slope so it NEVER flips on the ground!
+      if (throttleBrake > 0 && relPitch > -0.26 && Math.cos(theta) > 0.5) {
+        this.chassis.torque += -0.0008 * this.chassis.mass * b(1 - Math.abs(relPitch) / 0.26, 0, 1);
+      } else if (throttleBrake < 0 && relPitch < 0.26 && Math.cos(theta) > 0.5) {
+        this.chassis.torque += 0.0008 * this.chassis.mass * b(1 - Math.abs(relPitch) / 0.26, 0, 1);
+      }
+
+      // Strong anti-flip suspension restoring torque when both or either wheel is grounded
+      if (Math.cos(theta) > 0.15) {
+        const pitchError = normalizeAngle(theta - groundSlope);
+        if (Math.abs(pitchError) > 0.22) {
+          const excess = pitchError - Math.sign(pitchError) * 0.22;
+          this.chassis.torque += -excess * 0.028 * this.chassis.mass;
+        }
+        // Damp ground pitch oscillations strongly
+        this.chassis.torque += -this.chassis.angularVelocity * 0.045 * this.chassis.mass;
+      }
+    } else {
+      // IN MID-AIR:
+      // Distinguish between small trail hops (groundClearance <= 38px) vs real high jumps!
+      const isHighJump = this.groundClearance > 38 && this.airborneTimer >= 140;
+      if (isHighJump && throttleBrake !== 0) {
+        // Deliberate High-Air Stunt Control:
+        // D (Throttle > 0) -> Counter-clockwise (dir = -1 -> BACKFLIP)
+        // A (Brake > 0)    -> Clockwise         (dir = +1 -> FRONTFLIP)
+        const dir = -Math.sign(throttleBrake);
         const angVel = this.chassis.angularVelocity;
-        const spinLimit = b(1 - Math.abs(angVel) / 0.18, 0, 1);
-        const opposing = Math.sign(dir) !== Math.sign(angVel) ? 1.0 : spinLimit;
-        const airTorque = dir * Math.abs(throttleBrake) * vCfg.airControl * opposing * this.chassis.mass * 24;
+        // Target flip speed for 1.0s 360-degree stunt rotation in high air
+        const maxFlipRate = 0.115;
+        const spinLimit = b(1 - Math.abs(angVel) / maxFlipRate, 0, 1);
+        const opposing = Math.sign(dir) !== Math.sign(angVel) ? 1.25 : spinLimit;
+        const airTorque = dir * Math.abs(throttleBrake) * vCfg.airControl * opposing * this.chassis.mass * 34.0;
         this.chassis.torque += airTorque;
-      } else if (!this.airborne) {
-        // Subtle ground reaction: Gas lifts nose into wheelie, Brake presses nose down
-        const groundPitch = dir * Math.abs(throttleBrake) * 0.003 * this.chassis.mass;
-        this.chassis.torque += groundPitch;
+      } else if (!isHighJump && Math.cos(theta) > 0.2) {
+        // Low trail hop: gently auto-level chassis to terrain slope for smooth 4-wheel landings!
+        const hopError = normalizeAngle(theta - groundSlope);
+        this.chassis.torque += -hopError * 0.018 * this.chassis.mass - this.chassis.angularVelocity * 0.035 * this.chassis.mass;
       }
     }
 
-    // Dynamic 2-wheel grounded stability (damping ground oscillation)
-    if (this.wheels[0].contact && this.wheels[1].contact) {
-      this.chassis.torque += -0.008 * this.chassis.mass * this.chassis.angularVelocity;
-    }
-
-    // Inverted Self-Righting Roll Recovery (when resting on roof)
-    const isUpsideDown = !this.airborne && (Math.abs(normalizeAngle(this.chassis.angle)) > 1.65 || this.roofContact);
+    // Inverted Self-Righting Roll Recovery (when resting upside down on roof)
+    const isUpsideDown = !this.airborne && (Math.abs(theta) > 1.65 || this.roofContact);
     if (isUpsideDown && throttleBrake !== 0) {
       const rollDir = Math.sign(throttleBrake);
-      this.chassis.torque += rollDir * this.chassis.mass * 0.40;
+      this.chassis.torque += rollDir * this.chassis.mass * 0.32;
       Matter.Body.applyForce(this.chassis, this.chassis.position, {
-        x: rollDir * 0.016 * this.chassis.mass,
-        y: -0.028 * this.chassis.mass,
+        x: rollDir * 0.014 * this.chassis.mass,
+        y: -0.024 * this.chassis.mass,
       });
     }
 
-    const damping = this.airborne ? vCfg.angularDamping : vCfg.angularDamping * 2.2;
-    const factor = 1 - Math.min(damping * (dt / 16.666), 0.5);
-    d.default.Body.setAngularVelocity(this.chassis, this.chassis.angularVelocity * factor);
+    // Angular velocity damping & hard safety clamp
+    const damping = this.airborne ? vCfg.angularDamping * 0.65 : vCfg.angularDamping * 3.2;
+    const factor = 1 - Math.min(damping * (dt / 16.666), 0.45);
+    const maxAllowedAngVel = (this.airborne && this.groundClearance > 38) ? 0.125 : 0.045;
+    const clampedAngVel = b(this.chassis.angularVelocity * factor, -maxAllowedAngVel, maxAllowedAngVel);
+    d.default.Body.setAngularVelocity(this.chassis, clampedAngVel);
 
     this.driver.update(this, input, dt);
   }
 
-  markContacts(terrainSet, activePairs) {
-    for (const w of this.wheels) w.contact = false;
+  markContacts(terrainSet, activePairs, terrain = null, dt = 8.333) {
     this.roofContact = false;
+    const pairHit = [false, false];
 
     for (const pair of activePairs) {
       const { bodyA, bodyB } = pair;
-      const w = this.wheels.find((wheel) => wheel.body === bodyA || wheel.body === bodyB);
-      if (w) {
-        const other = bodyA === w.body ? bodyB : bodyA;
-        if (terrainSet.has(other)) {
-          w.contact = true;
-          w.material = other.materialKind ?? "grass";
+      for (let i = 0; i < this.wheels.length; i++) {
+        const w = this.wheels[i];
+        if (bodyA === w.body || bodyB === w.body) {
+          const other = bodyA === w.body ? bodyB : bodyA;
+          if (terrainSet.has(other)) {
+            pairHit[i] = true;
+            w.contact = true;
+            w.contactGrace = 85;
+            w.material = other.materialKind ?? "grass";
+          }
         }
       }
 
@@ -2512,6 +2799,39 @@ class f0 {
               this.roofContact = true;
             }
           }
+        }
+      }
+    }
+
+    // Spline proximity & grace hysteresis so 18px polygon seams never cause false airborne state
+    const vCfg = this.archetype;
+    const upright = Math.cos(this.chassis.angle) > 0.15;
+
+    for (let i = 0; i < this.wheels.length; i++) {
+      const w = this.wheels[i];
+      if (pairHit[i]) continue;
+
+      let nearSpline = false;
+      if (terrain && upright && w.body.velocity.y >= -3.2) {
+        const ty = terrain.heightAt(w.body.position.x);
+        const tireBottom = w.body.position.y + vCfg.wheelRadius;
+        if (Math.abs(ty - tireBottom) <= 6.5) {
+          nearSpline = true;
+          w.material = terrain.materialAt(w.body.position.x)?.name ?? "grass";
+        }
+      }
+
+      if (nearSpline) {
+        w.contact = true;
+        w.contactGrace = 65;
+      } else {
+        w.contactGrace = Math.max(0, (w.contactGrace ?? 0) - dt);
+        if (w.contactGrace > 0 && terrain) {
+          const ty = terrain.heightAt(w.body.position.x);
+          const tireBottom = w.body.position.y + vCfg.wheelRadius;
+          w.contact = (ty - tireBottom) < 12.0;
+        } else {
+          w.contact = false;
         }
       }
     }
@@ -2626,37 +2946,32 @@ class StuntDirector {
   checkGroundStunts(vehicle, terrain, dt) {
     const rear = vehicle.wheels[0];
     const front = vehicle.wheels[1];
-    const slope = terrain.slopeAt(vehicle.chassis.position.x);
-    const relAngle = vehicle.chassis.angle - slope;
+    const dtSec = dt / 1000;
+    const speed = Math.abs(vehicle.forwardSpeed);
 
-    // Wheelie: rear wheel contacts, front wheel elevated, nose pitched up (relAngle < -0.22)
-    if (rear.contact && !front.contact && relAngle < -0.22 && vehicle.forwardSpeed > 3.0) {
-      this.wheelieTime += dt;
-      this.wheelieDistance += (vehicle.forwardSpeed * dt) / 1000;
-      if (this.wheelieTime > 400) {
-        const step = Math.floor((this.wheelieTime - 400) / 350);
-        const prevStep = Math.floor((this.wheelieTime - dt - 400) / 350);
-        if (step > prevStep) {
-          const score = 80 + step * 40;
-          this.awardStunt(`WHEELIE (${(this.wheelieDistance / 2).toFixed(0)}m)`, score, 1);
-        }
+    // Wheelie: Rear wheel in contact, front wheel lifted
+    if (rear.contact && !front.contact && speed > 2.5) {
+      if (this.wheelieTime === 0) this.wheelieStartX = vehicle.chassis.position.x;
+      this.wheelieTime += dtSec;
+      this.wheelieDistance = Math.abs(vehicle.chassis.position.x - (this.wheelieStartX || vehicle.chassis.position.x)) / 40;
+
+      if (this.wheelieTime >= 1.2 && Math.floor((this.wheelieTime - dtSec) / 1.2) < Math.floor(this.wheelieTime / 1.2)) {
+        const pts = Math.round(80 + this.wheelieDistance * 8);
+        this.awardStunt(`WHEELIE ${Math.round(this.wheelieDistance)}m`, pts, 1);
       }
     } else {
       this.wheelieTime = 0;
       this.wheelieDistance = 0;
     }
 
-    // Stoppie: front wheel contacts, rear elevated, nose pitched down (relAngle > 0.22)
-    if (front.contact && !rear.contact && relAngle > 0.22 && vehicle.forwardSpeed > 2.5) {
-      this.stoppieTime += dt;
-      this.stoppieDistance += (vehicle.forwardSpeed * dt) / 1000;
-      if (this.stoppieTime > 400) {
-        const step = Math.floor((this.wheelieTime - 400) / 350);
-        const prevStep = Math.floor((this.wheelieTime - dt - 400) / 350);
-        if (step > prevStep) {
-          const score = 100 + step * 50;
-          this.awardStunt(`STOPPIE (${(this.stoppieDistance / 2).toFixed(0)}m)`, score, 1);
-        }
+    // Stoppie / Nose Manual: Front wheel in contact, rear wheel lifted
+    if (front.contact && !rear.contact && speed > 2.0) {
+      if (this.stoppieTime === 0) this.stoppieStartX = vehicle.chassis.position.x;
+      this.stoppieTime += dtSec;
+      this.stoppieDistance = Math.abs(vehicle.chassis.position.x - (this.stoppieStartX || vehicle.chassis.position.x)) / 40;
+
+      if (this.stoppieTime >= 0.9 && Math.floor((this.stoppieTime - dtSec) / 0.9) < Math.floor(this.stoppieTime / 0.9)) {
+        this.awardStunt(`NOSE BALANCE`, 120, 2);
       }
     } else {
       this.stoppieTime = 0;
@@ -2665,98 +2980,75 @@ class StuntDirector {
   }
 
   onLanding(vehicle, terrain) {
-    if (this.airtime < 220) {
+    if (this.airtime < 420) {
       this.airtime = 0;
-      this.groundedTime = 0;
       return;
     }
 
-    const chassis = vehicle.chassis;
-    const slope = terrain.slopeAt(chassis.position.x);
-    const angleDiff = Math.abs(normalizeAngle(chassis.angle - slope));
-    const vertSpeed = Math.abs(chassis.velocity.y);
-    const apexHeight = this.launchY - this.airApexY;
+    const slope = terrain.slopeAt(vehicle.chassis.position.x);
+    const angleDiff = Math.abs(normalizeAngle(vehicle.chassis.angle - slope));
+    const vy = Math.abs(vehicle.chassis.velocity.y);
+    const heightMeters = Math.max(0, (this.launchY - this.airApexY) / 40);
 
-    if (this.airtime > 720 || apexHeight > 65) {
-      this.awardStunt("BIG AIR", 180, 1);
-    }
-    if (this.airDistance > 26) {
-      this.awardStunt("LONG JUMP", 200, 1);
+    // Big Air & Long Jump
+    if (this.airDistance >= 14) {
+      const jumpScore = Math.round(this.airDistance * 12);
+      this.awardStunt(`LONG JUMP ${this.airDistance.toFixed(0)}m`, jumpScore, 2);
+    } else if (heightMeters >= 3.2 || this.airtime >= 950) {
+      this.awardStunt(`BIG AIR`, 180, 1);
     }
 
-    // Landing quality evaluation
-    if (angleDiff < 0.19 && vertSpeed < 14) {
-      this.comboMultiplier = Math.min(this.comboMultiplier + 1, 8);
-      this.awardStunt("PERFECT LANDING", 160 * this.comboMultiplier, 3);
-      this.camera.pulseZoom(0.04);
-      vehicle.driver.triggerVictory();
-      // Forward momentum boost for rewarding skillful landing
-      const forwardDir = { x: Math.cos(chassis.angle), y: Math.sin(chassis.angle) };
-      Matter.Body.applyForce(chassis, chassis.position, {
-        x: forwardDir.x * 0.03 * chassis.mass,
-        y: forwardDir.y * 0.03 * chassis.mass,
-      });
-    } else if (angleDiff < 0.40) {
-      this.awardStunt("CLEAN LANDING", 60, 1);
-      this.camera.pulseZoom(0.015);
-    } else if (angleDiff >= 0.72 || vertSpeed > 22) {
-      this.breakCombo();
-      this.camera.shake(0.30, 240);
-      Matter.Body.setVelocity(chassis, {
-        x: chassis.velocity.x * 0.82,
-        y: chassis.velocity.y * 0.82,
-      });
+    // Clean / Perfect Landing check (chassis aligned with terrain slope)
+    if (angleDiff < 0.24 && !vehicle.roofContact) {
+      if (this.airtime >= 680 || this.backflips > 0 || this.frontflips > 0) {
+        const bonus = (this.backflips + this.frontflips) > 0 ? 220 : 110;
+        this.awardStunt("PERFECT LANDING", bonus, 3);
+        this.camera.pulseZoom(0.035);
+        vehicle.driver.triggerVictory();
+      }
+    } else if (angleDiff > 0.75 || vy > 9.5) {
+      // Hard Slam Landing
+      if (this.comboMultiplier > 1) {
+        this.showToast("HARD SLAM!", 1);
+      }
     }
 
     this.airtime = 0;
-    this.groundedTime = 0;
   }
 
-  awardStunt(name, score, tier = 1) {
-    this.comboScore += score;
-    this.comboTimer = 4.0;
+  awardStunt(name, baseScore, tier = 1) {
+    this.comboScore += baseScore * this.comboMultiplier;
+    if (this.comboTimer > 0) {
+      this.comboMultiplier = Math.min(8, this.comboMultiplier + 1);
+    } else {
+      this.comboMultiplier = 1;
+    }
+    this.comboTimer = 4.2;
     this.activeStuntName = name;
-    this.audio?.stuntChime(tier);
 
+    this.audio.stuntChime(tier);
     this.bus.emit("stunt:awarded", {
-      name: name,
-      score: score,
+      name,
+      score: baseScore * this.comboMultiplier,
       multiplier: this.comboMultiplier,
-      tier: tier,
-      totalComboScore: this.comboScore,
+      tier,
     });
   }
 
   showToast(name, tier = 1) {
     this.bus.emit("stunt:awarded", {
-      name: name,
+      name,
       score: 0,
       multiplier: 1,
-      tier: tier,
-      totalComboScore: this.comboScore,
+      tier,
     });
   }
 
   endCombo() {
-    if (this.comboScore > 0) {
-      const finalScore = this.comboScore * this.comboMultiplier;
-      this.bus.emit("stunt:combo_complete", {
-        score: finalScore,
-        multiplier: this.comboMultiplier,
-      });
-    }
     this.comboMultiplier = 1;
     this.comboScore = 0;
     this.comboTimer = 0;
     this.activeStuntName = "";
-  }
-
-  breakCombo() {
-    this.comboMultiplier = 1;
-    this.comboScore = 0;
-    this.comboTimer = 0;
-    this.activeStuntName = "";
-    this.bus.emit("stunt:combo_broken", {});
   }
 }
 
@@ -3349,6 +3641,24 @@ class R0 {
 
       ctx.restore();
     }
+
+    // Render physical rigid-body fracture debris planks
+    if (propManager.debrisList && propManager.debrisList.length > 0) {
+      for (const dItem of propManager.debrisList) {
+        const bBody = dItem.body;
+        if (!bBody) continue;
+        ctx.save();
+        ctx.globalAlpha = Math.min(1, dItem.life / 1.2);
+        ctx.translate(bBody.position.x, bBody.position.y);
+        ctx.rotate(bBody.angle);
+        ctx.fillStyle = dItem.color || "#bca383";
+        ctx.strokeStyle = "#1b1f1d";
+        ctx.lineWidth = 1.4;
+        ctx.fillRect(-dItem.w / 2, -dItem.h / 2, dItem.w, dItem.h);
+        ctx.strokeRect(-dItem.w / 2, -dItem.h / 2, dItem.w, dItem.h);
+        ctx.restore();
+      }
+    }
   }
 
   drawVehicle(vehicle, biome) {
@@ -3615,23 +3925,48 @@ class R0 {
 
   drawArticulatedDriver(driver, vehicle) {
     const ctx = this.ctx;
-    // Driver seated naturally inside the cockpit
-    const hipX = -26;
-    const hipY = -12 + (driver.jolt || 0);
+    // Driver seated naturally inside the cockpit (or driven by physical Matter.js crash ragdoll)
+    let hipX = -26;
+    let hipY = -12 + (driver.jolt || 0);
 
     const spineAngle = (driver.lean || 0) * 0.72;
     const torsoLen = 17;
-    const shoulderX = hipX + Math.sin(spineAngle) * torsoLen;
-    const shoulderY = hipY - Math.cos(spineAngle) * torsoLen;
+    let shoulderX = hipX + Math.sin(spineAngle) * torsoLen;
+    let shoulderY = hipY - Math.cos(spineAngle) * torsoLen;
 
-    const headX = shoulderX + Math.sin(spineAngle) * 9;
-    const headY = shoulderY - Math.cos(spineAngle) * 9;
+    let headX = shoulderX + Math.sin(spineAngle + (driver.neckAngle || 0) * 0.35) * 9;
+    let headY = shoulderY - Math.cos(spineAngle + (driver.neckAngle || 0) * 0.35) * 9;
 
     const wheelHubX = -9;
     const wheelHubY = -23;
 
-    const handX = wheelHubX;
-    const handY = (driver.victory || 0) > 0.1 ? wheelHubY - 18 : wheelHubY - 2;
+    let handX = wheelHubX;
+    let handY = (driver.victory || 0) > 0.1 ? wheelHubY - 18 : wheelHubY - 2;
+
+    if (driver.ragdollActive && driver.ragdollBodies?.length >= 2 && vehicle?.chassis) {
+      const cPos = vehicle.chassis.position;
+      const cAng = vehicle.chassis.angle;
+      const cos = Math.cos(-cAng);
+      const sin = Math.sin(-cAng);
+      const toLocal = (wPt) => {
+        const dx = wPt.x - cPos.x;
+        const dy = wPt.y - cPos.y;
+        return { x: dx * cos - dy * sin, y: dx * sin + dy * cos };
+      };
+      const tLoc = toLocal(driver.ragdollBodies[0].position);
+      const hLoc = toLocal(driver.ragdollBodies[1].position);
+      shoulderX = tLoc.x;
+      shoulderY = tLoc.y - 6;
+      hipX = tLoc.x - 3;
+      hipY = tLoc.y + 8;
+      headX = hLoc.x;
+      headY = hLoc.y;
+      if (driver.ragdollBodies[2]) {
+        const aLoc = toLocal(driver.ragdollBodies[2].position);
+        handX = aLoc.x;
+        handY = aLoc.y;
+      }
+    }
 
     const footX = -3;
     const footY = -6;
@@ -4314,13 +4649,15 @@ class q0 {
     this.echoManager.initEchoes(this.terrain);
 
     this.startX = x.world.startX;
-    const startY = this.terrain.heightAt(this.startX) - 62;
+    const initCfg = VEHICLE_ARCHETYPES[x.activeArchetype] ?? VEHICLE_ARCHETYPES.buggy;
+    const startY = this.terrain.heightAt(this.startX) - (initCfg.wheelOffsetY + initCfg.wheelRadius);
     this.vehicle = new f0(this.startX, startY, x.activeArchetype, this.audio);
     Matter.Composite.add(this.engine.world, this.vehicle.composite);
 
     // Initial contacts so vehicle starts in grounded driving state
     this.vehicle.wheels.forEach((w) => {
       w.contact = true;
+      w.contactGrace = 100;
       w.material = "grass";
     });
 
@@ -4460,7 +4797,7 @@ class q0 {
 
       // Interactive destructible prop collision
       if (other.propDef) {
-        this.propManager.onHit(other, energy, pt);
+        this.propManager.onHit(other, energy, pt, vel);
         this.score += 50;
         continue;
       }
@@ -4524,9 +4861,10 @@ class q0 {
 
     this.vehicle.update(inputState, dt, this.terrain);
     Matter.Engine.update(this.engine, dt);
+    this.vehicle.solvePrismaticSuspension();
 
     const activePairs = this.engine.pairs.list.filter((p) => p.isActive);
-    this.vehicle.markContacts(this.terrainSet, activePairs);
+    this.vehicle.markContacts(this.terrainSet, activePairs, this.terrain, dt);
 
     this.safety(dt);
   }
@@ -4543,8 +4881,9 @@ class q0 {
 
     // Normalized upside-down amount U in [0, 1] (Spec #42)
     const sinAngle = Math.sin(this.vehicle.chassis.angle);
-    const isInverted = Math.abs(sinAngle) > 0.88 || this.vehicle.roofContact;
-    const isUpright = Math.abs(sinAngle) < 0.45;
+    const cosAngle = Math.cos(this.vehicle.chassis.angle);
+    const isInverted = (cosAngle < -0.35 && Math.abs(sinAngle) > 0.88) || this.vehicle.roofContact;
+    const isUpright = cosAngle > 0.65 && Math.abs(sinAngle) < 0.45;
     const hasGroundContact = this.vehicle.wheels.some(w => w.contact);
 
     // Robust 6-Stage Death State Machine
@@ -4597,6 +4936,9 @@ class q0 {
     this.deathState = "death";
     this.deathReason = reason;
     this.saveCareer();
+
+    // Activate multi-body driver crash ragdoll on fatal impact
+    this.vehicle?.driver?.spawnCrashRagdoll(this.engine.world, this.vehicle.chassis);
 
     // Cinematic time dilation and camera lock
     this.timeScale = 0.35;
@@ -4694,7 +5036,7 @@ class q0 {
 
     this.postPhysics(dt);
     this.particles.update(dt);
-    this.propManager.updateChunking(this.camera.x);
+    this.propManager.updateChunking(this.camera.x, dt);
     this.draw();
   };
 
@@ -4752,7 +5094,7 @@ class q0 {
         distance: Math.round(this.maxDistance * 10) / 10,
         speed: Math.round(Math.abs(v.forwardSpeed) * 7.2 * 10) / 10,
         altitude: altitudeMeters,
-        pitch: Math.round(v.chassis.angle * 180 / Math.PI * 10) / 10,
+        pitch: Math.round(normalizeAngle(v.chassis.angle) * 180 / Math.PI * 10) / 10,
         compFront: Math.round(v.wheels[1].compression * 100) / 100,
         compRear: Math.round(v.wheels[0].compression * 100) / 100,
         slip: Math.round(v.wheels[0].slip * 100) / 100,
@@ -4774,7 +5116,7 @@ class q0 {
       rpm: v.rpm,
       airborne: v.airborne,
       score: this.score,
-      incline: Math.round(v.chassis.angle * 180 / Math.PI),
+      incline: Math.round(normalizeAngle(v.chassis.angle) * 180 / Math.PI),
       echoCount: this.echoManager.collectedCount,
       echoTotal: this.echoManager.totalCount,
       biomeName: this.terrain.biomeAt(v.chassis.position.x).name,

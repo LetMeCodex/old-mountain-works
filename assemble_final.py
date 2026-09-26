@@ -34,7 +34,10 @@ from build_full_overhaul import html_head, html_tail
 
 full_html = html_head + matter_bundle + "\n" + full_engine + html_tail
 
-# Write both old-mountain-works.html and old-mountain-works(1).html (and Downloads)
+# Write index.html, old-mountain-works.html, and old-mountain-works(1).html (and Downloads)
+with open('index.html', 'w', encoding='utf-8') as f:
+    f.write(full_html)
+
 with open('old-mountain-works.html', 'w', encoding='utf-8') as f:
     f.write(full_html)
 

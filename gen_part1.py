@@ -1,15 +1,12 @@
-# Python script to assemble the full game_engine.js and HTML files
+# Python script to assemble Part 1: Core Math, Config, Archetypes, Biomes, Materials
 import os
-
-with open('test_assemble.py', 'r', encoding='utf-8') as f:
-    pass
 
 parts = []
 
 # PART 1: Core Math, Config, Archetypes, Biomes, Materials
 parts.append(r'''// ============================================================================
-// THE OLD MOUNTAIN WORKS - MASTER GAME ENGINE OVERHAUL V2
-// Handcrafted Illustrated Mountain Expedition & Physics Simulation
+// THE OLD MOUNTAIN WORKS - MASTER GAME ENGINE OVERHAUL V3
+// Constrained Rigid-Body Physics, Prismatic Suspension, Ragdoll & Destruction
 // ============================================================================
 
 const Matter = u.default || u;
@@ -43,29 +40,29 @@ function K0(seed) {
 const I0 = (p) => Number.isFinite(p.x) && Number.isFinite(p.y);
 
 // ----------------------------------------------------------------------------
-// Vehicle Archetypes (Authentic Physics Differences)
+// Vehicle Archetypes (Natural-Frequency Matched Prismatic Suspension)
 // ----------------------------------------------------------------------------
 const VEHICLE_ARCHETYPES = {
   buggy: {
     id: "buggy",
     name: "Trail Buggy",
-    desc: "Balanced agile expedition chassis with progressive suspension.",
-    chassisWidth: 104,
+    desc: "Balanced agile expedition chassis with progressive prismatic suspension.",
+    chassisWidth: 108,
     chassisHeight: 24,
     chassisMass: 7.4,
-    wheelRadius: 21,
-    wheelMass: 1.1,
-    wheelBase: 108,
+    wheelRadius: 22,
+    wheelMass: 1.25,
+    wheelBase: 112,
     wheelOffsetY: 36,
-    engineTorque: 0.075,
-    brakeTorque: 0.095,
+    engineTorque: 0.082,
+    brakeTorque: 0.105,
     maxWheelSpeed: 1.45,
-    suspensionStiffness: 0.15,
-    suspensionDamping: 0.045,
-    suspensionTravel: 26,
-    tireGrip: 1.45,
-    airControl: 0.045,
-    angularDamping: 0.022,
+    suspensionStiffness: 0.16,
+    suspensionDamping: 0.065,
+    suspensionTravel: 24,
+    tireGrip: 1.55,
+    airControl: 0.042,
+    angularDamping: 0.035,
     centerOfMassOffsetY: 6.0,
     accentColor: "#d4622a",
     chassisColor: "#c8bda6",
@@ -74,22 +71,22 @@ const VEHICLE_ARCHETYPES = {
     id: "crawler",
     name: "Mountain Crawler",
     desc: "Heavy reinforced frame, oversized tires, supreme grip and hill climbing torque.",
-    chassisWidth: 112,
+    chassisWidth: 116,
     chassisHeight: 26,
     chassisMass: 9.8,
-    wheelRadius: 24,
-    wheelMass: 1.5,
-    wheelBase: 116,
+    wheelRadius: 25,
+    wheelMass: 1.65,
+    wheelBase: 120,
     wheelOffsetY: 40,
-    engineTorque: 0.095,
-    brakeTorque: 0.120,
-    maxWheelSpeed: 1.25,
-    suspensionStiffness: 0.18,
-    suspensionDamping: 0.050,
-    suspensionTravel: 30,
-    tireGrip: 1.55,
-    airControl: 0.038,
-    angularDamping: 0.026,
+    engineTorque: 0.105,
+    brakeTorque: 0.130,
+    maxWheelSpeed: 1.28,
+    suspensionStiffness: 0.19,
+    suspensionDamping: 0.075,
+    suspensionTravel: 28,
+    tireGrip: 1.75,
+    airControl: 0.036,
+    angularDamping: 0.042,
     centerOfMassOffsetY: 8.0,
     accentColor: "#357a62",
     chassisColor: "#b5a88f",
@@ -98,22 +95,22 @@ const VEHICLE_ARCHETYPES = {
     id: "rally",
     name: "Alpine Rally",
     desc: "Lightweight tuned racer with explosive acceleration and high airborne pitch authority.",
-    chassisWidth: 98,
+    chassisWidth: 102,
     chassisHeight: 22,
     chassisMass: 5.8,
-    wheelRadius: 19,
-    wheelMass: 0.9,
-    wheelBase: 102,
+    wheelRadius: 20,
+    wheelMass: 1.0,
+    wheelBase: 106,
     wheelOffsetY: 34,
-    engineTorque: 0.085,
-    brakeTorque: 0.100,
-    maxWheelSpeed: 1.70,
-    suspensionStiffness: 0.14,
-    suspensionDamping: 0.040,
+    engineTorque: 0.090,
+    brakeTorque: 0.110,
+    maxWheelSpeed: 1.72,
+    suspensionStiffness: 0.15,
+    suspensionDamping: 0.058,
     suspensionTravel: 22,
-    tireGrip: 1.40,
-    airControl: 0.055,
-    angularDamping: 0.020,
+    tireGrip: 1.50,
+    airControl: 0.048,
+    angularDamping: 0.030,
     centerOfMassOffsetY: 5.0,
     accentColor: "#c23a3a",
     chassisColor: "#d2c7b5",
@@ -121,9 +118,9 @@ const VEHICLE_ARCHETYPES = {
 };
 
 const n0 = {
-  gravity: 1.55,
-  fixedDelta: 1000 / 120, // 8.333ms high-precision timestep
-  maxSubSteps: 5,
+  gravity: 1.65,
+  fixedDelta: 1000 / 120, // 8.333ms high-precision substep
+  maxSubSteps: 6,
 };
 
 const r0 = {
@@ -270,7 +267,7 @@ const MATERIALS = {
   },
   dirt: {
     name: "dirt",
-    friction: 0.92,
+    friction: 0.94,
     rollingResistance: 0.002,
     roughness: 0.12,
     dustKind: "dust",
@@ -279,7 +276,7 @@ const MATERIALS = {
   },
   rock: {
     name: "rock",
-    friction: 1.05,
+    friction: 1.08,
     rollingResistance: 0.001,
     roughness: 0.32,
     dustKind: "stone",
@@ -288,7 +285,7 @@ const MATERIALS = {
   },
   gravel: {
     name: "gravel",
-    friction: 0.78,
+    friction: 0.84,
     rollingResistance: 0.004,
     roughness: 0.22,
     dustKind: "grit",
@@ -297,7 +294,7 @@ const MATERIALS = {
   },
   snow: {
     name: "snow",
-    friction: 0.55,
+    friction: 0.65,
     rollingResistance: 0.003,
     roughness: 0.10,
     dustKind: "snow",
@@ -306,7 +303,7 @@ const MATERIALS = {
   },
   ice: {
     name: "ice",
-    friction: 0.30,
+    friction: 0.42,
     rollingResistance: 0.0005,
     roughness: 0.04,
     dustKind: "snow",

@@ -1,9 +1,9 @@
-# PART 3: Interactive Prop Manager & Procedural Terrain Grammar
+# PART 3: Interactive Physics Props, Multi-Body Fracture Debris & Procedural Terrain Grammar
 import os
 
 part3 = r'''
 // ----------------------------------------------------------------------------
-// Interactive Physics Props & Destruction Manager (PropManager)
+// Interactive Physics Props & Multi-Body Fracture Destruction Manager (PropManager)
 // ----------------------------------------------------------------------------
 class PropManager {
   world;
@@ -12,6 +12,7 @@ class PropManager {
   bus;
   defs = [];
   activeProps = new Map(); // id -> { bodies, def, smashed }
+  debrisList = []; // Physical rigid-body wooden planks & stone fragments
 
   constructor(world, audio, particles, bus) {
     this.world = world;
@@ -25,11 +26,11 @@ class PropManager {
     this.defs = [];
     const noise = K0(seed + 999);
 
-    // 1. Trail signs at scenic spots (starting after 2800m to keep opening track clear)
-    const signDistances = [2800, 5100, 8500, 13800, 18400, 24200, 31500];
+    // 1. Trail signs at scenic spots & early expedition markers
+    const signDistances = [820, 2800, 5100, 8500, 13800, 18400, 24200, 31500];
     for (let i = 0; i < signDistances.length; i++) {
       const sx = signDistances[i];
-      const sy = terrain.heightAt(sx) - 18;
+      const sy = terrain.heightAt(sx) - 15;
       this.defs.push({
         id: `sign_${i}`,
         type: "sign",
@@ -40,12 +41,12 @@ class PropManager {
     }
 
     // 2. Breakable wooden fences along ridges & bridges
-    const fenceClusters = [3200, 7200, 12200, 19100, 27400];
+    const fenceClusters = [1320, 3200, 7200, 12200, 19100, 27400];
     for (let c = 0; c < fenceClusters.length; c++) {
       const cx = fenceClusters[c];
       for (let f = 0; f < 4; f++) {
         const fx = cx + f * 24;
-        const fy = terrain.heightAt(fx) - 14;
+        const fy = terrain.heightAt(fx) - 13;
         this.defs.push({
           id: `fence_${c}_${f}`,
           type: "fence",
@@ -56,11 +57,11 @@ class PropManager {
       }
     }
 
-    // 3. Supply crates at outposts and industrial zones (placed on plateaus, away from slopes)
-    const crateStations = [3800, 7800, 14800, 25800, 26300];
+    // 3. Breakable Wooden Supply Crates & Stacked Outpost Caches
+    const crateStations = [2250, 2650, 3800, 6200, 7800, 11200, 14800, 21500, 25800, 26300];
     for (let c = 0; c < crateStations.length; c++) {
       const cx = crateStations[c];
-      const cy = terrain.heightAt(cx) - 16;
+      const cy = terrain.heightAt(cx) - 14;
       this.defs.push({
         id: `crate_${c}`,
         type: "crate",
@@ -86,7 +87,7 @@ class PropManager {
     }
   }
 
-  updateChunking(camX) {
+  updateChunking(camX, dt = 16.666) {
     const minX = camX - 1200;
     const maxX = camX + 1200;
 
@@ -101,16 +102,25 @@ class PropManager {
         this.despawnProp(def.id);
       }
     }
+
+    // Update physical fracture debris lifecycle
+    for (let i = this.debrisList.length - 1; i >= 0; i--) {
+      const dItem = this.debrisList[i];
+      dItem.life -= dt / 1000;
+      if (dItem.life <= 0 || Math.abs(dItem.body.position.x - camX) > 1600 || dItem.body.position.y > 4000) {
+        try { Matter.Composite.remove(this.world, dItem.body); } catch (e) {}
+        this.debrisList.splice(i, 1);
+      }
+    }
   }
 
   spawnProp(def) {
     if (def.type === "sign") {
       const body = Matter.Bodies.rectangle(def.x, def.y, 14, 26, {
         label: "prop_sign",
-        friction: 0.05,
-        density: 0.00005,
-        restitution: 0.05,
-        collisionFilter: { group: -1 },
+        friction: 0.25,
+        density: 0.00004,
+        restitution: 0.02,
       });
       body.propDef = def;
       Matter.Composite.add(this.world, body);
@@ -118,20 +128,19 @@ class PropManager {
     } else if (def.type === "fence") {
       const body = Matter.Bodies.rectangle(def.x, def.y, 8, 22, {
         label: "prop_fence",
-        friction: 0.05,
-        density: 0.00005,
-        restitution: 0.05,
-        collisionFilter: { group: -1 },
+        friction: 0.25,
+        density: 0.00004,
+        restitution: 0.02,
       });
       body.propDef = def;
       Matter.Composite.add(this.world, body);
       this.activeProps.set(def.id, { bodies: [body], def, smashed: false });
     } else if (def.type === "crate") {
-      const body = Matter.Bodies.rectangle(def.x, def.y, 22, 22, {
+      const body = Matter.Bodies.rectangle(def.x, def.y, 24, 24, {
         label: "prop_crate",
-        friction: 0.3,
-        density: 0.0002,
-        restitution: 0.10,
+        friction: 0.35,
+        density: 0.00012,
+        restitution: 0.05,
         chamfer: { radius: 2 },
       });
       body.propDef = def;
@@ -143,8 +152,8 @@ class PropManager {
         label: "prop_rock",
         friction: 0.7,
         frictionStatic: 0.9,
-        density: 0.002,
-        restitution: 0.15,
+        density: 0.0018,
+        restitution: 0.12,
       });
       body.propDef = def;
       Matter.Composite.add(this.world, body);
@@ -155,13 +164,60 @@ class PropManager {
   despawnProp(id) {
     const item = this.activeProps.get(id);
     if (!item) return;
-    for (const b of item.bodies) {
-      Matter.Composite.remove(this.world, b);
+    if (!item.smashed && item.def) {
+      item.def.spawned = false;
+    }
+    for (const bBody of item.bodies) {
+      Matter.Composite.remove(this.world, bBody);
     }
     this.activeProps.delete(id);
   }
 
-  onHit(propBody, hitEnergy, hitPt) {
+  spawnFractureDebris(originX, originY, kind, hitEnergy, baseVel = { x: 4, y: -2 }) {
+    const count = kind === "crate" ? 5 : 3;
+    // Enforce debris pool limit (max 42 rigid bodies)
+    while (this.debrisList.length + count > 42 && this.debrisList.length > 0) {
+      const oldest = this.debrisList.shift();
+      try { Matter.Composite.remove(this.world, oldest.body); } catch (e) {}
+    }
+
+    for (let i = 0; i < count; i++) {
+      const w = kind === "crate" ? 14 + (i % 2) * 6 : 12;
+      const h = 4.5;
+      const angle = (i / count) * Math.PI + (Math.random() - 0.5) * 0.6;
+      const ox = originX + (Math.random() - 0.5) * 14;
+      const oy = originY - 4 + (Math.random() - 0.5) * 14;
+
+      // Group -1 so debris collides with terrain (group 0) and tumbles realistically without colliding with vehicle (group -1)
+      const frag = Matter.Bodies.rectangle(ox, oy, w, h, {
+        label: "debris_plank",
+        collisionFilter: { group: -1 },
+        density: 0.0004,
+        friction: 0.45,
+        restitution: 0.28,
+        angle: angle,
+      });
+
+      const burstSpeed = b(2.5 + hitEnergy * 1.8, 3.0, 11.0);
+      const vx = (baseVel.x * 0.65) + (Math.random() - 0.25) * burstSpeed;
+      const vy = -Math.abs(burstSpeed * (0.45 + Math.random() * 0.65));
+      Matter.Body.setVelocity(frag, { x: vx, y: vy });
+      Matter.Body.setAngularVelocity(frag, (Math.random() - 0.5) * 0.24);
+
+      Matter.Composite.add(this.world, frag);
+      this.debrisList.push({
+        body: frag,
+        w,
+        h,
+        kind,
+        color: i % 2 === 0 ? "#bca383" : "#8a6d4d",
+        life: 4.5,
+        maxLife: 4.5,
+      });
+    }
+  }
+
+  onHit(propBody, hitEnergy, hitPt, impactVel = { x: 6, y: -2 }) {
     const def = propBody.propDef;
     if (!def) return;
     const item = this.activeProps.get(def.id);
@@ -170,7 +226,8 @@ class PropManager {
     if (def.type === "sign" || def.type === "fence" || def.type === "crate") {
       item.smashed = true;
       this.audio.destruct("wood");
-      this.particles.spawnSplinters(hitPt.x, hitPt.y, 16);
+      this.particles.spawnSplinters(hitPt.x, hitPt.y, 18);
+      this.spawnFractureDebris(propBody.position.x, propBody.position.y, def.type, hitEnergy, impactVel);
       this.bus.emit("prop:destroyed", { type: def.type, score: 75 });
       try { Matter.Composite.remove(this.world, propBody); } catch (e) {}
     } else if (def.type === "rock") {
@@ -181,10 +238,14 @@ class PropManager {
 
   clear() {
     for (const item of this.activeProps.values()) {
-      for (const b of item.bodies) {
-        Matter.Composite.remove(this.world, b);
+      for (const bBody of item.bodies) {
+        try { Matter.Composite.remove(this.world, bBody); } catch (e) {}
       }
     }
+    for (const dItem of this.debrisList) {
+      try { Matter.Composite.remove(this.world, dItem.body); } catch (e) {}
+    }
+    this.debrisList = [];
     this.activeProps.clear();
     this.defs = [];
   }
@@ -381,7 +442,6 @@ class P0 {
       });
 
       // Sample along Cubic Hermite Spline
-      // P(u) = (2u^3 - 3u^2 + 1)y0 + (u^3 - 2u^2 + u)L*m0 + (-2u^3 + 3u^2)y1 + (u^3 - u^2)L*m1
       const L = x1 - x0;
       for (let q = x0 + this.step; q <= x1; q += this.step) {
         const u = (q - x0) / L;
@@ -460,7 +520,7 @@ class P0 {
           angle: angle,
           friction: mat.friction,
           frictionStatic: mat.friction * 1.35,
-          restitution: 0.02,
+          restitution: 0.0,
           label: "terrain",
           chamfer: { radius: 2 },
         }
@@ -502,25 +562,23 @@ class P0 {
     };
   }
 
-  materialAt(xPos) {
-    const firstX = this.samples[0].x;
-    const idx = Math.floor((xPos - firstX) / this.step);
-    const sample = this.samples[Math.max(0, Math.min(this.samples.length - 1, idx))];
-    return sample ? MATERIALS[sample.material] ?? MATERIALS.dirt : MATERIALS.dirt;
+  biomeAt(xPos) {
+    const dist = Math.max(0, (xPos - x.world.startX) / 40);
+    return this.getBiomeAtDist(dist);
   }
 
-  biomeAt(xPos) {
-    const distMeters = Math.max(0, (xPos - x.world.startX) / 40);
-    return this.getBiomeAtDist(distMeters);
+  materialAt(xPos) {
+    const firstX = this.samples[0].x;
+    const idx = Math.max(0, Math.min(this.samples.length - 1, Math.floor((xPos - firstX) / this.step)));
+    const kind = this.samples[idx]?.material ?? "grass";
+    return MATERIALS[kind] ?? MATERIALS.grass;
   }
 
   segmentAt(xPos) {
     for (const seg of this.segments) {
-      if (xPos >= seg.startX && xPos < seg.endX) {
-        return seg;
-      }
+      if (xPos >= seg.startX && xPos <= seg.endX) return seg;
     }
-    return this.segments[this.segments.length - 1] ?? { name: "Trail", type: "rollers" };
+    return { name: "Starting Apron", type: "flat" };
   }
 }
 '''
@@ -528,4 +586,4 @@ class P0 {
 with open('engine_part3.js', 'w', encoding='utf-8') as f:
     f.write(part3)
 
-print("Part 3 written successfully.")
+print("Part 3 updated successfully.")
