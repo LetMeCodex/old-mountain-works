@@ -295,10 +295,16 @@ class R0 {
 
     if (startIdx >= endIdx || !terrain.samples[startIdx] || !terrain.samples[endIdx]) return;
 
-    // 1. Terrain Bedrock Fill
+    // 1. Terrain Bedrock Fill with Subterranean Depth Gradient & Topographic Strata
     const bottomY = Math.max(cam.y + (h / cam.zoom) + 600, 4000);
     ctx.save();
-    ctx.fillStyle = biome.groundFill;
+    const gradTop = cam.y - 80;
+    const gradBot = cam.y + 340;
+    const bedGrad = ctx.createLinearGradient(0, gradTop, 0, gradBot);
+    bedGrad.addColorStop(0, biome.groundFill);
+    bedGrad.addColorStop(0.45, "#151917");
+    bedGrad.addColorStop(1, "#0c0f0e");
+    ctx.fillStyle = bedGrad;
     ctx.beginPath();
     ctx.moveTo(terrain.samples[startIdx].x, bottomY);
 
@@ -310,6 +316,27 @@ class R0 {
     ctx.lineTo(terrain.samples[endIdx].x, bottomY);
     ctx.closePath();
     ctx.fill();
+
+    // Subterranean Topographic Contour Lines (clipped inside bedrock)
+    ctx.save();
+    ctx.clip();
+    ctx.strokeStyle = "rgba(239, 231, 214, 0.048)";
+    ctx.lineWidth = 1.0;
+    for (let layer = 1; layer <= 6; layer++) {
+      const depthOffset = 85 + layer * 34;
+      ctx.beginPath();
+      let cMoved = false;
+      for (let i = startIdx; i <= endIdx; i += 2) {
+        const p = terrain.samples[i];
+        if (!p) continue;
+        const wave = Math.sin(p.x * 0.0045 + layer * 1.7) * 18 + Math.cos(p.x * 0.011 - layer * 0.9) * 9;
+        const cy = p.y + depthOffset + wave;
+        if (!cMoved) { ctx.moveTo(p.x, cy); cMoved = true; }
+        else ctx.lineTo(p.x, cy);
+      }
+      ctx.stroke();
+    }
+    ctx.restore();
 
     // 2. Illustrated Top Crust / Foliage Ribbon
     ctx.lineWidth = 9.0;

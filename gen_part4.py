@@ -196,6 +196,8 @@ class f0 {
   audio = null;
   airborneTimer = 0;
   groundClearance = 0;
+  fuel = 1.0;
+  engineTemp = 0.28;
 
   constructor(xPos, yPos, archetypeId = "buggy", audio = null) {
     this.audio = audio;
@@ -577,6 +579,19 @@ class f0 {
     const maxAllowedAngVel = (this.airborne && this.groundClearance > 38) ? 0.125 : 0.045;
     const clampedAngVel = b(this.chassis.angularVelocity * factor, -maxAllowedAngVel, maxAllowedAngVel);
     d.default.Body.setAngularVelocity(this.chassis, clampedAngVel);
+
+    // Expedition Fuel / Energy Reserve & Engine Thermal Telemetry
+    const fuelDtSec = Math.min(0.033, Math.max(0.001, dt / 1000));
+    const climbLoad = Math.max(0, -Math.sin(groundSlope));
+    const throttleAbs = Math.abs(throttleBrake);
+    if (throttleAbs > 0.05) {
+      this.fuel = Math.max(0.08, this.fuel - (0.0022 + climbLoad * 0.0035) * throttleAbs * fuelDtSec);
+    } else if (this.forwardSpeed > 2.0 && Math.sin(groundSlope) > 0.05) {
+      // Regenerative downhill kinetic recovery
+      this.fuel = Math.min(1.0, this.fuel + 0.004 * fuelDtSec);
+    }
+    const targetTemp = b(0.24 + this.rpm * 0.52 + climbLoad * throttleAbs * 0.32, 0.20, 0.98);
+    this.engineTemp += (targetTemp - this.engineTemp) * Math.min(1, fuelDtSec * 1.8);
 
     this.driver.update(this, input, dt);
   }

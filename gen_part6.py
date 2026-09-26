@@ -185,6 +185,7 @@ class q0 {
       w.material = "grass";
     });
     Matter.Composite.add(this.engine.world, this.vehicle.composite);
+    window.hudManager?.animations?.animateVehicleChange(this.vehicle.archetype.name);
   }
 
   applyTuning(stiffness, damping, grip, torque) {
@@ -230,6 +231,7 @@ class q0 {
     this.timeScaleTarget = 1;
     this.stuckTimer = 0;
     this.bus.emit("run:reset", {});
+    window.hudManager?.reset();
 
     const deathOverlay = document.getElementById("death-screen");
     if (deathOverlay) deathOverlay.style.display = "none";
@@ -447,6 +449,7 @@ class q0 {
     // Hide HUD warning
     const warningEl = document.getElementById("hud-warning");
     if (warningEl) warningEl.style.display = "none";
+    window.hudManager?.onDeath(reason);
 
     // Show Death Debrief Overlay (Spec #46)
     setTimeout(() => {
@@ -603,12 +606,14 @@ class q0 {
     this.audio.setWind(v.speed);
 
     // Broadcast live telemetry
-    this.bus.emit("stats:update", {
+    const statsPayload = {
       distance: this.maxDistance,
       altitude: this.highestAltitude,
       speed: Math.abs(v.forwardSpeed) * 7.2,
       airtime: this.stunts.airtime,
       rpm: v.rpm,
+      fuel: v.fuel,
+      engineTemp: v.engineTemp,
       airborne: v.airborne,
       score: this.score,
       incline: Math.round(normalizeAngle(v.chassis.angle) * 180 / Math.PI),
@@ -619,7 +624,9 @@ class q0 {
       comboMultiplier: this.stunts.comboMultiplier,
       comboTimer: this.stunts.comboTimer,
       activeStunt: this.stunts.activeStuntName,
-    });
+    };
+    this.bus.emit("stats:update", statsPayload);
+    window.hudManager?.update(statsPayload, dt);
   }
 
   draw() {
@@ -655,12 +662,17 @@ const resize = () => {
   if (threeCanvas && window.game?.threeDepth) {
     window.game.threeDepth.resize(w, h);
   }
+  window.hudManager?.resize();
 };
 window.addEventListener("resize", resize);
 resize();
 
 const game = new q0(canvas, 48192);
 window.game = game;
+
+const hudManager = new HUDManager();
+hudManager.init(game);
+window.hudManager = hudManager;
 
 const $el = (id) => document.getElementById(id);
 
@@ -686,6 +698,8 @@ let liveStats = {
   speed: 0,
   airtime: 0,
   rpm: 0,
+  fuel: 100,
+  engineTemp: 40,
   airborne: false,
   score: 0,
   incline: 0,
@@ -800,6 +814,7 @@ function togglePause() {
     pauseOverlay.style.display = isPaused ? "flex" : "none";
     if (isPaused) updateCareerRecap();
   }
+  window.hudManager?.animations?.animatePause(isPaused);
 }
 
 game.input.onPause = () => {
@@ -814,6 +829,7 @@ $el("start-btn")?.addEventListener("click", () => {
   $el("hud").style.display = "block";
   const pedals = $el("pedals");
   if (pedals) pedals.style.display = "flex";
+  window.hudManager?.animations?.animateHUDIntro(window.hudManager);
 });
 
 $el("resume-btn")?.addEventListener("click", togglePause);

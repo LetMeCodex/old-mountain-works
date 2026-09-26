@@ -7,12 +7,21 @@ import gen_part2
 import gen_part3
 import gen_part4
 import gen_part5
+import gen_hud
 import gen_part6
 
 # Combine all engine parts
 engine_parts = []
-for i in range(1, 7):
-    with open(f'engine_part{i}.js', 'r', encoding='utf-8') as f:
+for part_file in [
+    'engine_part1.js',
+    'engine_part2.js',
+    'engine_part3.js',
+    'engine_part4.js',
+    'engine_part5.js',
+    'engine_hud.js',
+    'engine_part6.js',
+]:
+    with open(part_file, 'r', encoding='utf-8') as f:
         engine_parts.append(f.read())
 
 full_engine = '\n'.join(engine_parts)

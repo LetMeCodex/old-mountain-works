@@ -141,13 +141,15 @@ class q0 {
     this.echoManager.initEchoes(this.terrain);
 
     this.startX = x.world.startX;
-    const startY = this.terrain.heightAt(this.startX) - 62;
+    const initCfg = VEHICLE_ARCHETYPES[x.activeArchetype] ?? VEHICLE_ARCHETYPES.buggy;
+    const startY = this.terrain.heightAt(this.startX) - (initCfg.wheelOffsetY + initCfg.wheelRadius);
     this.vehicle = new f0(this.startX, startY, x.activeArchetype, this.audio);
     Matter.Composite.add(this.engine.world, this.vehicle.composite);
 
     // Initial contacts so vehicle starts in grounded driving state
     this.vehicle.wheels.forEach((w) => {
       w.contact = true;
+      w.contactGrace = 100;
       w.material = "grass";
     });
 
@@ -180,6 +182,7 @@ class q0 {
       w.material = "grass";
     });
     Matter.Composite.add(this.engine.world, this.vehicle.composite);
+    window.hudManager?.animations?.animateVehicleChange(this.vehicle.archetype.name);
   }
 
   applyTuning(stiffness, damping, grip, torque) {
@@ -225,6 +228,7 @@ class q0 {
     this.timeScaleTarget = 1;
     this.stuckTimer = 0;
     this.bus.emit("run:reset", {});
+    window.hudManager?.reset();
 
     const deathOverlay = document.getElementById("death-screen");
     if (deathOverlay) deathOverlay.style.display = "none";
@@ -287,7 +291,7 @@ class q0 {
 
       // Interactive destructible prop collision
       if (other.propDef) {
-        this.propManager.onHit(other, energy, pt);
+        this.propManager.onHit(other, energy, pt, vel);
         this.score += 50;
         continue;
       }
@@ -351,9 +355,10 @@ class q0 {
 
     this.vehicle.update(inputState, dt, this.terrain);
     Matter.Engine.update(this.engine, dt);
+    this.vehicle.solvePrismaticSuspension();
 
     const activePairs = this.engine.pairs.list.filter((p) => p.isActive);
-    this.vehicle.markContacts(this.terrainSet, activePairs);
+    this.vehicle.markContacts(this.terrainSet, activePairs, this.terrain, dt);
 
     this.safety(dt);
   }
@@ -370,8 +375,9 @@ class q0 {
 
     // Normalized upside-down amount U in [0, 1] (Spec #42)
     const sinAngle = Math.sin(this.vehicle.chassis.angle);
-    const isInverted = Math.abs(sinAngle) > 0.88 || this.vehicle.roofContact;
-    const isUpright = Math.abs(sinAngle) < 0.45;
+    const cosAngle = Math.cos(this.vehicle.chassis.angle);
+    const isInverted = (cosAngle < -0.35 && Math.abs(sinAngle) > 0.88) || this.vehicle.roofContact;
+    const isUpright = cosAngle > 0.65 && Math.abs(sinAngle) < 0.45;
     const hasGroundContact = this.vehicle.wheels.some(w => w.contact);
 
     // Robust 6-Stage Death State Machine
@@ -425,6 +431,9 @@ class q0 {
     this.deathReason = reason;
     this.saveCareer();
 
+    // Activate multi-body driver crash ragdoll on fatal impact
+    this.vehicle?.driver?.spawnCrashRagdoll(this.engine.world, this.vehicle.chassis);
+
     // Cinematic time dilation and camera lock
     this.timeScale = 0.35;
     this.timeScaleTarget = 0.1;
@@ -437,6 +446,7 @@ class q0 {
     // Hide HUD warning
     const warningEl = document.getElementById("hud-warning");
     if (warningEl) warningEl.style.display = "none";
+    window.hudManager?.onDeath(reason);
 
     // Show Death Debrief Overlay (Spec #46)
     setTimeout(() => {
@@ -521,7 +531,7 @@ class q0 {
 
     this.postPhysics(dt);
     this.particles.update(dt);
-    this.propManager.updateChunking(this.camera.x);
+    this.propManager.updateChunking(this.camera.x, dt);
     this.draw();
   };
 
@@ -579,7 +589,7 @@ class q0 {
         distance: Math.round(this.maxDistance * 10) / 10,
         speed: Math.round(Math.abs(v.forwardSpeed) * 7.2 * 10) / 10,
         altitude: altitudeMeters,
-        pitch: Math.round(v.chassis.angle * 180 / Math.PI * 10) / 10,
+        pitch: Math.round(normalizeAngle(v.chassis.angle) * 180 / Math.PI * 10) / 10,
         compFront: Math.round(v.wheels[1].compression * 100) / 100,
         compRear: Math.round(v.wheels[0].compression * 100) / 100,
         slip: Math.round(v.wheels[0].slip * 100) / 100,
@@ -593,15 +603,17 @@ class q0 {
     this.audio.setWind(v.speed);
 
     // Broadcast live telemetry
-    this.bus.emit("stats:update", {
+    const statsPayload = {
       distance: this.maxDistance,
       altitude: this.highestAltitude,
       speed: Math.abs(v.forwardSpeed) * 7.2,
       airtime: this.stunts.airtime,
       rpm: v.rpm,
+      fuel: v.fuel,
+      engineTemp: v.engineTemp,
       airborne: v.airborne,
       score: this.score,
-      incline: Math.round(v.chassis.angle * 180 / Math.PI),
+      incline: Math.round(normalizeAngle(v.chassis.angle) * 180 / Math.PI),
       echoCount: this.echoManager.collectedCount,
       echoTotal: this.echoManager.totalCount,
       biomeName: this.terrain.biomeAt(v.chassis.position.x).name,
@@ -609,7 +621,9 @@ class q0 {
       comboMultiplier: this.stunts.comboMultiplier,
       comboTimer: this.stunts.comboTimer,
       activeStunt: this.stunts.activeStuntName,
-    });
+    };
+    this.bus.emit("stats:update", statsPayload);
+    window.hudManager?.update(statsPayload, dt);
   }
 
   draw() {
@@ -645,12 +659,17 @@ const resize = () => {
   if (threeCanvas && window.game?.threeDepth) {
     window.game.threeDepth.resize(w, h);
   }
+  window.hudManager?.resize();
 };
 window.addEventListener("resize", resize);
 resize();
 
 const game = new q0(canvas, 48192);
 window.game = game;
+
+const hudManager = new HUDManager();
+hudManager.init(game);
+window.hudManager = hudManager;
 
 const $el = (id) => document.getElementById(id);
 
@@ -676,6 +695,8 @@ let liveStats = {
   speed: 0,
   airtime: 0,
   rpm: 0,
+  fuel: 100,
+  engineTemp: 40,
   airborne: false,
   score: 0,
   incline: 0,
@@ -790,6 +811,7 @@ function togglePause() {
     pauseOverlay.style.display = isPaused ? "flex" : "none";
     if (isPaused) updateCareerRecap();
   }
+  window.hudManager?.animations?.animatePause(isPaused);
 }
 
 game.input.onPause = () => {
@@ -804,6 +826,7 @@ $el("start-btn")?.addEventListener("click", () => {
   $el("hud").style.display = "block";
   const pedals = $el("pedals");
   if (pedals) pedals.style.display = "flex";
+  window.hudManager?.animations?.animateHUDIntro(window.hudManager);
 });
 
 $el("resume-btn")?.addEventListener("click", togglePause);
