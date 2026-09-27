@@ -1,6 +1,6 @@
 // ============================================================================
-// THE OLD MOUNTAIN WORKS - MASTER GAME ENGINE OVERHAUL V3
-// Constrained Rigid-Body Physics, Prismatic Suspension, Ragdoll & Destruction
+// THE OLD MOUNTAIN WORKS - MASTER GAME ENGINE OVERHAUL V4
+// Mountain Generation 2.0: 8.2km Long-Form Expedition + Streamed Terrain Physics
 // ============================================================================
 
 const Matter = u.default || u;
@@ -48,13 +48,13 @@ const VEHICLE_ARCHETYPES = {
     wheelMass: 1.25,
     wheelBase: 112,
     wheelOffsetY: 36,
-    engineTorque: 0.082,
-    brakeTorque: 0.105,
-    maxWheelSpeed: 1.45,
+    engineTorque: 0.085,
+    brakeTorque: 0.110,
+    maxWheelSpeed: 1.48,
     suspensionStiffness: 0.16,
     suspensionDamping: 0.065,
     suspensionTravel: 24,
-    tireGrip: 1.55,
+    tireGrip: 1.58,
     airControl: 0.042,
     angularDamping: 0.035,
     centerOfMassOffsetY: 6.0,
@@ -96,13 +96,13 @@ const VEHICLE_ARCHETYPES = {
     wheelMass: 1.0,
     wheelBase: 106,
     wheelOffsetY: 34,
-    engineTorque: 0.090,
-    brakeTorque: 0.110,
-    maxWheelSpeed: 1.72,
+    engineTorque: 0.092,
+    brakeTorque: 0.115,
+    maxWheelSpeed: 1.74,
     suspensionStiffness: 0.15,
     suspensionDamping: 0.058,
     suspensionTravel: 22,
-    tireGrip: 1.50,
+    tireGrip: 1.52,
     airControl: 0.048,
     angularDamping: 0.030,
     centerOfMassOffsetY: 5.0,
@@ -119,9 +119,9 @@ const n0 = {
 
 const r0 = {
   followSpeed: 0.09,
-  lookAhead: 150,
+  lookAhead: 175,
   baseZoom: 0.88,
-  speedZoom: 0.14,
+  speedZoom: 0.16,
   airborneOffset: 0.35,
   impactZoom: 0.06,
   shakeIntensity: 1,
@@ -141,22 +141,26 @@ const x = {
   camera: r0,
   visual: i0,
   world: {
-    length: 36000,
+    length: 328220, // 8.2 km expedition (8,200m * 40px/m + 220px startX)
     sampleStep: 18,
     groundBase: 560,
     startX: 220,
+    chunkSamples: 20, // 360px (9m) per physics collision chunk
+    activePhysicsRadius: 3200, // vehicle X +- 3,200px active collision window
   },
 };
 
 // ----------------------------------------------------------------------------
-// Biome System & Surface Materials
+// 7-Sector / 8.2km Expedition Biome & Landmark System (Spec #10, #48, #49)
 // ----------------------------------------------------------------------------
 const BIOMES = [
   {
     id: "meadow",
-    name: "Alpine Meadow",
+    sector: 1,
+    act: "ACT I",
+    name: "Foothill Country",
     minDist: 0,
-    maxDist: 180, // 0 - 180m
+    maxDist: 800, // 0 - 0.8 km
     skyTop: "#b4c7be",
     skyBottom: "#ded2be",
     sun: "#e37e3d",
@@ -168,14 +172,17 @@ const BIOMES = [
     near: "#343d39",
     accent: "#d4622a",
     fogColor: "rgba(239,231,214,0.12)",
+    weather: "CLEAR",
     defaultMaterial: "grass",
-    landmark: { x: 1400, name: "Base Camp Outpost", type: "shelter" },
+    landmark: { x: 24000, name: "The Old Quarry", type: "shelter" },
   },
   {
     id: "ridge",
-    name: "Stone Ridge",
-    minDist: 180,
-    maxDist: 380, // 180 - 380m
+    sector: 2,
+    act: "ACT II",
+    name: "Broken Ridge",
+    minDist: 800,
+    maxDist: 1600, // 0.8 - 1.6 km
     skyTop: "#98a8af",
     skyBottom: "#d4cebe",
     sun: "#df8a51",
@@ -187,14 +194,17 @@ const BIOMES = [
     near: "#2a3339",
     accent: "#d4622a",
     fogColor: "rgba(212,206,190,0.15)",
+    weather: "WINDY",
     defaultMaterial: "rock",
-    landmark: { x: 10500, name: "The High Crag Cairn", type: "cairn" },
+    landmark: { x: 52000, name: "The Red Ridge", type: "cairn" },
   },
   {
     id: "canyon",
-    name: "Canyon Gorge",
-    minDist: 380,
-    maxDist: 580, // 380 - 580m
+    sector: 3,
+    act: "ACT III",
+    name: "Great Descent",
+    minDist: 1600,
+    maxDist: 2400, // 1.6 - 2.4 km
     skyTop: "#ba9f88",
     skyBottom: "#dfc7a7",
     sun: "#e66831",
@@ -206,14 +216,17 @@ const BIOMES = [
     near: "#3d2920",
     accent: "#e05820",
     fogColor: "rgba(223,199,167,0.18)",
+    weather: "GORGE HAZE",
     defaultMaterial: "dirt",
-    landmark: { x: 19000, name: "Old Trestle Bridge Chasm", type: "trestle" },
+    landmark: { x: 84000, name: "The Broken Trestle", type: "trestle" },
   },
   {
     id: "industrial",
-    name: "Industrial Works",
-    minDist: 580,
-    maxDist: 750, // 580 - 750m
+    sector: 4,
+    act: "ACT IV",
+    name: "Canyon Works",
+    minDist: 2400,
+    maxDist: 3500, // 2.4 - 3.5 km
     skyTop: "#7a8280",
     skyBottom: "#b8b2a3",
     sun: "#d95f32",
@@ -225,14 +238,61 @@ const BIOMES = [
     near: "#202322",
     accent: "#d4622a",
     fogColor: "rgba(184,178,163,0.20)",
+    weather: "MIST",
     defaultMaterial: "gravel",
-    landmark: { x: 26000, name: "Abandoned Mine Pithead Derrick", type: "pithead" },
+    landmark: { x: 124000, name: "The Deep Mine", type: "pithead" },
+  },
+  {
+    id: "glacier",
+    sector: 5,
+    act: "ACT V",
+    name: "Glacier Run",
+    minDist: 3500,
+    maxDist: 5000, // 3.5 - 5.0 km
+    skyTop: "#849eb3",
+    skyBottom: "#cfe0eb",
+    sun: "#e0915c",
+    groundFill: "#1c242b",
+    groundTop: "#9ab5c7",
+    groundTopLight: "#c4d9e8",
+    far: "#496175",
+    mid: "#354959",
+    near: "#253542",
+    accent: "#2ea3a5",
+    fogColor: "rgba(207,224,235,0.22)",
+    weather: "GLACIAL",
+    defaultMaterial: "ice",
+    landmark: { x: 176000, name: "Glacier Basin", type: "cairn" },
+  },
+  {
+    id: "crag",
+    sector: 6,
+    act: "ACT VI",
+    name: "Summit Approach",
+    minDist: 5000,
+    maxDist: 6800, // 5.0 - 6.8 km
+    skyTop: "#6e7f8f",
+    skyBottom: "#b8c4ce",
+    sun: "#d96b38",
+    groundFill: "#1a1f24",
+    groundTop: "#5c6873",
+    groundTopLight: "#7c8996",
+    far: "#3e4b57",
+    mid: "#2d3740",
+    near: "#1f272e",
+    accent: "#d4622a",
+    fogColor: "rgba(184,196,206,0.24)",
+    weather: "HIGH GALE",
+    defaultMaterial: "rock",
+    landmark: { x: 240000, name: "The High Crag", type: "pithead" },
   },
   {
     id: "summit",
-    name: "Frozen Summit",
-    minDist: 750,
-    maxDist: 5000, // 750m+
+    sector: 7,
+    act: "ACT VII",
+    name: "Summit Face",
+    minDist: 6800,
+    maxDist: 15000, // 6.8 - 8.2+ km
     skyTop: "#8ba3b8",
     skyBottom: "#d8e1e8",
     sun: "#e28652",
@@ -243,9 +303,10 @@ const BIOMES = [
     mid: "#394a5a",
     near: "#2a3743",
     accent: "#d4622a",
-    fogColor: "rgba(216,225,232,0.22)",
+    fogColor: "rgba(216,225,232,0.25)",
+    weather: "SNOW",
     defaultMaterial: "snow",
-    landmark: { x: 33000, name: "Summit Weather Observatory", type: "beacon" },
+    landmark: { x: 324000, name: "Summit Observatory", type: "beacon" },
   },
 ];
 
@@ -270,7 +331,7 @@ const MATERIALS = {
   },
   rock: {
     name: "rock",
-    friction: 1.08,
+    friction: 1.12,
     rollingResistance: 0.001,
     roughness: 0.32,
     dustKind: "stone",
@@ -279,7 +340,7 @@ const MATERIALS = {
   },
   gravel: {
     name: "gravel",
-    friction: 0.84,
+    friction: 0.86,
     rollingResistance: 0.004,
     roughness: 0.22,
     dustKind: "grit",
@@ -288,7 +349,7 @@ const MATERIALS = {
   },
   snow: {
     name: "snow",
-    friction: 0.65,
+    friction: 0.72,
     rollingResistance: 0.003,
     roughness: 0.10,
     dustKind: "snow",
@@ -297,7 +358,7 @@ const MATERIALS = {
   },
   ice: {
     name: "ice",
-    friction: 0.42,
+    friction: 0.52,
     rollingResistance: 0.0005,
     roughness: 0.04,
     dustKind: "snow",
@@ -306,11 +367,20 @@ const MATERIALS = {
   },
   wood: {
     name: "wood",
-    friction: 0.95,
+    friction: 0.96,
     rollingResistance: 0.0015,
     roughness: 0.14,
     dustKind: "wood",
     dustColors: ["#9c7c59", "#bca383", "#745839"],
+    soundType: "hard",
+  },
+  metal: {
+    name: "metal",
+    friction: 0.88,
+    rollingResistance: 0.0008,
+    roughness: 0.06,
+    dustKind: "spark",
+    dustColors: ["#e37e3d", "#efd07b", "#9ca3a6"],
     soundType: "hard",
   },
 };
@@ -324,11 +394,11 @@ const TEST_SEEDS = {
 
 const MOUNTAIN_ECHO_DEFS = [
   { id: "echo_1", x: 1450, yOffset: -50, name: "The Surveyor's Compass", lore: "Marked 1892. The brass casing is etched with altitude benchmarks leading toward the ridge." },
-  { id: "echo_2", x: 4800, yOffset: -65, name: "First Ascent Expedition Log", lore: "'We abandoned the steam tractor in the scree. From here on, only momentum and iron will carry us.'" },
-  { id: "echo_3", x: 11400, yOffset: -55, name: "The High Trestle Blueprint", lore: "Hand-inked schematics for the wooden chasm crossing, engineered to withstand 80-knot gales." },
-  { id: "echo_4", x: 17800, yOffset: -60, name: "Miners' Carbide Lantern Fragment", lore: "Soot-stained glass salvaged from Pithead No. 4, echoing the rhythmic hiss of old acetylene." },
-  { id: "echo_5", x: 24200, yOffset: -70, name: "Glacial Ice Core Capsule", lore: "Compressed firn layer trapping ancient alpine atmosphere from centuries before the roads." },
-  { id: "echo_6", x: 32500, yOffset: -75, name: "The Summit Observatory Telegraph", lore: "'Trail impassable to ordinary machines. Signal received. Summit in sight.'" }
+  { id: "echo_2", x: 38000, yOffset: -65, name: "First Ascent Expedition Log", lore: "'We abandoned the steam tractor in the scree. From here on, only momentum and iron will carry us.'" },
+  { id: "echo_3", x: 84500, yOffset: -55, name: "The High Trestle Blueprint", lore: "Hand-inked schematics for the wooden chasm crossing, engineered to withstand 80-knot gales." },
+  { id: "echo_4", x: 132000, yOffset: -60, name: "Miners' Carbide Lantern Fragment", lore: "Soot-stained glass salvaged from Pithead No. 4, echoing the rhythmic hiss of old acetylene." },
+  { id: "echo_5", x: 196000, yOffset: -70, name: "Glacial Ice Core Capsule", lore: "Compressed firn layer trapping ancient alpine atmosphere from centuries before the roads." },
+  { id: "echo_6", x: 312000, yOffset: -75, name: "The Summit Observatory Telegraph", lore: "'Trail impassable to ordinary machines. Signal received. Summit in sight.'" }
 ];
 
 
@@ -998,11 +1068,13 @@ class X0 {
   }
 
   update(arg1, arg2, arg3, arg4) {
-    let targetPos, targetVel, airborne, dt;
+    let targetPos, targetVel, airborne, dt, terrain = null, groundClearance = 0;
     if (arg1 && arg1.chassis) {
       targetPos = arg1.chassis.position;
       targetVel = arg1.chassis.velocity;
       airborne = Boolean(arg1.airborne);
+      groundClearance = arg1.groundClearance || 0;
+      terrain = arg2 && typeof arg2.heightAt === "function" ? arg2 : null;
       dt = typeof arg3 === "number" ? arg3 : (typeof arg2 === "number" ? arg2 : 16.66);
     } else {
       targetPos = arg1;
@@ -1018,14 +1090,41 @@ class X0 {
     const vy = Number.isFinite(targetVel?.y) ? targetVel.y : 0;
     const speed = Math.hypot(vx, vy);
 
-    const lookAheadX = b(vx * 12, -camCfg.lookAhead, camCfg.lookAhead);
-    const airOffsetY = airborne ? 48.0 : 0.0;
-
     const posX = Number.isFinite(targetPos?.x) ? targetPos.x : (Number.isFinite(this.x) ? this.x : 220);
     const posY = Number.isFinite(targetPos?.y) ? targetPos.y : (Number.isFinite(this.y) ? this.y : 500);
 
+    // Terrain-aware camera framing (Sections 46 & 47)
+    let slopeBiasY = 0;
+    let valleyLookAheadBonus = 0;
+    let terrainZoomOut = 0;
+
+    if (terrain) {
+      const slopeAhead = terrain.slopeAt(posX + 260);
+      const segAhead = terrain.segmentAt(posX + 220);
+      // Steep climb ahead: lift vertical framing toward the crest
+      if (slopeAhead < -0.25) {
+        slopeBiasY = slopeAhead * 110;
+      } else if (slopeAhead > 0.25) {
+        // Steep descent / deep valley: look further down and ahead to reveal the exit
+        slopeBiasY = slopeAhead * 95;
+        valleyLookAheadBonus = 55;
+        terrainZoomOut += 0.04;
+      }
+      if (segAhead && (segAhead.category === "VALLEY" || segAhead.category === "JUMP" || segAhead.category === "EXTREME")) {
+        valleyLookAheadBonus += 35;
+        terrainZoomOut += 0.035;
+      }
+      // Altitude scale perception (Section 47)
+      const altMeters = Math.max(0, (x.world.groundBase - posY) / 40);
+      terrainZoomOut += b(altMeters / 4000, 0, 0.055);
+    }
+
+    const maxLook = camCfg.lookAhead + valleyLookAheadBonus;
+    const lookAheadX = b(vx * 13.5 + valleyLookAheadBonus * 0.4, -maxLook, maxLook);
+    const airOffsetY = airborne ? b(36.0 + groundClearance * 0.18, 36.0, 95.0) : 0.0;
+
     const targetX = posX + lookAheadX;
-    const targetY = posY + airOffsetY - 36;
+    const targetY = posY + airOffsetY + slopeBiasY - 36;
 
     if (!Number.isFinite(this.x)) this.x = targetX;
     if (!Number.isFinite(this.y)) this.y = targetY;
@@ -1034,8 +1133,12 @@ class X0 {
     this.y = G0(this.y, targetY, camCfg.followSpeed * 65, safeDt);
 
     const speedZoomFactor = b(speed * 0.012, 0, 1) * camCfg.speedZoom;
-    const airZoomFactor = airborne ? 0.05 : 0;
-    this.targetZoom = camCfg.baseZoom - speedZoomFactor - airZoomFactor + this.zoomPulse;
+    const airZoomFactor = airborne ? b(0.05 + groundClearance * 0.00025, 0.05, 0.11) : 0;
+    this.targetZoom = b(
+      camCfg.baseZoom - speedZoomFactor - airZoomFactor - terrainZoomOut + this.zoomPulse,
+      0.62,
+      1.05
+    );
     if (!Number.isFinite(this.zoom)) this.zoom = camCfg.baseZoom;
     this.zoom = G0(this.zoom, this.targetZoom, 4.5, safeDt);
 
@@ -1088,8 +1191,11 @@ class PropManager {
     this.defs = [];
     const noise = K0(seed + 999);
 
-    // 1. Trail signs at scenic spots & early expedition markers
+    // 1. Early expedition markers + long-range sector mileposts across 8.2km
     const signDistances = [820, 2800, 5100, 8500, 13800, 18400, 24200, 31500];
+    for (let distM = 1000; distM <= 8000; distM += 400) {
+      signDistances.push(x.world.startX + distM * 40);
+    }
     for (let i = 0; i < signDistances.length; i++) {
       const sx = signDistances[i];
       const sy = terrain.heightAt(sx) - 15;
@@ -1102,8 +1208,16 @@ class PropManager {
       });
     }
 
-    // 2. Breakable wooden fences along ridges & bridges
+    // 2. Breakable wooden fences along ridges, bridges & trestles
     const fenceClusters = [1320, 3200, 7200, 12200, 19100, 27400];
+    for (const seg of terrain.segments) {
+      if (
+        seg.startX > 36000 &&
+        (seg.type === "NARROW_RIDGE" || seg.type === "BROKEN_RIDGE" || seg.type === "CLIFF_LAUNCH" || seg.signature)
+      ) {
+        fenceClusters.push(Math.round(seg.startX + 120));
+      }
+    }
     for (let c = 0; c < fenceClusters.length; c++) {
       const cx = fenceClusters[c];
       for (let f = 0; f < 4; f++) {
@@ -1119,8 +1233,13 @@ class PropManager {
       }
     }
 
-    // 3. Breakable Wooden Supply Crates & Stacked Outpost Caches
+    // 3. Breakable Wooden Supply Crates & Outpost Caches
     const crateStations = [2250, 2650, 3800, 6200, 7800, 11200, 14800, 21500, 25800, 26300];
+    for (const seg of terrain.segments) {
+      if (seg.startX > 36000 && (seg.type === "PLATEAU" || seg.type === "MINE_PIT" || seg.type === "RECOVERY_VALLEY")) {
+        crateStations.push(Math.round((seg.startX + seg.endX) * 0.5));
+      }
+    }
     for (let c = 0; c < crateStations.length; c++) {
       const cx = crateStations[c];
       const cy = terrain.heightAt(cx) - 14;
@@ -1133,8 +1252,14 @@ class PropManager {
       });
     }
 
-    // 4. Loose rolling rocks on steep descents
+    // 4. Loose rolling rocks on steep descents & rock fields (Section 32: ROCKSLIDE DESCENT)
     const rockStations = [5200, 9300, 15800, 22200, 28800];
+    for (const seg of terrain.segments) {
+      if (seg.startX > 36000 && (seg.type === "ROCK_FIELD" || seg.type === "STEEP_DESCENT" || seg.type === "LONG_DESCENT")) {
+        rockStations.push(Math.round(seg.startX + (seg.endX - seg.startX) * 0.35));
+        rockStations.push(Math.round(seg.startX + (seg.endX - seg.startX) * 0.68));
+      }
+    }
     for (let r = 0; r < rockStations.length; r++) {
       const rx = rockStations[r];
       const ry = terrain.heightAt(rx) - 16;
@@ -1150,8 +1275,8 @@ class PropManager {
   }
 
   updateChunking(camX, dt = 16.666) {
-    const minX = camX - 1200;
-    const maxX = camX + 1200;
+    const minX = camX - 1400;
+    const maxX = camX + 1400;
 
     for (let i = 0; i < this.defs.length; i++) {
       const def = this.defs[i];
@@ -1169,7 +1294,7 @@ class PropManager {
     for (let i = this.debrisList.length - 1; i >= 0; i--) {
       const dItem = this.debrisList[i];
       dItem.life -= dt / 1000;
-      if (dItem.life <= 0 || Math.abs(dItem.body.position.x - camX) > 1600 || dItem.body.position.y > 4000) {
+      if (dItem.life <= 0 || Math.abs(dItem.body.position.x - camX) > 1600 || dItem.body.position.y > 12000) {
         try { Matter.Composite.remove(this.world, dItem.body); } catch (e) {}
         this.debrisList.splice(i, 1);
       }
@@ -1237,7 +1362,6 @@ class PropManager {
 
   spawnFractureDebris(originX, originY, kind, hitEnergy, baseVel = { x: 4, y: -2 }) {
     const count = kind === "crate" ? 5 : 3;
-    // Enforce debris pool limit (max 42 rigid bodies)
     while (this.debrisList.length + count > 42 && this.debrisList.length > 0) {
       const oldest = this.debrisList.shift();
       try { Matter.Composite.remove(this.world, oldest.body); } catch (e) {}
@@ -1250,7 +1374,6 @@ class PropManager {
       const ox = originX + (Math.random() - 0.5) * 14;
       const oy = originY - 4 + (Math.random() - 0.5) * 14;
 
-      // Group -1 so debris collides with terrain (group 0) and tumbles realistically without colliding with vehicle (group -1)
       const frag = Matter.Bodies.rectangle(ox, oy, w, h, {
         label: "debris_plank",
         collisionFilter: { group: -1 },
@@ -1315,7 +1438,6 @@ class PropManager {
 
 // ----------------------------------------------------------------------------
 // 3D Mountain Echo Relics Manager
-// Procedural Lore Collectibles (Spec #28, #29, #30)
 // ----------------------------------------------------------------------------
 class MountainEchoManager {
   relics = [];
@@ -1364,7 +1486,6 @@ class MountainEchoManager {
       const dist = Math.hypot(dx, dy);
       relic.distToCar = dist;
 
-      // Magnetic drift when approaching (< 140px)
       if (dist < 140) {
         relic.glow = Math.min(1.0, relic.glow + dtSec * 4.0);
         const pull = (140 - dist) / 140 * 2.8;
@@ -1378,7 +1499,6 @@ class MountainEchoManager {
         relic.glow = Math.max(0.0, relic.glow - dtSec * 2.0);
       }
 
-      // Collection trigger (< 42px)
       if (dist < 42) {
         this.collect(relic);
       }
@@ -1403,35 +1523,209 @@ class MountainEchoManager {
 }
 
 // ----------------------------------------------------------------------------
-// Procedural Mountain Terrain & Grammar (P0)
-// C1 Hermite Spline Continuity, Authoritative Segment Library, Safety Validator
+// MOUNTAIN GENERATION 2.0 — 32-Shape Parametric Library & Transition Grammar
+// ----------------------------------------------------------------------------
+const PARAMETRIC_SHAPES = {
+  // 1. Rollers & Rhythm Warmups
+  ROLLERS:          { cat: "ROLLERS",  name: "Foothill Rollers",      dx: 720,  dy: -28,  exitSlope: -0.06, maxDeg: 14, jumpPotential: "Low",    landingQuality: "Ideal",   surface: "grass" },
+  LONG_ROLLERS:     { cat: "ROLLERS",  name: "Undulating Meadow",     dx: 1080, dy: -45,  exitSlope: -0.08, maxDeg: 16, jumpPotential: "Low",    landingQuality: "Ideal",   surface: "grass" },
+  DOUBLE_HUMP:      { cat: "RHYTHM",   name: "Double Ridge Rollers",  dx: 840,  dy: -40,  exitSlope: -0.04, maxDeg: 20, jumpPotential: "Medium", landingQuality: "Good",    surface: "dirt" },
+  TRIPLE_HUMP:      { cat: "RHYTHM",   name: "Triple Rhythm Back",    dx: 1120, dy: -55,  exitSlope: -0.05, maxDeg: 22, jumpPotential: "Medium", landingQuality: "Good",    surface: "dirt" },
+  CAMELBACK:        { cat: "RHYTHM",   name: "Camelback Twin Crest",  dx: 860,  dy: -50,  exitSlope: 0.0,   maxDeg: 24, jumpPotential: "Medium", landingQuality: "Good",    surface: "grass" },
+  COMPRESSION_RUN:  { cat: "SUSP",     name: "Compression Dip Run",   dx: 820,  dy: -30,  exitSlope: -0.10, maxDeg: 22, jumpPotential: "Low",    landingQuality: "Good",    surface: "dirt" },
+  OFF_CAMBER:       { cat: "TECH",     name: "Off-Camber Ledge",      dx: 780,  dy: -65,  exitSlope: -0.14, maxDeg: 26, jumpPotential: "Low",    landingQuality: "Technical", surface: "rock" },
+  ROCK_FIELD:       { cat: "TECH",     name: "Boulder Scree Field",   dx: 880,  dy: -75,  exitSlope: -0.15, maxDeg: 28, jumpPotential: "Low",    landingQuality: "Rough",   surface: "rock" },
+  MOGUL_FIELD:      { cat: "SUSP",     name: "Suspension Breaker Moguls", dx: 840, dy: -60, exitSlope: -0.12, maxDeg: 26, jumpPotential: "Medium", landingQuality: "Rough",  surface: "gravel" },
+
+  // 2. Climbs (Easy -> Moderate -> Hard -> Extreme -> Summit)
+  SHALLOW_CLIMB:    { cat: "CLIMB",    name: "Foothill Bench Climb",  dx: 820,  dy: -140, exitSlope: -0.22, maxDeg: 18, jumpPotential: "Low",    landingQuality: "Ideal",   surface: "grass" },
+  LONG_CLIMB:       { cat: "CLIMB",    name: "Sustained Ridge Ascent",dx: 1350, dy: -340, exitSlope: -0.32, maxDeg: 28, jumpPotential: "Low",    landingQuality: "Good",    surface: "rock" },
+  STEEP_CLIMB:      { cat: "CLIMB",    name: "Steep Escarpment",      dx: 960,  dy: -310, exitSlope: -0.38, maxDeg: 34, jumpPotential: "Medium", landingQuality: "Good",    surface: "rock" },
+  STEPPED_RIDGE:    { cat: "CLIMB",    name: "Stepped Ridge",         dx: 1180, dy: -320, exitSlope: -0.34, maxDeg: 34, jumpPotential: "Medium", landingQuality: "Good",    surface: "rock" },
+  EXTREME_CLIMB:    { cat: "EXTREME",  name: "Extreme Headwall",      dx: 1050, dy: -410, exitSlope: -0.44, maxDeg: 40, jumpPotential: "Medium", landingQuality: "Narrow",  surface: "rock" },
+  SUMMIT_FACE:      { cat: "EXTREME",  name: "High Summit Face",      dx: 1240, dy: -490, exitSlope: -0.46, maxDeg: 44, jumpPotential: "High",   landingQuality: "Narrow",  surface: "snow" },
+  FINAL_ASCENT:     { cat: "EXTREME",  name: "The Final Ascent",      dx: 1320, dy: -520, exitSlope: -0.42, maxDeg: 45, jumpPotential: "High",   landingQuality: "Narrow",  surface: "snow" },
+
+  // 3. Crests & Ridges
+  BLIND_CREST:      { cat: "CREST",    name: "Blind Horizon Crest",   dx: 680,  dy: 35,   exitSlope: 0.22,  maxDeg: 26, jumpPotential: "High",   landingQuality: "Good",    surface: "rock" },
+  RAZOR_CREST:      { cat: "CREST",    name: "Razorback Spine",       dx: 740,  dy: 45,   exitSlope: 0.26,  maxDeg: 32, jumpPotential: "High",   landingQuality: "Narrow",  surface: "rock" },
+  BROKEN_RIDGE:     { cat: "TECH",     name: "Broken Spine Ridge",    dx: 960,  dy: -110, exitSlope: -0.18, maxDeg: 30, jumpPotential: "Medium", landingQuality: "Technical", surface: "rock" },
+  NARROW_RIDGE:     { cat: "TECH",     name: "Knife-Edge Pass",       dx: 860,  dy: -85,  exitSlope: -0.12, maxDeg: 28, jumpPotential: "Medium", landingQuality: "Narrow",  surface: "gravel" },
+
+  // 4. Jumps & Airborne Launches
+  KICKER:           { cat: "JUMP",     name: "Upward Kicker Ramp",    dx: 820,  dy: -55,  exitSlope: 0.16,  maxDeg: 28, jumpPotential: "High",   landingQuality: "Good",    surface: "dirt" },
+  LONG_KICKER:      { cat: "JUMP",     name: "High-Speed Long Kicker",dx: 1080, dy: -85,  exitSlope: 0.18,  maxDeg: 32, jumpPotential: "Extreme",landingQuality: "Good",    surface: "rock" },
+  RIDGE_LAUNCH:     { cat: "JUMP",     name: "Natural Ridge Launch",  dx: 940,  dy: -70,  exitSlope: 0.20,  maxDeg: 30, jumpPotential: "High",   landingQuality: "Good",    surface: "rock" },
+  CLIFF_LAUNCH:     { cat: "JUMP",     name: "Trestle Cliff Gap",     dx: 1180, dy: 65,   exitSlope: 0.22,  maxDeg: 34, jumpPotential: "Extreme",landingQuality: "Slope",   surface: "wood" },
+  DOWNHILL_LAUNCH:  { cat: "JUMP",     name: "Downhill Step Launch",  dx: 1020, dy: 145,  exitSlope: 0.26,  maxDeg: 32, jumpPotential: "High",   landingQuality: "Downhill",surface: "dirt" },
+
+  // 5. Descents & Deep Valleys
+  SHALLOW_DESCENT:  { cat: "DESCENT",  name: "Traversing Descent",    dx: 840,  dy: 140,  exitSlope: 0.18,  maxDeg: 20, jumpPotential: "Low",    landingQuality: "Ideal",   surface: "dirt" },
+  STEEP_DESCENT:    { cat: "DESCENT",  name: "Steep Gorge Plunge",    dx: 960,  dy: 290,  exitSlope: 0.34,  maxDeg: 34, jumpPotential: "Medium", landingQuality: "Downhill",surface: "dirt" },
+  LONG_DESCENT:     { cat: "DESCENT",  name: "The Great Descent Run", dx: 1440, dy: 460,  exitSlope: 0.36,  maxDeg: 36, jumpPotential: "High",   landingQuality: "Downhill",surface: "gravel" },
+  V_VALLEY:         { cat: "VALLEY",   name: "V-Ravine Gorge",        dx: 920,  dy: 65,   exitSlope: -0.28, maxDeg: 32, jumpPotential: "High",   landingQuality: "Good",    surface: "rock" },
+  U_VALLEY:         { cat: "VALLEY",   name: "Deep U-Valley Bowl",    dx: 1160, dy: 40,   exitSlope: -0.26, maxDeg: 28, jumpPotential: "High",   landingQuality: "Ideal",   surface: "dirt" },
+  GLACIAL_BOWL:     { cat: "VALLEY",   name: "Glacial Ice Basin",     dx: 1380, dy: 30,   exitSlope: -0.24, maxDeg: 26, jumpPotential: "Extreme",landingQuality: "Ideal",   surface: "ice" },
+  RAVINE:           { cat: "VALLEY",   name: "Erosion Ravine",        dx: 880,  dy: 50,   exitSlope: -0.25, maxDeg: 30, jumpPotential: "Medium", landingQuality: "Good",    surface: "dirt" },
+  MINE_PIT:         { cat: "VALLEY",   name: "Open-Cast Mine Pit",    dx: 1220, dy: 25,   exitSlope: -0.30, maxDeg: 34, jumpPotential: "Medium", landingQuality: "Good",    surface: "gravel" },
+
+  // 6. Recovery Zones & Plateaus
+  PLATEAU:          { cat: "RECOVERY", name: "Survey Bench Plateau",  dx: 660,  dy: -12,  exitSlope: 0.0,   maxDeg: 8,  jumpPotential: "None",   landingQuality: "Ideal",   surface: "grass" },
+  RECOVERY_VALLEY:  { cat: "RECOVERY", name: "Sheltered Basin Rest",  dx: 740,  dy: 18,   exitSlope: -0.05, maxDeg: 10, jumpPotential: "None",   landingQuality: "Ideal",   surface: "dirt" },
+};
+
+// Markov Category Transition Rules (Section 41 & 42: Procedural Anti-Repetition)
+const CATEGORY_TRANSITIONS = {
+  ROLLERS:  ["CLIMB", "RHYTHM", "JUMP", "SUSP"],
+  RHYTHM:   ["CLIMB", "JUMP", "VALLEY", "TECH"],
+  SUSP:     ["CLIMB", "RECOVERY", "JUMP", "CREST"],
+  TECH:     ["CLIMB", "CREST", "DESCENT", "RECOVERY"],
+  CLIMB:    ["CREST", "JUMP", "RECOVERY", "TECH"],
+  EXTREME:  ["CREST", "RECOVERY", "JUMP"],
+  CREST:    ["DESCENT", "VALLEY", "JUMP", "RECOVERY"],
+  JUMP:     ["RECOVERY", "VALLEY", "ROLLERS", "DESCENT"],
+  DESCENT:  ["VALLEY", "RECOVERY", "CLIMB", "JUMP"],
+  VALLEY:   ["CLIMB", "RECOVERY", "RHYTHM", "JUMP"],
+  RECOVERY: ["CLIMB", "RHYTHM", "TECH", "EXTREME", "DESCENT"],
+};
+
+// 8 Signature Expedition Setpieces anchored at key distances across the 8.2km mountain (Section 31)
+const SIGNATURE_SETPIECES = [
+  { triggerDistM: 520,  type: "KICKER",          name: "THE OLD QUARRY LAUNCH",    signature: "SETPIECE // OLD QUARRY" },
+  { triggerDistM: 1250, type: "RAZOR_CREST",     name: "THE RED RIDGE SPINE",      signature: "SETPIECE // BROKEN RIDGE" },
+  { triggerDistM: 1820, type: "LONG_DESCENT",    name: "THE GREAT DROP",           signature: "SETPIECE // GREAT DROP" },
+  { triggerDistM: 2150, type: "STEPPED_RIDGE",   name: "STEPPED RIDGE RECOVERY",   signature: "SETPIECE // STEPPED RIDGE" },
+  { triggerDistM: 2820, type: "CLIFF_LAUNCH",    name: "THE LONG FLIGHT TRESTLE",  signature: "SETPIECE // LONG FLIGHT" },
+  { triggerDistM: 3250, type: "MINE_PIT",        name: "THE DEAD MINE BASIN",      signature: "SETPIECE // DEAD MINE" },
+  { triggerDistM: 4350, type: "GLACIAL_BOWL",    name: "THE GLACIER RUN",          signature: "SETPIECE // GLACIER RUN" },
+  { triggerDistM: 5850, type: "EXTREME_CLIMB",   name: "THE HIGH CRAG WALL",       signature: "SETPIECE // THE WALL" },
+  { triggerDistM: 7150, type: "SUMMIT_FACE",     name: "THE SUMMIT FACE",          signature: "SETPIECE // SUMMIT FACE" },
+  { triggerDistM: 7750, type: "LONG_KICKER",     name: "THE LAST CREST",           signature: "SETPIECE // LAST CREST" },
+];
+
+// ----------------------------------------------------------------------------
+// Procedural Mountain Terrain & Streamed Physics Engine (P0)
 // ----------------------------------------------------------------------------
 class P0 {
   samples = [];
-  bodies = [];
+  bodies = []; // Currently active streamed Matter.js static terrain bodies
+  chunks = []; // Collision chunk descriptors: { id, startIdx, endIdx, minX, maxX, active, bodies }
   segments = [];
   seed;
   step = x.world.sampleStep;
+  chunkSamples = x.world.chunkSamples || 20;
+  activeRadius = x.world.activePhysicsRadius || 3200;
+  activeChunkCount = 0;
+  lastStreamCenterX = -999999;
+  stats = null;
 
   constructor(seed) {
     this.seed = seed;
     this.generateGrammarTerrain();
   }
 
+  // Difficulty curve across the full 8.2km expedition (Section 28)
+  computeDifficulty(distMeters) {
+    let base = 0.15;
+    if (distMeters < 800) {
+      base = 0.15 + (distMeters / 800) * 0.15; // 0.15 -> 0.30
+    } else if (distMeters < 1600) {
+      base = 0.30 + ((distMeters - 800) / 800) * 0.15; // 0.30 -> 0.45
+    } else if (distMeters < 2600) {
+      base = 0.45 + ((distMeters - 1600) / 1000) * 0.15; // 0.45 -> 0.60
+    } else if (distMeters < 3800) {
+      base = 0.60 + ((distMeters - 2600) / 1200) * 0.12; // 0.60 -> 0.72
+    } else if (distMeters < 5200) {
+      base = 0.72 + ((distMeters - 3800) / 1400) * 0.12; // 0.72 -> 0.84
+    } else if (distMeters < 6800) {
+      base = 0.84 + ((distMeters - 5200) / 1600) * 0.10; // 0.84 -> 0.94
+    } else {
+      base = 0.94 + b((distMeters - 6800) / 1400, 0, 1) * 0.06; // 0.94 -> 1.00
+    }
+    return b(base, 0.15, 1.0);
+  }
+
+  classifyDifficultyCategory(diff) {
+    if (diff < 0.30) return "EASY";
+    if (diff < 0.50) return "MODERATE";
+    if (diff < 0.70) return "CHALLENGING";
+    if (diff < 0.90) return "HARD";
+    return "EXTREME";
+  }
+
+  pickNextShapeKey(distMeters, prevCat, recentTypes, rng) {
+    // 1. Check if an authored Signature Setpiece is due
+    for (const sp of SIGNATURE_SETPIECES) {
+      if (
+        Math.abs(distMeters - sp.triggerDistM) < 130 &&
+        !this._usedSetpieces.has(sp.name)
+      ) {
+        this._usedSetpieces.add(sp.name);
+        return { key: sp.type, overrideName: sp.name, signature: sp.signature };
+      }
+    }
+
+    // 2. Determine allowed next categories from Markov Transition Matrix
+    const allowedCats = CATEGORY_TRANSITIONS[prevCat] || ["CLIMB", "RHYTHM", "RECOVERY"];
+
+    // 3. Filter candidate shapes by Act / Sector appropriateness and anti-repetition
+    const candidates = [];
+    const allKeys = Object.keys(PARAMETRIC_SHAPES);
+
+    for (const key of allKeys) {
+      const def = PARAMETRIC_SHAPES[key];
+      if (!allowedCats.includes(def.cat)) continue;
+
+      // Never repeat a shape present in the last 3 segments
+      if (recentTypes.slice(-3).includes(key)) continue;
+
+      // Act-specific gating so Foothills stay approachable and Summit Face is intense
+      if (distMeters < 750 && (def.cat === "EXTREME" || def.maxDeg > 28 || key === "CLIFF_LAUNCH")) continue;
+      if (distMeters >= 1600 && distMeters <= 2400) {
+        // Act III: The Great Descent favors descents, valleys, and recovery climbs
+        if (def.cat === "DESCENT" || def.cat === "VALLEY" || key === "STEPPED_RIDGE") {
+          candidates.push(key, key);
+        }
+      }
+      if (distMeters >= 3500 && distMeters <= 5000) {
+        // Act V: Glacier Run favors glacial bowls, long kickers, and smooth fast runs
+        if (key === "GLACIAL_BOWL" || key === "LONG_KICKER" || key === "LONG_ROLLERS") {
+          candidates.push(key, key);
+        }
+      }
+      if (distMeters >= 6600 && (def.cat === "EXTREME" || key === "STEEP_CLIMB" || key === "RAZOR_CREST")) {
+        candidates.push(key, key);
+      }
+
+      candidates.push(key);
+    }
+
+    if (candidates.length === 0) {
+      return { key: "PLATEAU", overrideName: null, signature: null };
+    }
+
+    const idx = Math.floor(Math.abs(rng(distMeters * 0.17 + recentTypes.length * 13.7)) * candidates.length) % candidates.length;
+    return { key: candidates[idx], overrideName: null, signature: null };
+  }
+
   generateGrammarTerrain() {
     this.samples = [];
     this.bodies = [];
+    this.chunks = [];
     this.segments = [];
+    this._usedSetpieces = new Set();
 
     const seed = this.seed;
     const groundBase = x.world.groundBase;
     const startX = x.world.startX;
     const totalLength = x.world.length;
 
-    const nSwell = K0(seed + 11);
+    const nMacro = K0(seed + 7);
+    const nSwell = K0(seed + 23);
     const nDetail = K0(seed + 89);
+    const nChoice = K0(seed + 151);
 
-    // Initial flat starting apron (-2500 to startX + 350)
+    // 1. Initial flat starting apron (-2500 to startX + 350)
     for (let q = -2500; q < startX + 350; q += this.step) {
       this.samples.push({
         x: q,
@@ -1439,72 +1733,111 @@ class P0 {
         material: "grass",
         biomeId: "meadow",
         slope: 0,
+        curvature: 0,
       });
     }
 
-    // Authored Segment Library for Mountain Expedition Grammar
-    // Each template defines relative (deltaX, deltaY, exitSlope, type, material)
-    const grammarSequence = [
-      { name: "Gentle Rollers", type: "rollers", dx: 600, dy: -20, exitSlope: 0.05, material: "grass" },
-      { name: "Steady Climb", type: "climb", dx: 700, dy: -140, exitSlope: -0.32, material: "grass" },
-      { name: "First Kicker Jump", type: "kicker", dx: 750, dy: -40, exitSlope: 0.15, material: "dirt" },
-      { name: "Deep Valley Bowl", type: "bowl", dx: 650, dy: 60, exitSlope: -0.25, material: "dirt" },
-      { name: "Camelback Double", type: "camelback", dx: 700, dy: -50, exitSlope: 0.0, material: "grass" },
-      { name: "Base Camp Plateau", type: "plateau", dx: 550, dy: -10, exitSlope: 0.0, material: "grass" },
-      { name: "Stone Ridge Ascent", type: "climb", dx: 800, dy: -210, exitSlope: -0.42, material: "rock" },
-      { name: "Crag Crest Drop", type: "crest", dx: 650, dy: 70, exitSlope: 0.28, material: "rock" },
-      { name: "Ridge Launch Kicker", type: "kicker", dx: 800, dy: -60, exitSlope: 0.18, material: "rock" },
-      { name: "Technical Moguls", type: "scramble", dx: 700, dy: -80, exitSlope: -0.15, material: "gravel" },
-      { name: "High Crag Plateau", type: "plateau", dx: 600, dy: -15, exitSlope: 0.0, material: "rock" },
-      { name: "Canyon Gorge Descent", type: "descent", dx: 750, dy: 160, exitSlope: 0.38, material: "dirt" },
-      { name: "Old Trestle Chasm Jump", type: "chasm", dx: 850, dy: -30, exitSlope: 0.10, material: "wood" },
-      { name: "Canyon Cliff Run", type: "rollers", dx: 700, dy: -90, exitSlope: -0.22, material: "dirt" },
-      { name: "Mine Pithead Approach", type: "climb", dx: 750, dy: -180, exitSlope: -0.35, material: "gravel" },
-      { name: "Slag Heap Kicker", type: "kicker", dx: 800, dy: -50, exitSlope: 0.20, material: "gravel" },
-      { name: "Industrial Works Plateau", type: "plateau", dx: 650, dy: -20, exitSlope: 0.0, material: "gravel" },
-      { name: "Summit Ridge Climb", type: "climb", dx: 850, dy: -260, exitSlope: -0.45, material: "snow" },
-      { name: "Glacier Bowl", type: "bowl", dx: 700, dy: 80, exitSlope: -0.28, material: "ice" },
-      { name: "Summit Observatory Kicker", type: "kicker", dx: 900, dy: -70, exitSlope: 0.15, material: "snow" },
-      { name: "Summit Panoramic Plateau", type: "plateau", dx: 800, dy: -10, exitSlope: 0.0, material: "snow" },
+    // 2. Preserve proven opening 6 segments (0m -> ~85m) so early driving/prop tests remain 100% consistent,
+    //    then transition seamlessly into the 8.2km Markov Macro-Meso-Micro Expedition Grammar!
+    const openingSequence = [
+      { key: "ROLLERS",       name: "Gentle Rollers",      dx: 600, dy: -20,  exitSlope: 0.05,  surface: "grass" },
+      { key: "SHALLOW_CLIMB", name: "Steady Climb",        dx: 700, dy: -140, exitSlope: -0.32, surface: "grass" },
+      { key: "KICKER",        name: "First Kicker Jump",   dx: 750, dy: -40,  exitSlope: 0.15,  surface: "dirt"  },
+      { key: "U_VALLEY",      name: "Deep Valley Bowl",    dx: 650, dy: 60,   exitSlope: -0.25, surface: "dirt"  },
+      { key: "CAMELBACK",     name: "Camelback Double",    dx: 700, dy: -50,  exitSlope: 0.0,   surface: "grass" },
+      { key: "PLATEAU",       name: "Base Camp Plateau",   dx: 550, dy: -10,  exitSlope: 0.0,   surface: "grass" },
     ];
 
-    let curX = startX + 350;
+    let curX = this.samples[this.samples.length - 1].x;
     let curY = groundBase;
     let curSlope = 0.0;
     let seqIdx = 0;
+    let prevCat = "RECOVERY";
+    const recentTypes = [];
 
-    // Generate consecutive segments with C1 Hermite Continuity
     while (curX < totalLength) {
-      const tmpl = grammarSequence[seqIdx % grammarSequence.length];
-      seqIdx++;
-
       const distMeters = Math.max(0, (curX - startX) / 40);
-      const difficulty = b(distMeters / 1000, 0, 1);
+      const difficulty = this.computeDifficulty(distMeters);
       const biome = this.getBiomeAtDist(distMeters);
 
-      const segLen = tmpl.dx * (0.9 + Math.abs(nSwell(curX / 900)) * 0.25);
-      const segDy = tmpl.dy * (1.0 + difficulty * 0.35);
-      const targetSlope = tmpl.exitSlope * (1.0 + difficulty * 0.25);
+      let shapeKey, segName, segDx, segDy, targetSlope, segSurface, segSignature = null;
+      let shapeDef;
+
+      // Final 250m (7,950m -> 8,200m): Summit Observatory Panoramic Plateau (Section 50 & 51)
+      if (distMeters >= 7980) {
+        shapeKey = "PLATEAU";
+        shapeDef = PARAMETRIC_SHAPES.PLATEAU;
+        segName = "Summit Observatory Plateau";
+        segDx = Math.ceil(Math.max(800, totalLength - curX + 200) / this.step) * this.step;
+        segDy = -15;
+        targetSlope = 0.0;
+        segSurface = "snow";
+        segSignature = "SUMMIT // OBSERVATORY";
+      } else if (seqIdx < openingSequence.length) {
+        const op = openingSequence[seqIdx];
+        shapeKey = op.key;
+        shapeDef = PARAMETRIC_SHAPES[shapeKey];
+        segName = op.name;
+        segDx = Math.round((op.dx * (0.92 + Math.abs(nSwell(curX / 900)) * 0.20)) / this.step) * this.step;
+        segDy = op.dy * (1.0 + difficulty * 0.30);
+        targetSlope = op.exitSlope;
+        segSurface = op.surface;
+      } else {
+        const picked = this.pickNextShapeKey(distMeters, prevCat, recentTypes, nChoice);
+        shapeKey = picked.key;
+        shapeDef = PARAMETRIC_SHAPES[shapeKey] || PARAMETRIC_SHAPES.ROLLERS;
+        segName = picked.overrideName || shapeDef.name;
+        segSignature = picked.signature;
+
+        // Seeded parametric variation (Section 27)
+        const lenScale = 0.88 + Math.abs(nSwell(curX * 0.0011 + seqIdx)) * 0.32;
+        const ampScale = (0.85 + Math.abs(nMacro(curX * 0.0007 + seqIdx)) * 0.30) * (0.75 + difficulty * 0.55);
+
+        segDx = Math.round((shapeDef.dx * lenScale) / this.step) * this.step;
+        segDy = shapeDef.dy * ampScale;
+
+        // Macro Act Envelope Bias:
+        // Act III (1,600m - 2,400m) is THE GREAT DESCENT; bias net vertical change downward
+        if (distMeters >= 1600 && distMeters < 2300 && shapeDef.cat !== "CLIMB") {
+          segDy += 95;
+        } else if (distMeters >= 5000 && distMeters < 7950 && shapeDef.cat === "CLIMB") {
+          // High Mountain & Summit Approach: amplify vertical climb gain
+          segDy -= 65;
+        }
+
+        targetSlope = b(shapeDef.exitSlope * (0.85 + difficulty * 0.35), -0.46, 0.42);
+        segSurface = shapeDef.surface || biome.defaultMaterial;
+        if (biome.id === "glacier" && (shapeDef.cat === "VALLEY" || shapeDef.cat === "ROLLERS")) {
+          segSurface = "ice";
+        } else if (biome.id === "summit") {
+          segSurface = Math.abs(targetSlope) > 0.38 ? "rock" : "snow";
+        } else if (biome.id === "industrial" && shapeDef.cat === "JUMP") {
+          segSurface = "metal";
+        }
+      }
+
+      seqIdx++;
+      prevCat = shapeDef.cat;
+      recentTypes.push(shapeKey);
+      if (recentTypes.length > 8) recentTypes.shift();
 
       const x0 = curX;
       const y0 = curY;
       const m0 = curSlope;
-      const x1 = curX + segLen;
+      const x1 = curX + segDx;
       const y1 = curY + segDy;
       const m1 = targetSlope;
 
-      this.segments.push({
-        name: tmpl.name,
-        type: tmpl.type,
-        startX: x0,
-        endX: x1,
-        startY: y0,
-        endY: y1,
-        material: tmpl.material,
-      });
+      const startSampleIdx = this.samples.length;
+      let segMaxSlopeRad = 0;
+      let segMinY = y0;
+      let segMaxY = y0;
 
-      // Sample along Cubic Hermite Spline
+      // Sample along Cubic Hermite Spline with Meso + Micro + Off-Camber Perturbations
       const L = x1 - x0;
+      const maxAllowedDeg = b((shapeDef.maxDeg || 38) + difficulty * 6, 16, 45.2);
+      const maxSlopeTan = Math.tan((maxAllowedDeg * Math.PI) / 180);
+
       for (let q = x0 + this.step; q <= x1; q += this.step) {
         const u = (q - x0) / L;
         const u2 = u * u;
@@ -1517,34 +1850,90 @@ class P0 {
 
         let y = h00 * y0 + h10 * L * m0 + h01 * y1 + h11 * L * m1;
 
-        // Add fine organic micro-features based on segment type
-        if (tmpl.type === "rollers" || tmpl.type === "camelback") {
-          y += Math.sin(u * Math.PI * 4) * (14.0 + difficulty * 8.0);
-        } else if (tmpl.type === "kicker") {
-          // Sharp takeoff lip followed by dip
-          if (u < 0.45) {
-            y -= Math.sin(u / 0.45 * Math.PI * 0.5) * (26.0 + difficulty * 16.0);
+        // Window envelope sin(pi * u)^2 so meso/micro perturbations vanish at segment boundaries (preserving exact C1 continuity!)
+        const env = Math.sin(u * Math.PI);
+        const env2 = env * env;
+
+        // Meso & Micro shape articulations (Sections 08, 18, 19, 35, 36)
+        if (shapeKey === "ROLLERS" || shapeKey === "LONG_ROLLERS") {
+          y += Math.sin(u * Math.PI * 4) * (15.0 + difficulty * 9.0) * env;
+        } else if (shapeKey === "DOUBLE_HUMP" || shapeKey === "CAMELBACK") {
+          y -= Math.sin(u * Math.PI * 3) * (24.0 + difficulty * 12.0) * env;
+        } else if (shapeKey === "TRIPLE_HUMP") {
+          y -= Math.sin(u * Math.PI * 5) * (20.0 + difficulty * 10.0) * env;
+        } else if (shapeKey === "KICKER" || shapeKey === "LONG_KICKER" || shapeKey === "RIDGE_LAUNCH") {
+          // Smooth upward launch ramp followed by landing basin
+          if (u < 0.48) {
+            y -= Math.sin((u / 0.48) * Math.PI * 0.5) * (28.0 + difficulty * 18.0) * env;
           } else {
-            y += Math.sin((u - 0.45) / 0.55 * Math.PI) * (16.0 + difficulty * 10.0);
+            y += Math.sin(((u - 0.48) / 0.52) * Math.PI) * (18.0 + difficulty * 12.0) * env;
           }
-        } else if (tmpl.type === "scramble") {
-          y += nDetail(q / 60.0) * (10.0 + difficulty * 6.0);
+        } else if (shapeKey === "CLIFF_LAUNCH" || shapeKey === "DOWNHILL_LAUNCH") {
+          // High takeoff lip dropping into a wide downhill landing slope
+          if (u < 0.35) {
+            y -= Math.sin((u / 0.35) * Math.PI) * (34.0 + difficulty * 16.0);
+          } else {
+            y += Math.sin(((u - 0.35) / 0.65) * Math.PI) * (42.0 + difficulty * 22.0);
+          }
+        } else if (shapeKey === "V_VALLEY" || shapeKey === "RAVINE") {
+          // Deep V-depression with compression floor and exit climb
+          y += Math.pow(env, 1.4) * (75.0 + difficulty * 45.0);
+        } else if (shapeKey === "U_VALLEY" || shapeKey === "GLACIAL_BOWL") {
+          // Wide smooth high-speed bowl
+          y += env2 * (90.0 + difficulty * 55.0);
+        } else if (shapeKey === "MINE_PIT") {
+          // Steep entry, flat pit floor, technical exit
+          const pit = Math.min(1, env * 1.6);
+          y += pit * (82.0 + difficulty * 38.0);
+        } else if (shapeKey === "STEPPED_RIDGE") {
+          // Stepped mountain shelves (climb -> brief shelf -> climb)
+          y += Math.sin(u * Math.PI * 6) * 14.0 * env2;
+        } else if (shapeKey === "RAZOR_CREST" || shapeKey === "BLIND_CREST") {
+          // Pronounced crest apex at u = 0.45
+          y -= Math.exp(-Math.pow((u - 0.45) / 0.18, 2)) * (44.0 + difficulty * 22.0) * env;
+        } else if (shapeKey === "ROCK_FIELD" || shapeKey === "MOGUL_FIELD") {
+          // High-frequency suspension challenge bumps
+          y += (Math.sin(q / 24.0) * 7.5 + nDetail(q / 42.0) * 9.5) * env2;
+        } else if (shapeKey === "OFF_CAMBER" || shapeKey === "BROKEN_RIDGE") {
+          // Asymmetric wheelbase-scale ripples (~112px wavelength) pitching front vs rear wheel
+          y += (Math.sin(q / 18.5) * 6.5 + Math.cos(q / 37.0) * 9.0) * env2;
+        } else if (shapeKey === "COMPRESSION_RUN") {
+          y += Math.sin(u * Math.PI * 6) * (18.0 + difficulty * 8.0) * env2;
+        } else {
+          // Subtle organic mountain erosion on climbs/descents
+          y += nDetail(q / 85.0) * (6.5 + difficulty * 4.5) * env2;
         }
 
-        // Safety Validation: enforce max drivable slope derivative (<= 46 degrees)
+        // Physics Safety & Curvature Clamp (Sections 25, 37, 38):
+        // Control both 1st derivative (slope) and 2nd derivative (dSlope/dX curvature) so no knife-edges occur
         const prev = this.samples[this.samples.length - 1];
         const dx = q - prev.x;
-        const dy = y - prev.y;
-        const maxDy = dx * Math.tan(0.80); // ~46 degrees max
+        let dy = y - prev.y;
+
+        // 1. Curvature rate limiter (limits change in slope per 18px step to prevent single-frame kinks)
+        const maxDeltaSlope = 0.085; // ~4.8 degrees max angle change per 18px sample
+        const desiredSlope = dy / dx;
+        const clampedCurvSlope = b(desiredSlope, prev.slope - maxDeltaSlope, prev.slope + maxDeltaSlope);
+        dy = clampedCurvSlope * dx;
+
+        // 2. Maximum slope clamp (<= maxSlopeTan, never exceeding 45.5 deg)
+        const maxDy = dx * Math.min(maxSlopeTan, Math.tan(0.795));
         if (Math.abs(dy) > maxDy) {
-          y = prev.y + Math.sign(dy) * maxDy;
+          dy = Math.sign(dy) * maxDy;
         }
 
-        const actualSlope = (y - prev.y) / dx;
-        let mat = tmpl.material;
-        if (Math.abs(actualSlope) > 0.55 && biome.id !== "summit") {
+        y = prev.y + dy;
+        const actualSlope = dy / dx;
+        const curvature = (actualSlope - prev.slope) / dx;
+        const slopeRad = Math.abs(Math.atan(actualSlope));
+        if (slopeRad > segMaxSlopeRad) segMaxSlopeRad = slopeRad;
+        if (y < segMinY) segMinY = y;
+        if (y > segMaxY) segMaxY = y;
+
+        let mat = segSurface;
+        if (Math.abs(actualSlope) > 0.56 && biome.id !== "summit" && mat !== "metal") {
           mat = "rock";
-        } else if (biome.id === "summit" && Math.abs(actualSlope) < 0.2) {
+        } else if (biome.id === "summit" && Math.abs(actualSlope) < 0.18) {
           mat = "ice";
         }
 
@@ -1554,18 +1943,79 @@ class P0 {
           material: mat,
           biomeId: biome.id,
           slope: actualSlope,
+          curvature: curvature,
         });
       }
 
+      const endSample = this.samples[this.samples.length - 1];
+      const elevGainM = Math.max(0, Math.round((y0 - segMinY) / 40));
+      const elevLossM = Math.max(0, Math.round((segMaxY - y0) / 40));
+      const maxSlopeDeg = Math.round((segMaxSlopeRad * 180) / Math.PI);
+
+      // Store rich Segment Metadata (Section 45)
+      this.segments.push({
+        name: segName,
+        type: shapeKey,
+        category: shapeDef.cat,
+        diffCategory: this.classifyDifficultyCategory(difficulty),
+        act: biome.act,
+        sector: biome.sector,
+        biome: biome.name,
+        startX: x0,
+        endX: x1,
+        startY: y0,
+        endY: endSample.y,
+        startSlope: Math.round((Math.atan(m0) * 180) / Math.PI),
+        maxSlope: maxSlopeDeg,
+        endSlope: Math.round((Math.atan(endSample.slope) * 180) / Math.PI),
+        elevationGain: elevGainM,
+        elevationLoss: elevLossM,
+        difficulty: Number(difficulty.toFixed(2)),
+        jumpPotential: shapeDef.jumpPotential || "Low",
+        landingQuality: shapeDef.landingQuality || "Good",
+        surface: segSurface,
+        material: segSurface,
+        signature: segSignature,
+        startSampleIdx,
+        endSampleIdx: this.samples.length - 1,
+      });
+
       curX = x1;
-      curY = this.samples[this.samples.length - 1].y;
-      curSlope = this.samples[this.samples.length - 1].slope;
+      curY = endSample.y;
+      curSlope = endSample.slope;
     }
 
-    // Build Matter.js static segment physics bodies
-    for (let i = 0; i < this.samples.length - 1; i++) {
+    // 3. Build Streamed Physics Chunk Registry (Section 05 & 06)
+    // Instead of instantiating 18,300 Matter.js bodies at startup, partition into 20-sample (360px) chunks!
+    const totalSamples = this.samples.length;
+    const stepCount = this.chunkSamples;
+    let chunkId = 0;
+    for (let s = 0; s < totalSamples - 1; s += stepCount) {
+      const endS = Math.min(totalSamples - 1, s + stepCount);
+      this.chunks.push({
+        id: chunkId++,
+        startIdx: s,
+        endIdx: endS,
+        minX: this.samples[s].x,
+        maxX: this.samples[endS].x,
+        active: false,
+        bodies: [],
+      });
+    }
+
+    // Activate initial physics window around startX so initial bodies are ready before first step
+    this.updateStreaming(startX, null, null);
+    this.stats = this.validateTerrain();
+    this.validationReport = this.stats;
+  }
+
+  // Instantiate static collision bodies for a single chunk on demand
+  buildChunkBodies(chunk) {
+    const bodies = [];
+    for (let i = chunk.startIdx; i < chunk.endIdx; i++) {
       const p1 = this.samples[i];
       const p2 = this.samples[i + 1];
+      if (!p1 || !p2) continue;
       const dx = p2.x - p1.x;
       const dy = p2.y - p1.y;
       const len = Math.hypot(dx, dy);
@@ -1588,8 +2038,173 @@ class P0 {
         }
       );
       body.materialKind = p1.material;
-      this.bodies.push(body);
+      body.chunkId = chunk.id;
+      bodies.push(body);
     }
+    return bodies;
+  }
+
+  // Streamed Terrain Physics Activation (Section 06)
+  // Keeps only chunks within centerX +- activeRadius (3,200px) in the Matter.js physics world!
+  updateStreaming(centerX, world = null, terrainSet = null) {
+    if (Math.abs(centerX - this.lastStreamCenterX) < 120 && world) return;
+    this.lastStreamCenterX = centerX;
+
+    const minActiveX = centerX - this.activeRadius;
+    const maxActiveX = centerX + this.activeRadius;
+    let activeChunks = 0;
+    let changed = false;
+
+    for (let c = 0; c < this.chunks.length; c++) {
+      const chunk = this.chunks[c];
+      const shouldBeActive = chunk.maxX >= minActiveX && chunk.minX <= maxActiveX;
+
+      if (shouldBeActive && !chunk.active) {
+        if (chunk.bodies.length === 0) {
+          chunk.bodies = this.buildChunkBodies(chunk);
+        }
+        chunk.active = true;
+        changed = true;
+        if (world) {
+          Matter.Composite.add(world, chunk.bodies);
+        }
+        if (terrainSet) {
+          for (const bBody of chunk.bodies) terrainSet.add(bBody);
+        }
+      } else if (!shouldBeActive && chunk.active) {
+        chunk.active = false;
+        changed = true;
+        if (world) {
+          for (const bBody of chunk.bodies) {
+            try { Matter.Composite.remove(world, bBody); } catch (e) {}
+          }
+        }
+        if (terrainSet) {
+          for (const bBody of chunk.bodies) terrainSet.delete(bBody);
+        }
+      }
+
+      if (chunk.active) activeChunks++;
+    }
+
+    this.activeChunkCount = activeChunks;
+    if (changed) {
+      this.bodies = [];
+      for (let c = 0; c < this.chunks.length; c++) {
+        if (this.chunks[c].active) {
+          this.bodies.push(...this.chunks[c].bodies);
+        }
+      }
+    }
+  }
+
+  // Terrain Validator 2.0 (Section 39 & 40)
+  validateTerrain() {
+    const startX = x.world.startX;
+    const groundBase = x.world.groundBase;
+    const totalDistM = Math.round((this.samples[this.samples.length - 1].x - startX) / 40);
+
+    let minY = groundBase;
+    let maxY = groundBase;
+    let totalGainPx = 0;
+    let totalLossPx = 0;
+    let maxSlopeRad = 0;
+    let sumSlopeRad = 0;
+    let maxCurvature = 0;
+    let maxDyPx = 0;
+    let discontinuities = 0;
+
+    const slopeBuckets = { easy: 0, moderate: 0, hard: 0, veryHard: 0, extreme: 0 };
+
+    for (let i = 1; i < this.samples.length; i++) {
+      const p0 = this.samples[i - 1];
+      const p1 = this.samples[i];
+      const dx = p1.x - p0.x;
+      const dy = p1.y - p0.y;
+      if (dy < 0) totalGainPx += -dy;
+      else totalLossPx += dy;
+
+      if (p1.y < minY) minY = p1.y;
+      if (p1.y > maxY) maxY = p1.y;
+      if (Math.abs(dy) > maxDyPx) maxDyPx = Math.abs(dy);
+
+      const sRad = Math.abs(Math.atan2(dy, dx));
+      const sDeg = (sRad * 180) / Math.PI;
+      if (sRad > maxSlopeRad) maxSlopeRad = sRad;
+      sumSlopeRad += sRad;
+
+      if (sDeg < 12) slopeBuckets.easy++;
+      else if (sDeg < 20) slopeBuckets.moderate++;
+      else if (sDeg < 28) slopeBuckets.hard++;
+      else if (sDeg < 35) slopeBuckets.veryHard++;
+      else slopeBuckets.extreme++;
+
+      const curv = Math.abs(p1.curvature || 0);
+      if (curv > maxCurvature) maxCurvature = curv;
+      if (Math.abs(dy) > 19.5) discontinuities++;
+    }
+
+    let jumpCount = 0;
+    let majorJumpCount = 0;
+    let extremeClimbCount = 0;
+    let deepValleyCount = 0;
+    let recoveryZoneCount = 0;
+    let adjacentRepeats = 0;
+    const setpiecePositions = [];
+
+    for (let i = 0; i < this.segments.length; i++) {
+      const seg = this.segments[i];
+      if (seg.category === "JUMP" || seg.jumpPotential === "High" || seg.jumpPotential === "Extreme") {
+        jumpCount++;
+        if (seg.jumpPotential === "Extreme" || seg.type === "CLIFF_LAUNCH" || seg.type === "LONG_KICKER") {
+          majorJumpCount++;
+        }
+      }
+      if (seg.category === "EXTREME" || seg.maxSlope >= 35) extremeClimbCount++;
+      if (seg.category === "VALLEY" || seg.type === "LONG_DESCENT") deepValleyCount++;
+      if (seg.category === "RECOVERY") recoveryZoneCount++;
+      if (i > 0 && this.segments[i - 1].type === seg.type) adjacentRepeats++;
+      if (seg.signature) setpiecePositions.push(seg.startX);
+    }
+
+    let minSetpieceSpacingM = 9999;
+    for (let i = 1; i < setpiecePositions.length; i++) {
+      const distM = (setpiecePositions[i] - setpiecePositions[i - 1]) / 40;
+      if (distM < minSetpieceSpacingM) minSetpieceSpacingM = Math.round(distM);
+    }
+
+    const diversityScore = Number(
+      b(1.0 - adjacentRepeats / Math.max(1, this.segments.length), 0, 1).toFixed(2)
+    );
+
+    return {
+      sampleCount: this.samples.length,
+      segmentCount: this.segments.length,
+      totalDistanceMeters: totalDistM,
+      totalDistanceKm: Number((totalDistM / 1000).toFixed(2)),
+      maxElevationMeters: Math.max(0, Math.round((groundBase - minY) / 40)),
+      totalElevationGain: Math.round(totalGainPx / 40),
+      maxDescentMeters: Math.round(totalLossPx / 40),
+      maxSlopeDeg: Number(((maxSlopeRad * 180) / Math.PI).toFixed(1)),
+      avgSlopeDeg: Number((((sumSlopeRad / Math.max(1, this.samples.length)) * 180) / Math.PI).toFixed(1)),
+      slopeDistribution: slopeBuckets,
+      maxCurvature: Number(maxCurvature.toFixed(4)),
+      maxDyPixels: Number(maxDyPx.toFixed(2)),
+      discontinuitiesCount: discontinuities,
+      jumpCount,
+      majorJumpCount,
+      extremeClimbCount,
+      deepValleyCount,
+      airtimeOpportunities: jumpCount + majorJumpCount,
+      recoveryZoneCount,
+      diversityScore,
+      diversityPercent: Math.round(diversityScore * 100),
+      adjacentRepeats,
+      setpieceCount: setpiecePositions.length,
+      minSetpieceSpacingMeters: minSetpieceSpacingM === 9999 ? 0 : minSetpieceSpacingM,
+      totalChunks: this.chunks.length,
+      chunkIntegrity: discontinuities === 0 && this.chunks.length > 100,
+    };
   }
 
   getBiomeAtDist(distMeters) {
@@ -1616,6 +2231,12 @@ class P0 {
     return Math.atan2(this.heightAt(xPos + 12) - this.heightAt(xPos - 12), 24);
   }
 
+  curvatureAt(xPos) {
+    const firstX = this.samples[0].x;
+    const idx = Math.max(0, Math.min(this.samples.length - 1, Math.floor((xPos - firstX) / this.step)));
+    return this.samples[idx]?.curvature ?? 0;
+  }
+
   normalAt(xPos) {
     const slope = this.slopeAt(xPos);
     return {
@@ -1636,11 +2257,38 @@ class P0 {
     return MATERIALS[kind] ?? MATERIALS.grass;
   }
 
+  // O(log N) Binary Search Segment Lookup across 8.2km mountain
   segmentAt(xPos) {
-    for (const seg of this.segments) {
-      if (xPos >= seg.startX && xPos <= seg.endX) return seg;
+    const segs = this.segments;
+    if (!segs || segs.length === 0) {
+      return { name: "Starting Apron", type: "FLAT", category: "RECOVERY", difficulty: 0.15 };
     }
-    return { name: "Starting Apron", type: "flat" };
+    let lo = 0;
+    let hi = segs.length - 1;
+    while (lo <= hi) {
+      const mid = (lo + hi) >> 1;
+      const s = segs[mid];
+      if (xPos < s.startX) {
+        hi = mid - 1;
+      } else if (xPos > s.endX) {
+        lo = mid + 1;
+      } else {
+        return s;
+      }
+    }
+    return { name: "Starting Apron", type: "FLAT", category: "RECOVERY", difficulty: 0.15 };
+  }
+
+  chunkAt(xPos) {
+    if (!this.chunks || this.chunks.length === 0) return 0;
+    const firstX = this.samples[0].x;
+    const sampleIdx = Math.max(0, Math.floor((xPos - firstX) / this.step));
+    return Math.min(this.chunks.length - 1, Math.floor(sampleIdx / this.chunkSamples));
+  }
+
+  getChunkAt(xPos) {
+    if (!this.chunks || this.chunks.length === 0) return null;
+    return this.chunks[this.chunkAt(xPos)];
   }
 }
 
@@ -2773,15 +3421,15 @@ class R0 {
   drawParallax(cam, w, h, time, biome) {
     const ctx = this.ctx;
     const layers = [
-      { speed: 0.08, base: 260, amp: 140, freq: 0.0016, color: biome.far, opacity: 0.60, seed: 31 },
-      { speed: 0.22, base: 180, amp: 110, freq: 0.0025, color: biome.mid, opacity: 0.78, seed: 44 },
-      { speed: 0.42, base: 110, amp: 75, freq: 0.0038, color: biome.near, opacity: 0.92, seed: 57 },
+      { speed: 0.08, base: 240, amp: 145, freq: 0.0018, color: biome.far, opacity: 0.62, seed: 31 },
+      { speed: 0.22, base: 165, amp: 112, freq: 0.0026, color: biome.mid, opacity: 0.78, seed: 44 },
+      { speed: 0.42, base: 95,  amp: 78,  freq: 0.0038, color: biome.near, opacity: 0.92, seed: 57 },
     ];
 
     const spanX = w / cam.zoom;
     const left = cam.x - spanX * 0.8;
     const right = cam.x + spanX * 0.8;
-    const bottomY = Math.max(cam.y + (h / cam.zoom) + 600, 4000);
+    const bottomY = Math.max(cam.y + (h / cam.zoom) + 1200, 16000);
     const step = 20;
 
     layers.forEach((l) => {
@@ -2791,10 +3439,14 @@ class R0 {
       ctx.globalAlpha = l.opacity;
       ctx.beginPath();
       ctx.moveTo(left - 20, bottomY);
+      const camElevOffset = (cam.y - x.world.groundBase) * (1 - l.speed * 0.65);
       for (let px = left - 20; px <= right + 20; px += step) {
-        const z = (px - cam.x) * l.speed + cam.x;
-        const ridge = noise(z * l.freq) * l.amp + noise(z * l.freq * 3.8) * (l.amp * 0.28);
-        const py = x.world.groundBase - l.base - ridge;
+        const z = px - cam.x * (1 - l.speed);
+        const ridge =
+          noise(z * l.freq) * l.amp +
+          noise(z * l.freq * 2.6) * (l.amp * 0.42) +
+          Math.abs(noise(z * l.freq * 5.8)) * (l.amp * 0.18);
+        const py = x.world.groundBase + camElevOffset - l.base - ridge;
         ctx.lineTo(px, py);
       }
       ctx.lineTo(right + 20, bottomY);
@@ -2820,7 +3472,7 @@ class R0 {
     if (startIdx >= endIdx || !terrain.samples[startIdx] || !terrain.samples[endIdx]) return;
 
     // 1. Terrain Bedrock Fill with Subterranean Depth Gradient & Topographic Strata
-    const bottomY = Math.max(cam.y + (h / cam.zoom) + 600, 4000);
+    const bottomY = Math.max(cam.y + (h / cam.zoom) + 1200, 16000);
     ctx.save();
     const gradTop = cam.y - 80;
     const gradBot = cam.y + 340;
@@ -3815,7 +4467,33 @@ class R0 {
     const ctx = this.ctx;
     ctx.save();
 
-    // 1. Static & Dynamic Wireframes
+    // 1. Slope & Difficulty Heatmap Ribbon along visible terrain (Section 53)
+    const terrain = this.terrain;
+    if (terrain?.samples?.length > 1) {
+      const firstX = terrain.samples[0].x;
+      const step = terrain.step;
+      const startIdx = Math.max(0, Math.floor((camera.x - 1100 - firstX) / step));
+      const endIdx = Math.min(terrain.samples.length - 2, Math.ceil((camera.x + 1100 - firstX) / step));
+
+      ctx.lineWidth = 5.0;
+      for (let i = startIdx; i <= endIdx; i += 2) {
+        const p1 = terrain.samples[i];
+        const p2 = terrain.samples[Math.min(terrain.samples.length - 1, i + 2)];
+        if (!p1 || !p2) continue;
+        const sDeg = Math.abs((Math.atan(p1.slope) * 180) / Math.PI);
+        if (sDeg < 12) ctx.strokeStyle = "rgba(78, 154, 104, 0.85)"; // EASY
+        else if (sDeg < 22) ctx.strokeStyle = "rgba(216, 155, 60, 0.85)"; // MODERATE
+        else if (sDeg < 32) ctx.strokeStyle = "rgba(212, 98, 42, 0.90)"; // HARD
+        else ctx.strokeStyle = "rgba(194, 50, 40, 0.95)"; // EXTREME
+
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y - 10);
+        ctx.lineTo(p2.x, p2.y - 10);
+        ctx.stroke();
+      }
+    }
+
+    // 2. Static & Dynamic Wireframes
     ctx.strokeStyle = "rgba(212,98,42,0.85)";
     ctx.lineWidth = 1;
     for (const b of bodies) {
@@ -3828,7 +4506,7 @@ class R0 {
       ctx.stroke();
     }
 
-    // 2. Chassis Velocity Vector
+    // 3. Chassis Velocity Vector
     ctx.strokeStyle = "#2ea3a5";
     ctx.lineWidth = 2.4;
     ctx.beginPath();
@@ -3839,13 +4517,13 @@ class R0 {
     );
     ctx.stroke();
 
-    // 3. Center of Mass
+    // 4. Center of Mass
     ctx.fillStyle = "#d4622a";
     ctx.beginPath();
     ctx.arc(vehicle.chassis.position.x, vehicle.chassis.position.y, 4.5, 0, Math.PI * 2);
     ctx.fill();
 
-    // 4. Wheel Contacts & Normals
+    // 5. Wheel Contacts & Normals
     for (const w of vehicle.wheels) {
       ctx.fillStyle = w.contact ? "#2ea3a5" : "rgba(27,31,29,0.3)";
       ctx.beginPath();
@@ -3863,7 +4541,7 @@ class R0 {
       }
     }
 
-    // 5. Predicted Jump Ballistic Trajectory
+    // 6. Predicted Jump Ballistic Trajectory
     if (vehicle.airborne) {
       ctx.strokeStyle = "rgba(212,98,42,0.6)";
       ctx.setLineDash([4, 4]);
@@ -3897,7 +4575,6 @@ class R0 {
       ctx.save();
       ctx.translate(relic.x, relic.y);
 
-      // Amber outer radial glow
       const glowR = 26 + relic.glow * 16;
       const grad = ctx.createRadialGradient(0, 0, 4, 0, 0, glowR);
       grad.addColorStop(0, "rgba(212, 98, 42, 0.45)");
@@ -3908,7 +4585,6 @@ class R0 {
       ctx.arc(0, 0, glowR, 0, Math.PI * 2);
       ctx.fill();
 
-      // Rotating 3D crystal projection (octahedron)
       const rot = relic.rotation;
       const s = 13.0;
       const cosR = Math.cos(rot);
@@ -3919,7 +4595,6 @@ class R0 {
       const v0 = { x: -s * cosR, y: -s * 0.35 * sinR };
       const v1 = { x: s * sinR, y: -s * 0.35 * cosR };
       const v2 = { x: s * cosR, y: s * 0.35 * sinR };
-      const v3 = { x: -s * sinR, y: s * 0.35 * cosR };
 
       const drawFacet = (pA, pB, pC, fillAlpha) => {
         ctx.beginPath();
@@ -3939,7 +4614,6 @@ class R0 {
       drawFacet(btm, v0, v1, 0.60);
       drawFacet(btm, v1, v2, 0.45);
 
-      // Glyphs
       ctx.strokeStyle = "rgba(239, 231, 214, 0.85)";
       ctx.lineWidth = 1.2;
       ctx.beginPath();
@@ -3960,11 +4634,13 @@ class R0 {
     const pos = chassis.position;
     const vel = chassis.velocity;
     const seg = this.terrain.segmentAt(pos.x);
+    const nextSeg = this.terrain.segmentAt(pos.x + 600);
     const slope = this.terrain.slopeAt(pos.x);
+    const curv = this.terrain.curvatureAt ? this.terrain.curvatureAt(pos.x) : 0;
     const mat = this.terrain.materialAt(pos.x);
     const biome = this.terrain.biomeAt(pos.x);
-    const distMeters = game.maxDistance;
-    const difficulty = b(distMeters / 1000, 0, 1);
+    const chunkId = this.terrain.chunkAt ? this.terrain.chunkAt(pos.x) : 0;
+    const tStats = this.terrain.stats || {};
 
     const nf = v.normalLoads?.front ?? 0;
     const nr = v.normalLoads?.rear ?? 0;
@@ -3972,35 +4648,34 @@ class R0 {
     const sr = v.wheels[0]?.slipRatio ?? 0;
 
     const lines = [
-      `DIAGNOSTICS (F3)  FPS: ${game.fps.toFixed(0)}  STEP: 8.33ms`,
-      `VEHICLE: ${v.archetype.name.toUpperCase()}  BODIES: ${Matter.Composite.allBodies(game.engine.world).length}`,
-      `NORMAL FORCES: F=${nf.toFixed(1)}N  R=${nr.toFixed(1)}N  F/R=${((nf/(nf+nr||1))*100).toFixed(0)}%/${((nr/(nf+nr||1))*100).toFixed(0)}%`,
-      `SLIP RATIO: F=${sf.toFixed(2)}  R=${sr.toFixed(2)}  ROOF_CONTACT: ${v.roofContact}`,
+      `DIAGNOSTICS (F3)  FPS: ${game.fps.toFixed(0)}  STEP: 8.33ms  SEED: ${game.seed}`,
+      `VEHICLE: ${v.archetype.name.toUpperCase()}  WORLD BODIES: ${Matter.Composite.allBodies(game.engine.world).length}`,
+      `STREAMING: CHUNK #${chunkId}/${this.terrain.chunks?.length || 0} (ACTIVE CHUNKS: ${this.terrain.activeChunkCount || 0}, BODIES: ${this.terrain.bodies?.length || 0})`,
+      `BIOME: ${biome.act || "ACT I"} // ${biome.name.toUpperCase()}  WEATHER: ${biome.weather || "CLEAR"}`,
+      `SEGMENT: ${seg.name} [${seg.type}]  DIFF: ${seg.difficulty ?? 0.2} (${seg.diffCategory || "MOD"})`,
+      `SLOPE: ${(slope * 180 / Math.PI).toFixed(1)}° (MAX ${seg.maxSlope ?? 20}°)  CURV: ${curv.toFixed(4)}  MAT: ${mat.name.toUpperCase()}`,
+      `UPCOMING (+15m): ${nextSeg.name} [${nextSeg.type}]  JUMP_POT: ${nextSeg.jumpPotential || "Low"}`,
+      `WORLD STATS: ${tStats.totalDistanceKm || 8.2}km | GAIN:+${tStats.totalElevationGain || 0}m | DROP:-${tStats.maxDescentMeters || 0}m | VAR:${tStats.diversityPercent || 94}%`,
+      `NORMAL FORCES: F=${nf.toFixed(1)}N  R=${nr.toFixed(1)}N  SLIP: F=${sf.toFixed(2)} R=${sr.toFixed(2)}`,
       `SPEED: ${(Math.abs(v.forwardSpeed) * 7.2).toFixed(1)} km/h  VERT: ${vel.y.toFixed(1)}  RPM: ${(v.rpm * 100).toFixed(0)}%`,
-      `CHASSIS ANGLE: ${(chassis.angle * 180 / Math.PI).toFixed(1)}°  ANG_VEL: ${chassis.angularVelocity.toFixed(3)}`,
-      `DEATH STATE: ${(game.deathState || "NORMAL").toUpperCase()}  TIMER: ${(game.upsideDownTimer || 0).toFixed(1)}s`,
-      `SUSPENSION: R=${v.wheels[0].compression.toFixed(2)} F=${v.wheels[1].compression.toFixed(2)}`,
-      `TERRAIN: ${seg.name} (${seg.type})  SLOPE: ${(slope * 180 / Math.PI).toFixed(1)}°  MAT: ${mat.name}`,
-      `AIRBORNE: ${v.airborne}  AIRTIME: ${(game.stunts.airtime / 1000).toFixed(2)}s  APEX_H: ${(game.stunts.launchY - game.stunts.airApexY).toFixed(0)}px`,
-      `STUNT: ${game.stunts.activeStuntName || "NONE"}  CUMUL_ANG: ${(game.stunts.cumulativeAngle * 180 / Math.PI).toFixed(0)}°  FLIPS: B=${game.stunts.backflips} F=${game.stunts.frontflips}`,
-      `COMBO: x${game.stunts.comboMultiplier}  SCORE: ${game.score}  ECHOES: ${game.echoManager?.collectedCount || 0}/${game.echoManager?.totalCount || 6}`,
-      `SEEDS: [1]FLAT(1001) [2]STEEP(48192) [3]JUMP(77234) [4]VALLEY(33109)`,
-      `TELEMETRY: Press 'T' to export JSON  SEED: ${game.seed}`,
+      `SUSPENSION: R=${v.wheels[0].compression.toFixed(2)} F=${v.wheels[1].compression.toFixed(2)}  ROOF: ${v.roofContact}`,
+      `AIRBORNE: ${v.airborne}  AIRTIME: ${(game.stunts.airtime / 1000).toFixed(2)}s  STUNT: ${game.stunts.activeStuntName || "NONE"}`,
+      `SEEDS: [1]FLAT(1001) [2]STEEP(48192) [3]JUMP(77234) [4]VALLEY(33109)  [T] EXPORT JSON`,
     ];
 
     ctx.save();
-    ctx.fillStyle = "rgba(27,31,29,0.85)";
-    const panelW = 460;
-    const panelH = lines.length * 16 + 18;
+    ctx.fillStyle = "rgba(18, 22, 20, 0.88)";
+    const panelW = 520;
+    const panelH = lines.length * 15 + 18;
     ctx.fillRect(w - panelW - 16, h - panelH - 16, panelW, panelH);
     ctx.strokeStyle = "var(--hot)";
     ctx.lineWidth = 1.5;
     ctx.strokeRect(w - panelW - 16, h - panelH - 16, panelW, panelH);
 
-    ctx.font = "11px 'Courier New', monospace";
+    ctx.font = "10.5px 'Courier New', monospace";
     ctx.fillStyle = "#efe7d6";
     for (let i = 0; i < lines.length; i++) {
-      ctx.fillText(lines[i], w - panelW - 6, h - panelH + 4 + i * 16);
+      ctx.fillText(lines[i], w - panelW - 6, h - panelH + 4 + i * 15);
     }
     ctx.restore();
   }
@@ -5348,7 +6023,8 @@ class ExpeditionRouteAndScanner {
       if (this.scannerPastEl) this.scannerPastEl.setAttribute("d", pastPath);
       if (this.scannerStrataEl) this.scannerStrataEl.setAttribute("d", strataPath);
 
-      // Classify upcoming geological feature
+      // Classify upcoming geological feature using both slope profile and segment metadata (Section 44 & 45)
+      const upcomingSeg = terrain.segmentAt ? terrain.segmentAt(carX + 480) : null;
       let callout = "TERRAIN // NOMINAL";
       let isHazard = false;
       if (prog > 0.88) {
@@ -5367,6 +6043,9 @@ class ExpeditionRouteAndScanner {
         callout = "UPCOMING RIDGE";
       } else if (maxDropSlope > 0.26) {
         callout = "DEPRESSION";
+      } else if (upcomingSeg?.signature) {
+        callout = upcomingSeg.signature;
+        isHazard = true;
       }
 
       if (this.scannerLineEl) {
@@ -5846,14 +6525,17 @@ class HUDManager {
       this.telemetry.updateSpiritLevelInclinometer(this.snapshot.incline, dt);
     }
 
-    // 4. LOW FREQUENCY (5Hz / every 200ms): Sector transitions, Inversion state check, Lenis scroll
+    // 4. LOW FREQUENCY (5Hz / every 200ms): 7-Sector transitions, Inversion state check, Lenis scroll
     this.lowFreqTimer += dt;
     if (this.lowFreqTimer >= 180) {
       this.lowFreqTimer = 0;
+      const curBiome = this.game.terrain?.getBiomeAtDist
+        ? this.game.terrain.getBiomeAtDist(this.snapshot.distance)
+        : null;
       const totalMeters = (x.world.length - x.world.startX) / 40;
-      const sector = Math.min(
-        5,
-        Math.max(1, Math.floor((this.snapshot.distance / Math.max(1, totalMeters)) * 5) + 1)
+      const sector = curBiome?.sector || Math.min(
+        7,
+        Math.max(1, Math.floor((this.snapshot.distance / Math.max(1, totalMeters)) * 7) + 1)
       );
       if (sector !== this.currentSector) {
         this.currentSector = sector;
@@ -5946,6 +6628,7 @@ class q0 {
   upsideDownTimer = 0;
   isDead = false;
   deathReason = "";
+  summitReached = false;
 
   // Telemetry Recorder (Spec #60)
   telemetrySamples = [];
@@ -6129,6 +6812,7 @@ class q0 {
     this.timeScale = 1;
     this.timeScaleTarget = 1;
     this.stuckTimer = 0;
+    this.summitReached = false;
     this.bus.emit("run:reset", {});
     window.hudManager?.reset();
 
@@ -6255,6 +6939,10 @@ class q0 {
       brake: this.input.brake,
     };
 
+    if (this.terrain && this.vehicle?.chassis) {
+      this.terrain.updateStreaming(this.vehicle.chassis.position.x, this.engine.world, this.terrainSet);
+    }
+
     this.vehicle.update(inputState, dt, this.terrain);
     Matter.Engine.update(this.engine, dt);
     this.vehicle.solvePrismaticSuspension();
@@ -6269,8 +6957,9 @@ class q0 {
     const pos = this.vehicle.chassis.position;
     const vel = this.vehicle.chassis.velocity;
     const speed = Math.hypot(vel.x, vel.y);
+    const groundY = this.terrain ? this.terrain.heightAt(pos.x) : 6000;
 
-    if (!I0(pos) || !I0(vel) || speed > 220 || pos.y > 6000) {
+    if (!I0(pos) || !I0(vel) || speed > 220 || pos.y > Math.max(6000, groundY + 2500)) {
       this.triggerDeath("Fell into Mountain Chasm");
       return;
     }
@@ -6310,10 +6999,13 @@ class q0 {
     } else {
       // RECOVERY WINDOW (Spec #44): If vehicle was critical/crashed and gets back upright
       if ((this.deathState === "critical" || this.deathState === "crashed") && isUpright && hasGroundContact) {
+        const wasActuallyInverted = this.upsideDownTimer >= 0.35;
         this.deathState = "normal";
         this.upsideDownTimer = 0;
-        this.score += 350;
-        this.stunts.showToast("ROLLOVER RECOVERED!", 2);
+        if (wasActuallyInverted) {
+          this.score += 350;
+          this.stunts.showToast("ROLLOVER RECOVERED!", 2);
+        }
 
         const warningEl = document.getElementById("hud-warning");
         if (warningEl) warningEl.style.display = "none";
@@ -6480,6 +7172,13 @@ class q0 {
       this.score += Math.round(distMeters - this.maxDistance + 1);
     }
 
+    if (distMeters >= 8100 && !this.summitReached) {
+      this.summitReached = true;
+      this.score += 5000;
+      this.stunts.showToast("SUMMIT OBSERVATORY REACHED (8.1 KM) +5000", 5);
+      this.saveCareer();
+    }
+
     const altitudeMeters = Math.max(0, Math.round((x.world.groundBase - v.chassis.position.y) / 40));
     if (altitudeMeters > this.highestAltitude) {
       this.highestAltitude = altitudeMeters;
@@ -6618,11 +7317,19 @@ game.bus.on("stats:update", (stats) => {
   liveStats = stats;
 });
 
-// Floating Stunt Toast
+// Floating Stunt Toast (deduplicated & capped at 3)
 game.bus.on("stunt:awarded", (data) => {
   if (hudStunt) {
+    const lastToast = hudStunt.lastElementChild;
+    if (lastToast && lastToast.getAttribute("data-stunt") === data.name) {
+      return;
+    }
+    while (hudStunt.children.length >= 3) {
+      hudStunt.firstElementChild?.remove();
+    }
     const toast = document.createElement("div");
     toast.className = `stunt-toast tier-${data.tier}`;
+    toast.setAttribute("data-stunt", data.name);
     const multStr = data.multiplier > 1 ? ` &times;${data.multiplier}` : "";
     const scoreStr = data.score > 0 ? ` +${data.score}${multStr}` : "";
     toast.innerHTML = `<strong>${data.name}</strong>${scoreStr}`;

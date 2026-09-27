@@ -668,11 +668,13 @@ class X0 {
   }
 
   update(arg1, arg2, arg3, arg4) {
-    let targetPos, targetVel, airborne, dt;
+    let targetPos, targetVel, airborne, dt, terrain = null, groundClearance = 0;
     if (arg1 && arg1.chassis) {
       targetPos = arg1.chassis.position;
       targetVel = arg1.chassis.velocity;
       airborne = Boolean(arg1.airborne);
+      groundClearance = arg1.groundClearance || 0;
+      terrain = arg2 && typeof arg2.heightAt === "function" ? arg2 : null;
       dt = typeof arg3 === "number" ? arg3 : (typeof arg2 === "number" ? arg2 : 16.66);
     } else {
       targetPos = arg1;
@@ -688,14 +690,41 @@ class X0 {
     const vy = Number.isFinite(targetVel?.y) ? targetVel.y : 0;
     const speed = Math.hypot(vx, vy);
 
-    const lookAheadX = b(vx * 12, -camCfg.lookAhead, camCfg.lookAhead);
-    const airOffsetY = airborne ? 48.0 : 0.0;
-
     const posX = Number.isFinite(targetPos?.x) ? targetPos.x : (Number.isFinite(this.x) ? this.x : 220);
     const posY = Number.isFinite(targetPos?.y) ? targetPos.y : (Number.isFinite(this.y) ? this.y : 500);
 
+    // Terrain-aware camera framing (Sections 46 & 47)
+    let slopeBiasY = 0;
+    let valleyLookAheadBonus = 0;
+    let terrainZoomOut = 0;
+
+    if (terrain) {
+      const slopeAhead = terrain.slopeAt(posX + 260);
+      const segAhead = terrain.segmentAt(posX + 220);
+      // Steep climb ahead: lift vertical framing toward the crest
+      if (slopeAhead < -0.25) {
+        slopeBiasY = slopeAhead * 110;
+      } else if (slopeAhead > 0.25) {
+        // Steep descent / deep valley: look further down and ahead to reveal the exit
+        slopeBiasY = slopeAhead * 95;
+        valleyLookAheadBonus = 55;
+        terrainZoomOut += 0.04;
+      }
+      if (segAhead && (segAhead.category === "VALLEY" || segAhead.category === "JUMP" || segAhead.category === "EXTREME")) {
+        valleyLookAheadBonus += 35;
+        terrainZoomOut += 0.035;
+      }
+      // Altitude scale perception (Section 47)
+      const altMeters = Math.max(0, (x.world.groundBase - posY) / 40);
+      terrainZoomOut += b(altMeters / 4000, 0, 0.055);
+    }
+
+    const maxLook = camCfg.lookAhead + valleyLookAheadBonus;
+    const lookAheadX = b(vx * 13.5 + valleyLookAheadBonus * 0.4, -maxLook, maxLook);
+    const airOffsetY = airborne ? b(36.0 + groundClearance * 0.18, 36.0, 95.0) : 0.0;
+
     const targetX = posX + lookAheadX;
-    const targetY = posY + airOffsetY - 36;
+    const targetY = posY + airOffsetY + slopeBiasY - 36;
 
     if (!Number.isFinite(this.x)) this.x = targetX;
     if (!Number.isFinite(this.y)) this.y = targetY;
@@ -704,8 +733,12 @@ class X0 {
     this.y = G0(this.y, targetY, camCfg.followSpeed * 65, safeDt);
 
     const speedZoomFactor = b(speed * 0.012, 0, 1) * camCfg.speedZoom;
-    const airZoomFactor = airborne ? 0.05 : 0;
-    this.targetZoom = camCfg.baseZoom - speedZoomFactor - airZoomFactor + this.zoomPulse;
+    const airZoomFactor = airborne ? b(0.05 + groundClearance * 0.00025, 0.05, 0.11) : 0;
+    this.targetZoom = b(
+      camCfg.baseZoom - speedZoomFactor - airZoomFactor - terrainZoomOut + this.zoomPulse,
+      0.62,
+      1.05
+    );
     if (!Number.isFinite(this.zoom)) this.zoom = camCfg.baseZoom;
     this.zoom = G0(this.zoom, this.targetZoom, 4.5, safeDt);
 

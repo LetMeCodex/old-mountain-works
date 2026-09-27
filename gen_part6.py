@@ -46,6 +46,7 @@ class q0 {
   upsideDownTimer = 0;
   isDead = false;
   deathReason = "";
+  summitReached = false;
 
   // Telemetry Recorder (Spec #60)
   telemetrySamples = [];
@@ -229,6 +230,7 @@ class q0 {
     this.timeScale = 1;
     this.timeScaleTarget = 1;
     this.stuckTimer = 0;
+    this.summitReached = false;
     this.bus.emit("run:reset", {});
     window.hudManager?.reset();
 
@@ -355,6 +357,10 @@ class q0 {
       brake: this.input.brake,
     };
 
+    if (this.terrain && this.vehicle?.chassis) {
+      this.terrain.updateStreaming(this.vehicle.chassis.position.x, this.engine.world, this.terrainSet);
+    }
+
     this.vehicle.update(inputState, dt, this.terrain);
     Matter.Engine.update(this.engine, dt);
     this.vehicle.solvePrismaticSuspension();
@@ -369,8 +375,9 @@ class q0 {
     const pos = this.vehicle.chassis.position;
     const vel = this.vehicle.chassis.velocity;
     const speed = Math.hypot(vel.x, vel.y);
+    const groundY = this.terrain ? this.terrain.heightAt(pos.x) : 6000;
 
-    if (!I0(pos) || !I0(vel) || speed > 220 || pos.y > 6000) {
+    if (!I0(pos) || !I0(vel) || speed > 220 || pos.y > Math.max(6000, groundY + 2500)) {
       this.triggerDeath("Fell into Mountain Chasm");
       return;
     }
@@ -410,10 +417,13 @@ class q0 {
     } else {
       // RECOVERY WINDOW (Spec #44): If vehicle was critical/crashed and gets back upright
       if ((this.deathState === "critical" || this.deathState === "crashed") && isUpright && hasGroundContact) {
+        const wasActuallyInverted = this.upsideDownTimer >= 0.35;
         this.deathState = "normal";
         this.upsideDownTimer = 0;
-        this.score += 350;
-        this.stunts.showToast("ROLLOVER RECOVERED!", 2);
+        if (wasActuallyInverted) {
+          this.score += 350;
+          this.stunts.showToast("ROLLOVER RECOVERED!", 2);
+        }
 
         const warningEl = document.getElementById("hud-warning");
         if (warningEl) warningEl.style.display = "none";
@@ -580,6 +590,13 @@ class q0 {
       this.score += Math.round(distMeters - this.maxDistance + 1);
     }
 
+    if (distMeters >= 8100 && !this.summitReached) {
+      this.summitReached = true;
+      this.score += 5000;
+      this.stunts.showToast("SUMMIT OBSERVATORY REACHED (8.1 KM) +5000", 5);
+      this.saveCareer();
+    }
+
     const altitudeMeters = Math.max(0, Math.round((x.world.groundBase - v.chassis.position.y) / 40));
     if (altitudeMeters > this.highestAltitude) {
       this.highestAltitude = altitudeMeters;
@@ -718,11 +735,19 @@ game.bus.on("stats:update", (stats) => {
   liveStats = stats;
 });
 
-// Floating Stunt Toast
+// Floating Stunt Toast (deduplicated & capped at 3)
 game.bus.on("stunt:awarded", (data) => {
   if (hudStunt) {
+    const lastToast = hudStunt.lastElementChild;
+    if (lastToast && lastToast.getAttribute("data-stunt") === data.name) {
+      return;
+    }
+    while (hudStunt.children.length >= 3) {
+      hudStunt.firstElementChild?.remove();
+    }
     const toast = document.createElement("div");
     toast.className = `stunt-toast tier-${data.tier}`;
+    toast.setAttribute("data-stunt", data.name);
     const multStr = data.multiplier > 1 ? ` &times;${data.multiplier}` : "";
     const scoreStr = data.score > 0 ? ` +${data.score}${multStr}` : "";
     toast.innerHTML = `<strong>${data.name}</strong>${scoreStr}`;

@@ -1340,7 +1340,8 @@ class ExpeditionRouteAndScanner {
       if (this.scannerPastEl) this.scannerPastEl.setAttribute("d", pastPath);
       if (this.scannerStrataEl) this.scannerStrataEl.setAttribute("d", strataPath);
 
-      // Classify upcoming geological feature
+      // Classify upcoming geological feature using both slope profile and segment metadata (Section 44 & 45)
+      const upcomingSeg = terrain.segmentAt ? terrain.segmentAt(carX + 480) : null;
       let callout = "TERRAIN // NOMINAL";
       let isHazard = false;
       if (prog > 0.88) {
@@ -1359,6 +1360,9 @@ class ExpeditionRouteAndScanner {
         callout = "UPCOMING RIDGE";
       } else if (maxDropSlope > 0.26) {
         callout = "DEPRESSION";
+      } else if (upcomingSeg?.signature) {
+        callout = upcomingSeg.signature;
+        isHazard = true;
       }
 
       if (this.scannerLineEl) {
@@ -1838,14 +1842,17 @@ class HUDManager {
       this.telemetry.updateSpiritLevelInclinometer(this.snapshot.incline, dt);
     }
 
-    // 4. LOW FREQUENCY (5Hz / every 200ms): Sector transitions, Inversion state check, Lenis scroll
+    // 4. LOW FREQUENCY (5Hz / every 200ms): 7-Sector transitions, Inversion state check, Lenis scroll
     this.lowFreqTimer += dt;
     if (this.lowFreqTimer >= 180) {
       this.lowFreqTimer = 0;
+      const curBiome = this.game.terrain?.getBiomeAtDist
+        ? this.game.terrain.getBiomeAtDist(this.snapshot.distance)
+        : null;
       const totalMeters = (x.world.length - x.world.startX) / 40;
-      const sector = Math.min(
-        5,
-        Math.max(1, Math.floor((this.snapshot.distance / Math.max(1, totalMeters)) * 5) + 1)
+      const sector = curBiome?.sector || Math.min(
+        7,
+        Math.max(1, Math.floor((this.snapshot.distance / Math.max(1, totalMeters)) * 7) + 1)
       );
       if (sector !== this.currentSector) {
         this.currentSector = sector;

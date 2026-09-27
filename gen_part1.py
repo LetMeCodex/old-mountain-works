@@ -5,8 +5,8 @@ parts = []
 
 # PART 1: Core Math, Config, Archetypes, Biomes, Materials
 parts.append(r'''// ============================================================================
-// THE OLD MOUNTAIN WORKS - MASTER GAME ENGINE OVERHAUL V3
-// Constrained Rigid-Body Physics, Prismatic Suspension, Ragdoll & Destruction
+// THE OLD MOUNTAIN WORKS - MASTER GAME ENGINE OVERHAUL V4
+// Mountain Generation 2.0: 8.2km Long-Form Expedition + Streamed Terrain Physics
 // ============================================================================
 
 const Matter = u.default || u;
@@ -54,13 +54,13 @@ const VEHICLE_ARCHETYPES = {
     wheelMass: 1.25,
     wheelBase: 112,
     wheelOffsetY: 36,
-    engineTorque: 0.082,
-    brakeTorque: 0.105,
-    maxWheelSpeed: 1.45,
+    engineTorque: 0.085,
+    brakeTorque: 0.110,
+    maxWheelSpeed: 1.48,
     suspensionStiffness: 0.16,
     suspensionDamping: 0.065,
     suspensionTravel: 24,
-    tireGrip: 1.55,
+    tireGrip: 1.58,
     airControl: 0.042,
     angularDamping: 0.035,
     centerOfMassOffsetY: 6.0,
@@ -102,13 +102,13 @@ const VEHICLE_ARCHETYPES = {
     wheelMass: 1.0,
     wheelBase: 106,
     wheelOffsetY: 34,
-    engineTorque: 0.090,
-    brakeTorque: 0.110,
-    maxWheelSpeed: 1.72,
+    engineTorque: 0.092,
+    brakeTorque: 0.115,
+    maxWheelSpeed: 1.74,
     suspensionStiffness: 0.15,
     suspensionDamping: 0.058,
     suspensionTravel: 22,
-    tireGrip: 1.50,
+    tireGrip: 1.52,
     airControl: 0.048,
     angularDamping: 0.030,
     centerOfMassOffsetY: 5.0,
@@ -125,9 +125,9 @@ const n0 = {
 
 const r0 = {
   followSpeed: 0.09,
-  lookAhead: 150,
+  lookAhead: 175,
   baseZoom: 0.88,
-  speedZoom: 0.14,
+  speedZoom: 0.16,
   airborneOffset: 0.35,
   impactZoom: 0.06,
   shakeIntensity: 1,
@@ -147,22 +147,26 @@ const x = {
   camera: r0,
   visual: i0,
   world: {
-    length: 36000,
+    length: 328220, // 8.2 km expedition (8,200m * 40px/m + 220px startX)
     sampleStep: 18,
     groundBase: 560,
     startX: 220,
+    chunkSamples: 20, // 360px (9m) per physics collision chunk
+    activePhysicsRadius: 3200, // vehicle X +- 3,200px active collision window
   },
 };
 
 // ----------------------------------------------------------------------------
-// Biome System & Surface Materials
+// 7-Sector / 8.2km Expedition Biome & Landmark System (Spec #10, #48, #49)
 // ----------------------------------------------------------------------------
 const BIOMES = [
   {
     id: "meadow",
-    name: "Alpine Meadow",
+    sector: 1,
+    act: "ACT I",
+    name: "Foothill Country",
     minDist: 0,
-    maxDist: 180, // 0 - 180m
+    maxDist: 800, // 0 - 0.8 km
     skyTop: "#b4c7be",
     skyBottom: "#ded2be",
     sun: "#e37e3d",
@@ -174,14 +178,17 @@ const BIOMES = [
     near: "#343d39",
     accent: "#d4622a",
     fogColor: "rgba(239,231,214,0.12)",
+    weather: "CLEAR",
     defaultMaterial: "grass",
-    landmark: { x: 1400, name: "Base Camp Outpost", type: "shelter" },
+    landmark: { x: 24000, name: "The Old Quarry", type: "shelter" },
   },
   {
     id: "ridge",
-    name: "Stone Ridge",
-    minDist: 180,
-    maxDist: 380, // 180 - 380m
+    sector: 2,
+    act: "ACT II",
+    name: "Broken Ridge",
+    minDist: 800,
+    maxDist: 1600, // 0.8 - 1.6 km
     skyTop: "#98a8af",
     skyBottom: "#d4cebe",
     sun: "#df8a51",
@@ -193,14 +200,17 @@ const BIOMES = [
     near: "#2a3339",
     accent: "#d4622a",
     fogColor: "rgba(212,206,190,0.15)",
+    weather: "WINDY",
     defaultMaterial: "rock",
-    landmark: { x: 10500, name: "The High Crag Cairn", type: "cairn" },
+    landmark: { x: 52000, name: "The Red Ridge", type: "cairn" },
   },
   {
     id: "canyon",
-    name: "Canyon Gorge",
-    minDist: 380,
-    maxDist: 580, // 380 - 580m
+    sector: 3,
+    act: "ACT III",
+    name: "Great Descent",
+    minDist: 1600,
+    maxDist: 2400, // 1.6 - 2.4 km
     skyTop: "#ba9f88",
     skyBottom: "#dfc7a7",
     sun: "#e66831",
@@ -212,14 +222,17 @@ const BIOMES = [
     near: "#3d2920",
     accent: "#e05820",
     fogColor: "rgba(223,199,167,0.18)",
+    weather: "GORGE HAZE",
     defaultMaterial: "dirt",
-    landmark: { x: 19000, name: "Old Trestle Bridge Chasm", type: "trestle" },
+    landmark: { x: 84000, name: "The Broken Trestle", type: "trestle" },
   },
   {
     id: "industrial",
-    name: "Industrial Works",
-    minDist: 580,
-    maxDist: 750, // 580 - 750m
+    sector: 4,
+    act: "ACT IV",
+    name: "Canyon Works",
+    minDist: 2400,
+    maxDist: 3500, // 2.4 - 3.5 km
     skyTop: "#7a8280",
     skyBottom: "#b8b2a3",
     sun: "#d95f32",
@@ -231,14 +244,61 @@ const BIOMES = [
     near: "#202322",
     accent: "#d4622a",
     fogColor: "rgba(184,178,163,0.20)",
+    weather: "MIST",
     defaultMaterial: "gravel",
-    landmark: { x: 26000, name: "Abandoned Mine Pithead Derrick", type: "pithead" },
+    landmark: { x: 124000, name: "The Deep Mine", type: "pithead" },
+  },
+  {
+    id: "glacier",
+    sector: 5,
+    act: "ACT V",
+    name: "Glacier Run",
+    minDist: 3500,
+    maxDist: 5000, // 3.5 - 5.0 km
+    skyTop: "#849eb3",
+    skyBottom: "#cfe0eb",
+    sun: "#e0915c",
+    groundFill: "#1c242b",
+    groundTop: "#9ab5c7",
+    groundTopLight: "#c4d9e8",
+    far: "#496175",
+    mid: "#354959",
+    near: "#253542",
+    accent: "#2ea3a5",
+    fogColor: "rgba(207,224,235,0.22)",
+    weather: "GLACIAL",
+    defaultMaterial: "ice",
+    landmark: { x: 176000, name: "Glacier Basin", type: "cairn" },
+  },
+  {
+    id: "crag",
+    sector: 6,
+    act: "ACT VI",
+    name: "Summit Approach",
+    minDist: 5000,
+    maxDist: 6800, // 5.0 - 6.8 km
+    skyTop: "#6e7f8f",
+    skyBottom: "#b8c4ce",
+    sun: "#d96b38",
+    groundFill: "#1a1f24",
+    groundTop: "#5c6873",
+    groundTopLight: "#7c8996",
+    far: "#3e4b57",
+    mid: "#2d3740",
+    near: "#1f272e",
+    accent: "#d4622a",
+    fogColor: "rgba(184,196,206,0.24)",
+    weather: "HIGH GALE",
+    defaultMaterial: "rock",
+    landmark: { x: 240000, name: "The High Crag", type: "pithead" },
   },
   {
     id: "summit",
-    name: "Frozen Summit",
-    minDist: 750,
-    maxDist: 5000, // 750m+
+    sector: 7,
+    act: "ACT VII",
+    name: "Summit Face",
+    minDist: 6800,
+    maxDist: 15000, // 6.8 - 8.2+ km
     skyTop: "#8ba3b8",
     skyBottom: "#d8e1e8",
     sun: "#e28652",
@@ -249,9 +309,10 @@ const BIOMES = [
     mid: "#394a5a",
     near: "#2a3743",
     accent: "#d4622a",
-    fogColor: "rgba(216,225,232,0.22)",
+    fogColor: "rgba(216,225,232,0.25)",
+    weather: "SNOW",
     defaultMaterial: "snow",
-    landmark: { x: 33000, name: "Summit Weather Observatory", type: "beacon" },
+    landmark: { x: 324000, name: "Summit Observatory", type: "beacon" },
   },
 ];
 
@@ -276,7 +337,7 @@ const MATERIALS = {
   },
   rock: {
     name: "rock",
-    friction: 1.08,
+    friction: 1.12,
     rollingResistance: 0.001,
     roughness: 0.32,
     dustKind: "stone",
@@ -285,7 +346,7 @@ const MATERIALS = {
   },
   gravel: {
     name: "gravel",
-    friction: 0.84,
+    friction: 0.86,
     rollingResistance: 0.004,
     roughness: 0.22,
     dustKind: "grit",
@@ -294,7 +355,7 @@ const MATERIALS = {
   },
   snow: {
     name: "snow",
-    friction: 0.65,
+    friction: 0.72,
     rollingResistance: 0.003,
     roughness: 0.10,
     dustKind: "snow",
@@ -303,7 +364,7 @@ const MATERIALS = {
   },
   ice: {
     name: "ice",
-    friction: 0.42,
+    friction: 0.52,
     rollingResistance: 0.0005,
     roughness: 0.04,
     dustKind: "snow",
@@ -312,11 +373,20 @@ const MATERIALS = {
   },
   wood: {
     name: "wood",
-    friction: 0.95,
+    friction: 0.96,
     rollingResistance: 0.0015,
     roughness: 0.14,
     dustKind: "wood",
     dustColors: ["#9c7c59", "#bca383", "#745839"],
+    soundType: "hard",
+  },
+  metal: {
+    name: "metal",
+    friction: 0.88,
+    rollingResistance: 0.0008,
+    roughness: 0.06,
+    dustKind: "spark",
+    dustColors: ["#e37e3d", "#efd07b", "#9ca3a6"],
     soundType: "hard",
   },
 };
@@ -330,11 +400,11 @@ const TEST_SEEDS = {
 
 const MOUNTAIN_ECHO_DEFS = [
   { id: "echo_1", x: 1450, yOffset: -50, name: "The Surveyor's Compass", lore: "Marked 1892. The brass casing is etched with altitude benchmarks leading toward the ridge." },
-  { id: "echo_2", x: 4800, yOffset: -65, name: "First Ascent Expedition Log", lore: "'We abandoned the steam tractor in the scree. From here on, only momentum and iron will carry us.'" },
-  { id: "echo_3", x: 11400, yOffset: -55, name: "The High Trestle Blueprint", lore: "Hand-inked schematics for the wooden chasm crossing, engineered to withstand 80-knot gales." },
-  { id: "echo_4", x: 17800, yOffset: -60, name: "Miners' Carbide Lantern Fragment", lore: "Soot-stained glass salvaged from Pithead No. 4, echoing the rhythmic hiss of old acetylene." },
-  { id: "echo_5", x: 24200, yOffset: -70, name: "Glacial Ice Core Capsule", lore: "Compressed firn layer trapping ancient alpine atmosphere from centuries before the roads." },
-  { id: "echo_6", x: 32500, yOffset: -75, name: "The Summit Observatory Telegraph", lore: "'Trail impassable to ordinary machines. Signal received. Summit in sight.'" }
+  { id: "echo_2", x: 38000, yOffset: -65, name: "First Ascent Expedition Log", lore: "'We abandoned the steam tractor in the scree. From here on, only momentum and iron will carry us.'" },
+  { id: "echo_3", x: 84500, yOffset: -55, name: "The High Trestle Blueprint", lore: "Hand-inked schematics for the wooden chasm crossing, engineered to withstand 80-knot gales." },
+  { id: "echo_4", x: 132000, yOffset: -60, name: "Miners' Carbide Lantern Fragment", lore: "Soot-stained glass salvaged from Pithead No. 4, echoing the rhythmic hiss of old acetylene." },
+  { id: "echo_5", x: 196000, yOffset: -70, name: "Glacial Ice Core Capsule", lore: "Compressed firn layer trapping ancient alpine atmosphere from centuries before the roads." },
+  { id: "echo_6", x: 312000, yOffset: -75, name: "The Summit Observatory Telegraph", lore: "'Trail impassable to ordinary machines. Signal received. Summit in sight.'" }
 ];
 ''')
 

@@ -384,7 +384,7 @@ async function run() {
     };
   })()`);
   console.log('Mountain Echo Relic Collection Result:', echoTest);
-  if (echoTest.totalRelics !== 6 || !echoTest.relic0Collected || echoTest.collectedNow !== 1) {
+  if (echoTest.totalRelics < 6 || !echoTest.relic0Collected || echoTest.collectedNow !== 1) {
     throw new Error('Mountain Echo Relic system failed to initialize or collect properly!');
   }
 
@@ -640,8 +640,97 @@ async function run() {
     throw new Error('Master HUD 2.0 verification failed: ' + JSON.stringify(hud2Test));
   }
 
-  // TEST 19: Error Audit
-  console.log('\n--- TEST 19: Browser Error Audit ---');
+  // TEST 19: Mountain Generation 2.0 — 8.2km Scale, 20-Seed Validator 2.0, Diversity Score & Physics Chunk Streaming
+  console.log('\n--- TEST 19: Mountain Generation 2.0 (8.2km Scale, 20-Seed Validator 2.0 & Physics Chunk Streaming) ---');
+  const mtn2Test = await evaluate(`(() => {
+    const t = game.terrain;
+    const rep = t.validationReport;
+
+    // 1. Test Physics Chunk Streaming at 3,000m (x=120,220) and 7,000m (x=280,220)
+    const startChunk = t.getChunkAt(220);
+    const wasStartActive = startChunk.active;
+
+    t.updateStreaming(120220, game.engine.world, game.terrainSet);
+    const midChunk = t.getChunkAt(120220);
+    const midChunkActive = Boolean(midChunk && midChunk.active && game.terrainSet.has(midChunk.bodies[0]));
+    const startDeactivatedAtMid = !startChunk.active && !game.terrainSet.has(startChunk.bodies[0]);
+    const activeChunksAtMid = t.activeChunkCount;
+    const activeBodiesAtMid = t.bodies.length;
+
+    t.updateStreaming(280220, game.engine.world, game.terrainSet);
+    const summitChunk = t.getChunkAt(280220);
+    const summitChunkActive = Boolean(summitChunk && summitChunk.active && game.terrainSet.has(summitChunk.bodies[0]));
+    const midDeactivatedAtSummit = !midChunk.active;
+
+    // Restore streaming back to start
+    t.updateStreaming(game.vehicle.chassis.position.x, game.engine.world, game.terrainSet);
+
+    // 2. Validate 20 distinct seeds in-engine via P0 + validateTerrain()
+    const seeds20 = [42, 101, 256, 512, 777, 1024, 1337, 2025, 3141, 4096, 5839, 6553, 7919, 8192, 9001, 11113, 22229, 31415, 48192, 99991];
+    let passedSeeds = 0;
+    let minDiv = 100;
+    let maxSlopeAcross20 = 0;
+    let minDistKm = 999;
+
+    for (const s of seeds20) {
+      const testTerrain = new P0(s);
+      const r = testTerrain.validationReport;
+      if (
+        r.totalDistanceKm >= 8.15 &&
+        r.maxSlopeDeg <= 45.2 &&
+        r.maxDyPixels <= 20.0 &&
+        r.diversityPercent >= 80 &&
+        r.setpieceCount >= 10 &&
+        r.chunkIntegrity
+      ) {
+        passedSeeds++;
+      }
+      if (r.diversityPercent < minDiv) minDiv = r.diversityPercent;
+      if (r.maxSlopeDeg > maxSlopeAcross20) maxSlopeAcross20 = r.maxSlopeDeg;
+      if (r.totalDistanceKm < minDistKm) minDistKm = r.totalDistanceKm;
+    }
+
+    return {
+      totalDistanceKm: rep.totalDistanceKm,
+      sampleCount: rep.sampleCount,
+      segmentCount: rep.segmentCount,
+      totalChunks: t.chunks.length,
+      activeChunksAtMid,
+      activeBodiesAtMid,
+      wasStartActive,
+      midChunkActive,
+      startDeactivatedAtMid,
+      summitChunkActive,
+      midDeactivatedAtSummit,
+      maxElevationMeters: rep.maxElevationMeters,
+      totalElevationGain: rep.totalElevationGain,
+      maxDescentMeters: rep.maxDescentMeters,
+      jumpCount: rep.jumpCount,
+      majorJumpCount: rep.majorJumpCount,
+      extremeClimbCount: rep.extremeClimbCount,
+      deepValleyCount: rep.deepValleyCount,
+      diversityPercent: rep.diversityPercent,
+      setpieceCount: rep.setpieceCount,
+      passedSeeds,
+      minDiv,
+      maxSlopeAcross20,
+      minDistKm
+    };
+  })()`);
+  console.log('Mountain Generation 2.0 Verification Result:', mtn2Test);
+  if (
+    mtn2Test.passedSeeds !== 20 ||
+    !mtn2Test.midChunkActive ||
+    !mtn2Test.startDeactivatedAtMid ||
+    !mtn2Test.summitChunkActive ||
+    !mtn2Test.midDeactivatedAtSummit ||
+    mtn2Test.activeBodiesAtMid > 500
+  ) {
+    throw new Error('Mountain Generation 2.0 verification failed: ' + JSON.stringify(mtn2Test));
+  }
+
+  // TEST 20: Error Audit
+  console.log('\n--- TEST 20: Browser Error Audit ---');
   if (errors.length > 0) {
     console.error('FOUND CONSOLE EXCEPTIONS:', errors);
     throw new Error('Browser execution reported exceptions!');
@@ -652,7 +741,7 @@ async function run() {
   ws.close();
   chrome.kill();
   console.log('\n======================================================');
-  console.log('>>> ALL 19 DEEP VERIFICATION CDP TESTS PASSED! <<<');
+  console.log('>>> ALL 20 DEEP VERIFICATION CDP TESTS PASSED! <<<');
   console.log('======================================================\n');
 }
 

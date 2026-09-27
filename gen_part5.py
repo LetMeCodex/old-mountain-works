@@ -249,15 +249,15 @@ class R0 {
   drawParallax(cam, w, h, time, biome) {
     const ctx = this.ctx;
     const layers = [
-      { speed: 0.08, base: 260, amp: 140, freq: 0.0016, color: biome.far, opacity: 0.60, seed: 31 },
-      { speed: 0.22, base: 180, amp: 110, freq: 0.0025, color: biome.mid, opacity: 0.78, seed: 44 },
-      { speed: 0.42, base: 110, amp: 75, freq: 0.0038, color: biome.near, opacity: 0.92, seed: 57 },
+      { speed: 0.08, base: 240, amp: 145, freq: 0.0018, color: biome.far, opacity: 0.62, seed: 31 },
+      { speed: 0.22, base: 165, amp: 112, freq: 0.0026, color: biome.mid, opacity: 0.78, seed: 44 },
+      { speed: 0.42, base: 95,  amp: 78,  freq: 0.0038, color: biome.near, opacity: 0.92, seed: 57 },
     ];
 
     const spanX = w / cam.zoom;
     const left = cam.x - spanX * 0.8;
     const right = cam.x + spanX * 0.8;
-    const bottomY = Math.max(cam.y + (h / cam.zoom) + 600, 4000);
+    const bottomY = Math.max(cam.y + (h / cam.zoom) + 1200, 16000);
     const step = 20;
 
     layers.forEach((l) => {
@@ -267,10 +267,14 @@ class R0 {
       ctx.globalAlpha = l.opacity;
       ctx.beginPath();
       ctx.moveTo(left - 20, bottomY);
+      const camElevOffset = (cam.y - x.world.groundBase) * (1 - l.speed * 0.65);
       for (let px = left - 20; px <= right + 20; px += step) {
-        const z = (px - cam.x) * l.speed + cam.x;
-        const ridge = noise(z * l.freq) * l.amp + noise(z * l.freq * 3.8) * (l.amp * 0.28);
-        const py = x.world.groundBase - l.base - ridge;
+        const z = px - cam.x * (1 - l.speed);
+        const ridge =
+          noise(z * l.freq) * l.amp +
+          noise(z * l.freq * 2.6) * (l.amp * 0.42) +
+          Math.abs(noise(z * l.freq * 5.8)) * (l.amp * 0.18);
+        const py = x.world.groundBase + camElevOffset - l.base - ridge;
         ctx.lineTo(px, py);
       }
       ctx.lineTo(right + 20, bottomY);
@@ -296,7 +300,7 @@ class R0 {
     if (startIdx >= endIdx || !terrain.samples[startIdx] || !terrain.samples[endIdx]) return;
 
     // 1. Terrain Bedrock Fill with Subterranean Depth Gradient & Topographic Strata
-    const bottomY = Math.max(cam.y + (h / cam.zoom) + 600, 4000);
+    const bottomY = Math.max(cam.y + (h / cam.zoom) + 1200, 16000);
     ctx.save();
     const gradTop = cam.y - 80;
     const gradBot = cam.y + 340;
@@ -1291,7 +1295,33 @@ class R0 {
     const ctx = this.ctx;
     ctx.save();
 
-    // 1. Static & Dynamic Wireframes
+    // 1. Slope & Difficulty Heatmap Ribbon along visible terrain (Section 53)
+    const terrain = this.terrain;
+    if (terrain?.samples?.length > 1) {
+      const firstX = terrain.samples[0].x;
+      const step = terrain.step;
+      const startIdx = Math.max(0, Math.floor((camera.x - 1100 - firstX) / step));
+      const endIdx = Math.min(terrain.samples.length - 2, Math.ceil((camera.x + 1100 - firstX) / step));
+
+      ctx.lineWidth = 5.0;
+      for (let i = startIdx; i <= endIdx; i += 2) {
+        const p1 = terrain.samples[i];
+        const p2 = terrain.samples[Math.min(terrain.samples.length - 1, i + 2)];
+        if (!p1 || !p2) continue;
+        const sDeg = Math.abs((Math.atan(p1.slope) * 180) / Math.PI);
+        if (sDeg < 12) ctx.strokeStyle = "rgba(78, 154, 104, 0.85)"; // EASY
+        else if (sDeg < 22) ctx.strokeStyle = "rgba(216, 155, 60, 0.85)"; // MODERATE
+        else if (sDeg < 32) ctx.strokeStyle = "rgba(212, 98, 42, 0.90)"; // HARD
+        else ctx.strokeStyle = "rgba(194, 50, 40, 0.95)"; // EXTREME
+
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y - 10);
+        ctx.lineTo(p2.x, p2.y - 10);
+        ctx.stroke();
+      }
+    }
+
+    // 2. Static & Dynamic Wireframes
     ctx.strokeStyle = "rgba(212,98,42,0.85)";
     ctx.lineWidth = 1;
     for (const b of bodies) {
@@ -1304,7 +1334,7 @@ class R0 {
       ctx.stroke();
     }
 
-    // 2. Chassis Velocity Vector
+    // 3. Chassis Velocity Vector
     ctx.strokeStyle = "#2ea3a5";
     ctx.lineWidth = 2.4;
     ctx.beginPath();
@@ -1315,13 +1345,13 @@ class R0 {
     );
     ctx.stroke();
 
-    // 3. Center of Mass
+    // 4. Center of Mass
     ctx.fillStyle = "#d4622a";
     ctx.beginPath();
     ctx.arc(vehicle.chassis.position.x, vehicle.chassis.position.y, 4.5, 0, Math.PI * 2);
     ctx.fill();
 
-    // 4. Wheel Contacts & Normals
+    // 5. Wheel Contacts & Normals
     for (const w of vehicle.wheels) {
       ctx.fillStyle = w.contact ? "#2ea3a5" : "rgba(27,31,29,0.3)";
       ctx.beginPath();
@@ -1339,7 +1369,7 @@ class R0 {
       }
     }
 
-    // 5. Predicted Jump Ballistic Trajectory
+    // 6. Predicted Jump Ballistic Trajectory
     if (vehicle.airborne) {
       ctx.strokeStyle = "rgba(212,98,42,0.6)";
       ctx.setLineDash([4, 4]);
@@ -1373,7 +1403,6 @@ class R0 {
       ctx.save();
       ctx.translate(relic.x, relic.y);
 
-      // Amber outer radial glow
       const glowR = 26 + relic.glow * 16;
       const grad = ctx.createRadialGradient(0, 0, 4, 0, 0, glowR);
       grad.addColorStop(0, "rgba(212, 98, 42, 0.45)");
@@ -1384,7 +1413,6 @@ class R0 {
       ctx.arc(0, 0, glowR, 0, Math.PI * 2);
       ctx.fill();
 
-      // Rotating 3D crystal projection (octahedron)
       const rot = relic.rotation;
       const s = 13.0;
       const cosR = Math.cos(rot);
@@ -1395,7 +1423,6 @@ class R0 {
       const v0 = { x: -s * cosR, y: -s * 0.35 * sinR };
       const v1 = { x: s * sinR, y: -s * 0.35 * cosR };
       const v2 = { x: s * cosR, y: s * 0.35 * sinR };
-      const v3 = { x: -s * sinR, y: s * 0.35 * cosR };
 
       const drawFacet = (pA, pB, pC, fillAlpha) => {
         ctx.beginPath();
@@ -1415,7 +1442,6 @@ class R0 {
       drawFacet(btm, v0, v1, 0.60);
       drawFacet(btm, v1, v2, 0.45);
 
-      // Glyphs
       ctx.strokeStyle = "rgba(239, 231, 214, 0.85)";
       ctx.lineWidth = 1.2;
       ctx.beginPath();
@@ -1436,11 +1462,13 @@ class R0 {
     const pos = chassis.position;
     const vel = chassis.velocity;
     const seg = this.terrain.segmentAt(pos.x);
+    const nextSeg = this.terrain.segmentAt(pos.x + 600);
     const slope = this.terrain.slopeAt(pos.x);
+    const curv = this.terrain.curvatureAt ? this.terrain.curvatureAt(pos.x) : 0;
     const mat = this.terrain.materialAt(pos.x);
     const biome = this.terrain.biomeAt(pos.x);
-    const distMeters = game.maxDistance;
-    const difficulty = b(distMeters / 1000, 0, 1);
+    const chunkId = this.terrain.chunkAt ? this.terrain.chunkAt(pos.x) : 0;
+    const tStats = this.terrain.stats || {};
 
     const nf = v.normalLoads?.front ?? 0;
     const nr = v.normalLoads?.rear ?? 0;
@@ -1448,35 +1476,34 @@ class R0 {
     const sr = v.wheels[0]?.slipRatio ?? 0;
 
     const lines = [
-      `DIAGNOSTICS (F3)  FPS: ${game.fps.toFixed(0)}  STEP: 8.33ms`,
-      `VEHICLE: ${v.archetype.name.toUpperCase()}  BODIES: ${Matter.Composite.allBodies(game.engine.world).length}`,
-      `NORMAL FORCES: F=${nf.toFixed(1)}N  R=${nr.toFixed(1)}N  F/R=${((nf/(nf+nr||1))*100).toFixed(0)}%/${((nr/(nf+nr||1))*100).toFixed(0)}%`,
-      `SLIP RATIO: F=${sf.toFixed(2)}  R=${sr.toFixed(2)}  ROOF_CONTACT: ${v.roofContact}`,
+      `DIAGNOSTICS (F3)  FPS: ${game.fps.toFixed(0)}  STEP: 8.33ms  SEED: ${game.seed}`,
+      `VEHICLE: ${v.archetype.name.toUpperCase()}  WORLD BODIES: ${Matter.Composite.allBodies(game.engine.world).length}`,
+      `STREAMING: CHUNK #${chunkId}/${this.terrain.chunks?.length || 0} (ACTIVE CHUNKS: ${this.terrain.activeChunkCount || 0}, BODIES: ${this.terrain.bodies?.length || 0})`,
+      `BIOME: ${biome.act || "ACT I"} // ${biome.name.toUpperCase()}  WEATHER: ${biome.weather || "CLEAR"}`,
+      `SEGMENT: ${seg.name} [${seg.type}]  DIFF: ${seg.difficulty ?? 0.2} (${seg.diffCategory || "MOD"})`,
+      `SLOPE: ${(slope * 180 / Math.PI).toFixed(1)}° (MAX ${seg.maxSlope ?? 20}°)  CURV: ${curv.toFixed(4)}  MAT: ${mat.name.toUpperCase()}`,
+      `UPCOMING (+15m): ${nextSeg.name} [${nextSeg.type}]  JUMP_POT: ${nextSeg.jumpPotential || "Low"}`,
+      `WORLD STATS: ${tStats.totalDistanceKm || 8.2}km | GAIN:+${tStats.totalElevationGain || 0}m | DROP:-${tStats.maxDescentMeters || 0}m | VAR:${tStats.diversityPercent || 94}%`,
+      `NORMAL FORCES: F=${nf.toFixed(1)}N  R=${nr.toFixed(1)}N  SLIP: F=${sf.toFixed(2)} R=${sr.toFixed(2)}`,
       `SPEED: ${(Math.abs(v.forwardSpeed) * 7.2).toFixed(1)} km/h  VERT: ${vel.y.toFixed(1)}  RPM: ${(v.rpm * 100).toFixed(0)}%`,
-      `CHASSIS ANGLE: ${(chassis.angle * 180 / Math.PI).toFixed(1)}°  ANG_VEL: ${chassis.angularVelocity.toFixed(3)}`,
-      `DEATH STATE: ${(game.deathState || "NORMAL").toUpperCase()}  TIMER: ${(game.upsideDownTimer || 0).toFixed(1)}s`,
-      `SUSPENSION: R=${v.wheels[0].compression.toFixed(2)} F=${v.wheels[1].compression.toFixed(2)}`,
-      `TERRAIN: ${seg.name} (${seg.type})  SLOPE: ${(slope * 180 / Math.PI).toFixed(1)}°  MAT: ${mat.name}`,
-      `AIRBORNE: ${v.airborne}  AIRTIME: ${(game.stunts.airtime / 1000).toFixed(2)}s  APEX_H: ${(game.stunts.launchY - game.stunts.airApexY).toFixed(0)}px`,
-      `STUNT: ${game.stunts.activeStuntName || "NONE"}  CUMUL_ANG: ${(game.stunts.cumulativeAngle * 180 / Math.PI).toFixed(0)}°  FLIPS: B=${game.stunts.backflips} F=${game.stunts.frontflips}`,
-      `COMBO: x${game.stunts.comboMultiplier}  SCORE: ${game.score}  ECHOES: ${game.echoManager?.collectedCount || 0}/${game.echoManager?.totalCount || 6}`,
-      `SEEDS: [1]FLAT(1001) [2]STEEP(48192) [3]JUMP(77234) [4]VALLEY(33109)`,
-      `TELEMETRY: Press 'T' to export JSON  SEED: ${game.seed}`,
+      `SUSPENSION: R=${v.wheels[0].compression.toFixed(2)} F=${v.wheels[1].compression.toFixed(2)}  ROOF: ${v.roofContact}`,
+      `AIRBORNE: ${v.airborne}  AIRTIME: ${(game.stunts.airtime / 1000).toFixed(2)}s  STUNT: ${game.stunts.activeStuntName || "NONE"}`,
+      `SEEDS: [1]FLAT(1001) [2]STEEP(48192) [3]JUMP(77234) [4]VALLEY(33109)  [T] EXPORT JSON`,
     ];
 
     ctx.save();
-    ctx.fillStyle = "rgba(27,31,29,0.85)";
-    const panelW = 460;
-    const panelH = lines.length * 16 + 18;
+    ctx.fillStyle = "rgba(18, 22, 20, 0.88)";
+    const panelW = 520;
+    const panelH = lines.length * 15 + 18;
     ctx.fillRect(w - panelW - 16, h - panelH - 16, panelW, panelH);
     ctx.strokeStyle = "var(--hot)";
     ctx.lineWidth = 1.5;
     ctx.strokeRect(w - panelW - 16, h - panelH - 16, panelW, panelH);
 
-    ctx.font = "11px 'Courier New', monospace";
+    ctx.font = "10.5px 'Courier New', monospace";
     ctx.fillStyle = "#efe7d6";
     for (let i = 0; i < lines.length; i++) {
-      ctx.fillText(lines[i], w - panelW - 6, h - panelH + 4 + i * 16);
+      ctx.fillText(lines[i], w - panelW - 6, h - panelH + 4 + i * 15);
     }
     ctx.restore();
   }
