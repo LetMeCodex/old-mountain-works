@@ -615,6 +615,11 @@ class q0 {
         compFront: Math.round(v.wheels[1].compression * 100) / 100,
         compRear: Math.round(v.wheels[0].compression * 100) / 100,
         slip: Math.round(v.wheels[0].slip * 100) / 100,
+        camState: this.camera.state,
+        camShot: this.camera.shotType,
+        camZoom: Math.round(this.camera.zoom * 1000) / 1000,
+        camFov: Math.round(this.camera.fov * 10) / 10,
+        camLookAhead: Math.round(this.camera.lookAheadDistance || 0),
         state: this.deathState
       });
       if (this.telemetrySamples.length > 2500) this.telemetrySamples.shift();

@@ -126,11 +126,19 @@ const n0 = {
 const r0 = {
   followSpeed: 0.09,
   lookAhead: 175,
-  baseZoom: 0.88,
+  baseZoom: 0.86,
   speedZoom: 0.16,
   airborneOffset: 0.35,
   impactZoom: 0.06,
   shakeIntensity: 1,
+  baseFov: 55,
+  minFov: 50,
+  maxFov: 75,
+  minZoom: 0.52,
+  maxZoom: 0.96,
+  horizonStability: 0.15,
+  stuntRollFactor: 0.36,
+  cinematicBudgetRatio: 0.26,
 };
 
 const i0 = {

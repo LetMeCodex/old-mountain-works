@@ -120,11 +120,19 @@ const n0 = {
 const r0 = {
   followSpeed: 0.09,
   lookAhead: 175,
-  baseZoom: 0.88,
+  baseZoom: 0.86,
   speedZoom: 0.16,
   airborneOffset: 0.35,
   impactZoom: 0.06,
   shakeIntensity: 1,
+  baseFov: 55,
+  minFov: 50,
+  maxFov: 75,
+  minZoom: 0.52,
+  maxZoom: 0.96,
+  horizonStability: 0.15,
+  stuntRollFactor: 0.36,
+  cinematicBudgetRatio: 0.26,
 };
 
 const i0 = {
@@ -1031,49 +1039,602 @@ class S0 {
 }
 
 // ----------------------------------------------------------------------------
-// Camera System (X0) - Speed Lookahead, Airborne Framing, Landing Pulse
+// CINEMATIC CAMERA DIRECTOR 2.0 — 21-State Machine, Shot Director, Spring Physics & Impact System
 // ----------------------------------------------------------------------------
-class X0 {
-  x = 0;
-  y = 0;
-  zoom = x.camera.baseZoom;
-  targetZoom = x.camera.baseZoom;
-  shakes = [];
-  zoomPulse = 0;
+const CAMERA_STATES = {
+  FOLLOW:             { priority: 20,  baseZoom: 0.86, fov: 55, lookMult: 1.00, heightOff: -34, thirdsX: -0.10, thirdsY: 0.12, rollFrac: 0.12, terrainWeight: 0.15, kX: 34, cX: 11.5, kY: 30, cY: 11.0, kZ: 18, cZ: 8.5 },
+  CRUISE:             { priority: 25,  baseZoom: 0.82, fov: 58, lookMult: 1.15, heightOff: -38, thirdsX: -0.14, thirdsY: 0.14, rollFrac: 0.14, terrainWeight: 0.18, kX: 32, cX: 11.0, kY: 28, cY: 10.5, kZ: 16, cZ: 8.0 },
+  DRONE:              { priority: 32,  baseZoom: 0.64, fov: 70, lookMult: 1.35, heightOff: -105,thirdsX: -0.12, thirdsY: 0.22, rollFrac: 0.08, terrainWeight: 0.32, kX: 20, cX: 9.0,  kY: 18, cY: 8.5,  kZ: 12, cZ: 7.0 },
+  ORBIT:              { priority: 34,  baseZoom: 0.72, fov: 64, lookMult: 0.90, heightOff: -52, thirdsX: -0.05, thirdsY: 0.10, rollFrac: 0.24, terrainWeight: 0.20, kX: 26, cX: 10.0, kY: 24, cY: 9.5,  kZ: 15, cZ: 7.5 },
+  CINEMATIC_APPROACH: { priority: 35,  baseZoom: 0.75, fov: 62, lookMult: 1.30, heightOff: -56, thirdsX: -0.16, thirdsY: 0.16, rollFrac: 0.10, terrainWeight: 0.28, kX: 24, cX: 9.5,  kY: 22, cY: 9.2,  kZ: 14, cZ: 7.5 },
+  LANDING:            { priority: 42,  baseZoom: 0.88, fov: 52, lookMult: 0.95, heightOff: -18, thirdsX: -0.08, thirdsY: 0.06, rollFrac: 0.18, terrainWeight: 0.22, kX: 42, cX: 13.0, kY: 44, cY: 13.5, kZ: 26, cZ: 10.0 },
+  JUMP:               { priority: 45,  baseZoom: 0.75, fov: 62, lookMult: 1.25, heightOff: -54, thirdsX: -0.12, thirdsY: -0.08,rollFrac: 0.18, terrainWeight: 0.25, kX: 28, cX: 10.2, kY: 24, cY: 9.5,  kZ: 16, cZ: 8.0 },
+  AIRBORNE:           { priority: 48,  baseZoom: 0.71, fov: 64, lookMult: 1.30, heightOff: -62, thirdsX: -0.10, thirdsY: -0.12,rollFrac: 0.22, terrainWeight: 0.28, kX: 26, cX: 9.8,  kY: 22, cY: 9.0,  kZ: 15, cZ: 7.8 },
+  HIGH_SPEED:         { priority: 50,  baseZoom: 0.73, fov: 66, lookMult: 1.45, heightOff: -24, thirdsX: -0.18, thirdsY: 0.14, rollFrac: 0.15, terrainWeight: 0.22, kX: 36, cX: 11.8, kY: 28, cY: 10.4, kZ: 18, cZ: 8.4 },
+  ASCENT:             { priority: 55,  baseZoom: 0.79, fov: 58, lookMult: 1.15, heightOff: -64, thirdsX: -0.15, thirdsY: 0.18, rollFrac: 0.16, terrainWeight: 0.26, kX: 30, cX: 10.8, kY: 28, cY: 10.2, kZ: 16, cZ: 8.0 },
+  DESCENT:            { priority: 60,  baseZoom: 0.71, fov: 64, lookMult: 1.38, heightOff: -12, thirdsX: -0.14, thirdsY: -0.14,rollFrac: 0.16, terrainWeight: 0.30, kX: 30, cX: 10.6, kY: 26, cY: 9.8,  kZ: 16, cZ: 8.0 },
+  DANGER:             { priority: 62,  baseZoom: 0.83, fov: 56, lookMult: 0.90, heightOff: -30, thirdsX: -0.06, thirdsY: 0.08, rollFrac: 0.22, terrainWeight: 0.18, kX: 38, cX: 12.2, kY: 36, cY: 11.8, kZ: 22, cZ: 9.2 },
+  EXTREME_CLIMB:      { priority: 65,  baseZoom: 0.74, fov: 61, lookMult: 1.25, heightOff: -88, thirdsX: -0.16, thirdsY: 0.22, rollFrac: 0.18, terrainWeight: 0.34, kX: 28, cX: 10.4, kY: 26, cY: 9.8,  kZ: 15, cZ: 7.8 },
+  DEEP_VALLEY:        { priority: 70,  baseZoom: 0.63, fov: 68, lookMult: 1.42, heightOff: -48, thirdsX: -0.12, thirdsY: 0.16, rollFrac: 0.12, terrainWeight: 0.38, kX: 22, cX: 9.2,  kY: 20, cY: 8.8,  kZ: 13, cZ: 7.2 },
+  CREST_REVEAL:       { priority: 75,  baseZoom: 0.69, fov: 64, lookMult: 1.48, heightOff: -96, thirdsX: -0.16, thirdsY: 0.20, rollFrac: 0.10, terrainWeight: 0.36, kX: 24, cX: 9.6,  kY: 24, cY: 9.4,  kZ: 14, cZ: 7.5 },
+  LANDMARK:           { priority: 80,  baseZoom: 0.62, fov: 69, lookMult: 1.35, heightOff: -92, thirdsX: -0.12, thirdsY: 0.20, rollFrac: 0.08, terrainWeight: 0.40, kX: 20, cX: 8.8,  kY: 18, cY: 8.4,  kZ: 12, cZ: 6.8 },
+  GIANT_JUMP:         { priority: 85,  baseZoom: 0.58, fov: 72, lookMult: 1.45, heightOff: -86, thirdsX: -0.10, thirdsY: -0.14,rollFrac: 0.25, terrainWeight: 0.35, kX: 22, cX: 9.2,  kY: 20, cY: 8.6,  kZ: 13, cZ: 7.0 },
+  STUNT:              { priority: 90,  baseZoom: 0.66, fov: 67, lookMult: 1.05, heightOff: -58, thirdsX: -0.04, thirdsY: -0.06,rollFrac: 0.36, terrainWeight: 0.20, kX: 28, cX: 10.2, kY: 26, cY: 9.8,  kZ: 16, cZ: 8.0 },
+  SUMMIT:             { priority: 92,  baseZoom: 0.58, fov: 71, lookMult: 1.30, heightOff: -110,thirdsX: -0.10, thirdsY: 0.24, rollFrac: 0.06, terrainWeight: 0.42, kX: 18, cX: 8.4,  kY: 16, cY: 8.0,  kZ: 11, cZ: 6.5 },
+  DEATH:              { priority: 95,  baseZoom: 0.74, fov: 62, lookMult: 0.30, heightOff: -42, thirdsX: 0.0,   thirdsY: 0.05, rollFrac: 0.06, terrainWeight: 0.10, kX: 14, cX: 7.5,  kY: 14, cY: 7.5,  kZ: 10, cZ: 6.2 },
+  VICTORY:            { priority: 95,  baseZoom: 0.53, fov: 74, lookMult: 0.60, heightOff: -135,thirdsX: 0.0,   thirdsY: 0.26, rollFrac: 0.0,  terrainWeight: 0.45, kX: 12, cX: 7.0,  kY: 12, cY: 7.0,  kZ: 9,  cZ: 5.8 },
+  IMPACT:             { priority: 100, baseZoom: 0.90, fov: 51, lookMult: 0.90, heightOff: -22, thirdsX: -0.08, thirdsY: 0.06, rollFrac: 0.24, terrainWeight: 0.15, kX: 46, cX: 13.8, kY: 48, cY: 14.0, kZ: 28, cZ: 10.5 },
+};
 
-  reset(xPos, yPos) {
-    this.x = xPos;
-    this.y = yPos;
-    this.zoom = x.camera.baseZoom;
-    this.targetZoom = x.camera.baseZoom;
-    this.shakes.length = 0;
-    this.zoomPulse = 0;
+// 2nd-Order Physical Spring-Damper Integrator (Section 33)
+class SpringDamper1D {
+  value = 0;
+  target = 0;
+  velocity = 0;
+  stiffness = 30;
+  damping = 10.5;
+  mass = 1.0;
+
+  constructor(initial = 0, stiffness = 30, damping = 10.5, mass = 1.0) {
+    this.value = initial;
+    this.target = initial;
+    this.stiffness = stiffness;
+    this.damping = damping;
+    this.mass = mass;
   }
 
-  shake(intensity, duration, dirX = 0, dirY = 0) {
-    if (!x.visual.screenShake || x.visual.reducedMotion) return;
-    this.shakes.push({
-      intensity,
-      duration,
+  reset(val) {
+    this.value = val;
+    this.target = val;
+    this.velocity = 0;
+  }
+
+  step(target, dtSec, k = this.stiffness, c = this.damping, m = this.mass) {
+    if (!Number.isFinite(target)) return this.value;
+    if (!Number.isFinite(this.value)) this.value = target;
+    if (!Number.isFinite(this.velocity)) this.velocity = 0;
+    this.target = target;
+
+    // Sub-step at <= 8ms for unconditional spring stability
+    const clampedDt = b(dtSec, 0.001, 0.05);
+    const subSteps = Math.max(1, Math.ceil(clampedDt / 0.008));
+    const h = clampedDt / subSteps;
+
+    for (let i = 0; i < subSteps; i++) {
+      const disp = this.value - this.target;
+      const force = -k * disp - c * this.velocity;
+      const accel = force / Math.max(0.1, m);
+      this.velocity += accel * h;
+      this.value += this.velocity * h;
+    }
+    return this.value;
+  }
+
+  get error() {
+    return Math.abs(this.target - this.value);
+  }
+}
+
+// Physically Driven Multi-Frequency Procedural Camera Vibration & Impact Response (Sections 21 & 22)
+class CameraImpactSystem {
+  events = [];
+  posImpulseX = 0;
+  posImpulseY = 0;
+  rotImpulse = 0;
+  zoomImpulse = 0;
+  fovImpulse = 0;
+  lastImpactMagnitude = 0;
+  phase = 0;
+
+  get intensity() {
+    return this.lastImpactMagnitude;
+  }
+
+  reset() {
+    this.events.length = 0;
+    this.posImpulseX = 0;
+    this.posImpulseY = 0;
+    this.rotImpulse = 0;
+    this.zoomImpulse = 0;
+    this.fovImpulse = 0;
+    this.lastImpactMagnitude = 0;
+  }
+
+  triggerImpact(magnitude, durationMs = 280, nx = 0, ny = -1) {
+    const mag = b(magnitude, 0, 1.0);
+    this.lastImpactMagnitude = Math.max(this.lastImpactMagnitude, mag);
+    const isReduced = Boolean(x.visual.reducedMotion || (typeof window !== "undefined" && window.game?.settings?.reducedMotion));
+    if (!x.visual.screenShake || isReduced) {
+      // Even in reduced motion, preserve a tiny non-jarring zoom response
+      this.zoomImpulse = Math.min(0.03, this.zoomImpulse + mag * 0.025);
+      return;
+    }
+
+    const dirX = Number.isFinite(nx) ? nx : 0;
+    const dirY = Number.isFinite(ny) ? ny : -1;
+
+    // Physical directional impulse on camera mass
+    this.posImpulseX += -dirX * mag * 18;
+    this.posImpulseY += Math.abs(dirY) * mag * 24;
+    this.rotImpulse += (dirX >= 0 ? 1 : -1) * mag * 0.032;
+    this.zoomImpulse = b(this.zoomImpulse + mag * 0.055, -0.06, 0.085);
+    this.fovImpulse = b(this.fovImpulse - mag * 4.5, -6.5, 4.0);
+
+    this.events.push({
+      mag,
+      duration: Math.max(120, durationMs),
       elapsed: 0,
-      dirX,
-      dirY,
+      nx: dirX,
+      ny: dirY,
+      seedPhase: Math.random() * Math.PI * 2,
     });
-    if (this.shakes.length > 6) this.shakes.shift();
+    if (this.events.length > 6) this.events.shift();
+  }
+
+  update(dtMs) {
+    const dtSec = b(dtMs / 1000, 0.001, 0.05);
+    this.phase += dtSec;
+
+    // Natural exponential decay of physical impulses
+    const decay = Math.exp(-8.5 * dtSec);
+    this.posImpulseX *= decay;
+    this.posImpulseY *= decay;
+    this.rotImpulse *= decay;
+    this.zoomImpulse *= Math.exp(-6.2 * dtSec);
+    this.fovImpulse *= Math.exp(-6.2 * dtSec);
+    this.lastImpactMagnitude *= Math.exp(-3.5 * dtSec);
+
+    for (let i = this.events.length - 1; i >= 0; i--) {
+      const ev = this.events[i];
+      ev.elapsed += dtMs;
+      if (ev.elapsed >= ev.duration) {
+        this.events.splice(i, 1);
+      }
+    }
+  }
+
+  // Multi-frequency procedural operator vibration (Low 2.8Hz heave + Mid 8.5Hz thud + High 21Hz chassis ring)
+  getOffset() {
+    const isReduced = Boolean(x.visual.reducedMotion || (typeof window !== "undefined" && window.game?.settings?.reducedMotion));
+    if (!x.visual.screenShake || isReduced) {
+      return { x: 0, y: 0, roll: 0 };
+    }
+    let ox = this.posImpulseX;
+    let oy = this.posImpulseY;
+    let oroll = this.rotImpulse;
+
+    const scale = x.camera.shakeIntensity ?? 1.0;
+    for (const ev of this.events) {
+      const u = b(1 - ev.elapsed / ev.duration, 0, 1);
+      const env = u * u;
+      const t = ev.elapsed * 0.001 + ev.seedPhase;
+
+      // 3-band physical synthesis
+      const lowBody = Math.sin(t * Math.PI * 2 * 2.8) * 14.0 * ev.mag * env;
+      const midImpact = Math.cos(t * Math.PI * 2 * 8.5) * 9.5 * ev.mag * env;
+      const highMicro = Math.sin(t * Math.PI * 2 * 21.0) * 3.8 * ev.mag * env * u;
+
+      ox += (lowBody * 0.45 + midImpact * (0.5 + Math.abs(ev.nx)) + highMicro * 0.35) * scale;
+      oy += (lowBody * 0.75 + midImpact * (0.5 + Math.abs(ev.ny)) + highMicro * 0.25) * scale;
+      oroll += Math.sin(t * Math.PI * 2 * 5.2) * 0.012 * ev.mag * env * scale;
+    }
+
+    return { x: ox, y: oy, roll: oroll };
+  }
+}
+
+// Shot Director with Per-Shot Cooldowns, Min/Max Durations & 75/25 Cinematic Budget (Sections 38, 39, 40)
+const SHOT_CONFIGS = {
+  SHOT_FOLLOW:  { cooldown: 0,     minDur: 0,    maxDur: 999999, isSpecial: false },
+  SHOT_SIDE:    { cooldown: 14000, minDur: 1800, maxDur: 3800,   isSpecial: true  },
+  SHOT_DRONE:   { cooldown: 20000, minDur: 2200, maxDur: 4600,   isSpecial: true  },
+  SHOT_LOW:     { cooldown: 16000, minDur: 1400, maxDur: 2800,   isSpecial: true  },
+  SHOT_REVERSE: { cooldown: 28000, minDur: 1500, maxDur: 2800,   isSpecial: true  },
+  SHOT_ORBIT:   { cooldown: 4500,  minDur: 700,  maxDur: 3200,   isSpecial: true  },
+  SHOT_WIDE:    { cooldown: 18000, minDur: 2200, maxDur: 4800,   isSpecial: true  },
+  SHOT_CLOSE:   { cooldown: 9000,  minDur: 550,  maxDur: 1200,   isSpecial: true  },
+  SHOT_REVEAL:  { cooldown: 12000, minDur: 1400, maxDur: 3400,   isSpecial: true  },
+  SHOT_SUMMIT:  { cooldown: 0,     minDur: 2500, maxDur: 999999, isSpecial: true  },
+};
+
+class CameraShotDirector {
+  activeShot = "SHOT_FOLLOW";
+  shotElapsed = 0;
+  cooldowns = new Map();
+  totalTimeMs = 1;
+  specialTimeMs = 0;
+
+  reset() {
+    this.activeShot = "SHOT_FOLLOW";
+    this.shotElapsed = 0;
+    this.cooldowns.clear();
+    this.totalTimeMs = 1;
+    this.specialTimeMs = 0;
+  }
+
+  get cinematicRatio() {
+    return this.specialTimeMs / Math.max(1, this.totalTimeMs);
+  }
+
+  getCinematicRatio() {
+    return this.cinematicRatio;
+  }
+
+  canTrigger(shotType) {
+    const cfg = SHOT_CONFIGS[shotType];
+    if (!cfg) return false;
+    if (!cfg.isSpecial) return true;
+    const isReduced = Boolean(x.visual.reducedMotion || (typeof window !== "undefined" && window.game?.settings?.reducedMotion));
+    if (isReduced && (shotType === "SHOT_ORBIT" || shotType === "SHOT_REVERSE" || shotType === "SHOT_LOW")) {
+      return false;
+    }
+    const rem = this.cooldowns.get(shotType) ?? 0;
+    if (rem > 0) return false;
+
+    // Enforce 70-80% normal gameplay budget unless it's a high-priority stunt, landmark, or summit shot
+    if (shotType !== "SHOT_SUMMIT" && shotType !== "SHOT_ORBIT" && shotType !== "SHOT_REVEAL") {
+      if (this.cinematicRatio > (x.camera.cinematicBudgetRatio ?? 0.26)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  selectShot(state, ctx, dtMs) {
+    this.totalTimeMs += dtMs;
+    this.shotElapsed += dtMs;
+
+    for (const [k, rem] of this.cooldowns.entries()) {
+      if (rem > 0) this.cooldowns.set(k, Math.max(0, rem - dtMs));
+    }
+
+    const curCfg = SHOT_CONFIGS[this.activeShot] || SHOT_CONFIGS.SHOT_FOLLOW;
+    if (curCfg.isSpecial) {
+      this.specialTimeMs += dtMs;
+    }
+    // Decay rolling budget window over 30s
+    if (this.totalTimeMs > 30000) {
+      this.totalTimeMs *= 0.98;
+      this.specialTimeMs *= 0.98;
+    }
+
+    // Immediate overrides for Summit / Victory / Death / Stunt
+    if (state === "SUMMIT" || state === "VICTORY") {
+      return this.transitionTo("SHOT_SUMMIT");
+    }
+    if (state === "DEATH") {
+      return this.transitionTo("SHOT_WIDE");
+    }
+    if (state === "STUNT" || ctx.stuntMagnitude >= 1) {
+      if (this.canTrigger("SHOT_ORBIT") || this.activeShot === "SHOT_ORBIT") {
+        return this.transitionTo("SHOT_ORBIT");
+      }
+    }
+
+    // Respect minimum duration of active special shot unless danger/impact interrupts
+    if (
+      this.activeShot !== "SHOT_FOLLOW" &&
+      this.shotElapsed < curCfg.minDur &&
+      state !== "DANGER" &&
+      state !== "IMPACT"
+    ) {
+      return this.activeShot;
+    }
+
+    // Expire active special shot if it reached maxDur
+    if (this.activeShot !== "SHOT_FOLLOW" && this.shotElapsed >= curCfg.maxDur) {
+      this.cooldowns.set(this.activeShot, curCfg.cooldown);
+      this.activeShot = "SHOT_FOLLOW";
+      this.shotElapsed = 0;
+    }
+
+    // Evaluate contextual shot candidates
+    let desired = "SHOT_FOLLOW";
+    if (state === "CREST_REVEAL") {
+      desired = "SHOT_REVEAL";
+    } else if (state === "LANDMARK" || state === "DEEP_VALLEY") {
+      desired = this.canTrigger("SHOT_DRONE") ? "SHOT_DRONE" : "SHOT_WIDE";
+    } else if (state === "GIANT_JUMP") {
+      const isReduced = Boolean(x.visual.reducedMotion || (typeof window !== "undefined" && window.game?.settings?.reducedMotion));
+      desired = ctx.airTimeMs > 1100 && !isReduced ? "SHOT_ORBIT" : "SHOT_WIDE";
+    } else if (state === "LANDING" && ctx.maxCompression > 0.62) {
+      desired = "SHOT_CLOSE";
+    } else if (state === "EXTREME_CLIMB" && ctx.speedKmh > 38) {
+      desired = this.canTrigger("SHOT_DRONE") ? "SHOT_DRONE" : (this.canTrigger("SHOT_REVERSE") ? "SHOT_REVERSE" : "SHOT_WIDE");
+    } else if (state === "HIGH_SPEED") {
+      if (Math.abs(ctx.slopeDeg) < 10 && this.canTrigger("SHOT_LOW")) {
+        desired = "SHOT_LOW";
+      } else if (Math.abs(ctx.slopeDeg) < 15 && this.canTrigger("SHOT_SIDE")) {
+        desired = "SHOT_SIDE";
+      }
+    } else if (state === "CRUISE" && ctx.speedKmh > 42 && Math.abs(ctx.slopeDeg) < 12) {
+      if (this.canTrigger("SHOT_SIDE")) desired = "SHOT_SIDE";
+    }
+
+    if (desired !== this.activeShot) {
+      if (desired === "SHOT_FOLLOW" || this.canTrigger(desired)) {
+        return this.transitionTo(desired);
+      }
+    }
+    return this.activeShot;
+  }
+
+  transitionTo(nextShot) {
+    if (this.activeShot === nextShot) return this.activeShot;
+    const prevCfg = SHOT_CONFIGS[this.activeShot];
+    if (prevCfg && prevCfg.isSpecial && this.shotElapsed > 300) {
+      this.cooldowns.set(this.activeShot, prevCfg.cooldown);
+    }
+    this.activeShot = nextShot;
+    this.shotElapsed = 0;
+    return this.activeShot;
+  }
+}
+
+// Master Cinematic Camera Director (Single Camera Authority — Sections 01–59)
+class CameraDirector {
+  x = 220;
+  y = 500;
+  zoom = x.camera.baseZoom;
+  targetZoom = x.camera.baseZoom;
+  fov = x.camera.baseFov || 55;
+  targetFov = x.camera.baseFov || 55;
+  roll = 0;
+  targetRoll = 0;
+
+  state = "FOLLOW";
+  prevState = "FOLLOW";
+  shotType = "SHOT_FOLLOW";
+  priority = 20;
+  transitionCount = 0;
+  stateTimer = 0;
+
+  // Dynamic Look-Ahead & Rule-of-Thirds Targets
+  lookAhead = 100;
+  rawLookAhead = 100;
+  predictedPos = { x: 220, y: 500 };
+  terrainFocusPoint = { x: 320, y: 500 };
+  landingZone = { x: 220, y: 500, active: false };
+  targetPoint = { x: 220, y: 500 };
+  cameraVelocity = { x: 0, y: 0 };
+
+  // Feature & Landmark Awareness
+  currentFeature = "Starting Apron";
+  distanceToFeature = 0;
+  nearestLandmark = "";
+  distanceToLandmark = 9999;
+  stuntMagnitude = 0;
+  prevMaxCompression = 0;
+  zoomPulse = 0;
+
+  // Sub-systems
+  springX = new SpringDamper1D(220, 34, 11.5, 1.0);
+  springY = new SpringDamper1D(500, 30, 11.0, 1.0);
+  springZoom = new SpringDamper1D(x.camera.baseZoom, 18, 8.5, 1.0);
+  springFov = new SpringDamper1D(55, 16, 8.0, 1.0);
+  springRoll = new SpringDamper1D(0, 24, 9.5, 1.0);
+  springLookX = new SpringDamper1D(220, 38, 12.0, 1.0);
+  springLookY = new SpringDamper1D(500, 34, 11.5, 1.0);
+
+  impact = new CameraImpactSystem();
+  shotDirector = new CameraShotDirector();
+  shakes = []; // Kept for backward compatibility
+
+  telemetry = {
+    cameraState: "FOLLOW",
+    shotType: "SHOT_FOLLOW",
+    transitionCount: 0,
+    cameraDistance: 100,
+    lookAhead: 100,
+    fov: 55,
+    zoom: 0.86,
+    rollDeg: 0,
+    priority: 20,
+    impactMagnitude: 0,
+    airTime: 0,
+    stuntMagnitude: 0,
+    terrainFeature: "Starting Apron",
+    distanceToFeature: 0,
+    springVelocity: 0,
+    springError: 0,
+  };
+
+  reset(xPos = 220, yPos = 500) {
+    const safeX = Number.isFinite(xPos) ? xPos : 220;
+    const safeY = Number.isFinite(yPos) ? yPos : 500;
+    this.x = safeX;
+    this.y = safeY;
+    this.zoom = x.camera.baseZoom;
+    this.targetZoom = x.camera.baseZoom;
+    this.fov = x.camera.baseFov || 55;
+    this.targetFov = this.fov;
+    this.roll = 0;
+    this.targetRoll = 0;
+    this.state = "FOLLOW";
+    this.prevState = "FOLLOW";
+    this.shotType = "SHOT_FOLLOW";
+    this.priority = 20;
+    this.stateTimer = 0;
+    this.lookAhead = 100;
+    this.rawLookAhead = 100;
+    this.predictedPos = { x: safeX, y: safeY };
+    this.terrainFocusPoint = { x: safeX + 100, y: safeY };
+    this.landingZone = { x: safeX, y: safeY, active: false };
+    this.targetPoint = { x: safeX, y: safeY };
+    this.cameraVelocity = { x: 0, y: 0 };
+    this.zoomPulse = 0;
+    this.prevMaxCompression = 0;
+
+    this.springX.reset(safeX);
+    this.springY.reset(safeY);
+    this.springZoom.reset(x.camera.baseZoom);
+    this.springFov.reset(this.fov);
+    this.springRoll.reset(0);
+    this.springLookX.reset(safeX);
+    this.springLookY.reset(safeY);
+
+    this.impact.reset();
+    this.shotDirector.reset();
+    this.shakes.length = 0;
+  }
+
+  shake(intensity, duration = 260, dirX = 0, dirY = -1) {
+    this.impact.triggerImpact(intensity * 1.6, duration, dirX, dirY);
+  }
+
+  addShake(intensity, angle = 0, energy = 0) {
+    this.impact.triggerImpact(intensity, 280, Math.cos(angle), Math.sin(angle));
   }
 
   pulseZoom(amount) {
     if (x.visual.reducedMotion) return;
-    this.zoomPulse = Math.min(this.zoomPulse + amount, 0.08);
+    this.zoomPulse = b(this.zoomPulse + amount, -0.06, 0.08);
+  }
+
+  get lookAheadDistance() {
+    return this.rawLookAhead;
+  }
+
+  get springVelocity() {
+    return { x: this.springX.velocity, y: this.springY.velocity };
+  }
+
+  get springError() {
+    return { x: this.springX.error, y: this.springY.error };
+  }
+
+  // Smooth nonlinear speed -> look-ahead curve (Section 06)
+  // 0 km/h -> 100px | 20 km/h -> 250px | 50 km/h -> 500px | 80+ km/h -> 800px+
+  computeNonlinearLookAhead(speedKmh, dirSign = 1) {
+    const s = Math.max(0, speedKmh);
+    let distPx;
+    if (s <= 20) {
+      const t = s / 20;
+      distPx = 100 + (250 - 100) * (t * (2 - t));
+    } else if (s <= 50) {
+      const t = (s - 20) / 30;
+      const smoothT = t * t * (3 - 2 * t);
+      distPx = 250 + (500 - 250) * smoothT;
+    } else {
+      const t = b((s - 50) / 30, 0, 1.35);
+      distPx = 500 + 300 * Math.min(1, t) + Math.max(0, t - 1) * 180;
+    }
+    return distPx * dirSign;
+  }
+
+  // Predict ballistic landing point on terrain when airborne (Sections 16 & 20)
+  predictLandingZone(posX, posY, vx, vy, terrain) {
+    if (!terrain) return { x: posX + vx * 20, y: posY, active: false };
+    let simX = posX;
+    let simY = posY;
+    let simVx = vx;
+    let simVy = vy;
+    const grav = (x.physics.gravity || 1.65) * 0.12;
+
+    for (let i = 0; i < 28; i++) {
+      simX += simVx * 1.6;
+      simY += simVy * 1.6;
+      simVy += grav;
+      const ty = terrain.heightAt(simX);
+      if (simY >= ty - 28) {
+        return { x: simX, y: ty - 28, active: true };
+      }
+    }
+    const fallbackY = terrain.heightAt(simX);
+    return { x: simX, y: fallbackY - 28, active: true };
+  }
+
+  // Locate nearest major landmark across the 7 sectors (Section 30)
+  findNearestLandmark(posX) {
+    let bestName = "";
+    let bestDistM = 9999;
+    let bestX = posX;
+    if (typeof BIOMES !== "undefined") {
+      for (const bItem of BIOMES) {
+        if (bItem.landmark) {
+          const dM = Math.abs(bItem.landmark.x - posX) / 40;
+          if (dM < bestDistM) {
+            bestDistM = dM;
+            bestName = bItem.landmark.name;
+            bestX = bItem.landmark.x;
+          }
+        }
+      }
+    }
+    return { name: bestName, distM: bestDistM, x: bestX };
+  }
+
+  // Evaluate priority-driven Camera State from live world + vehicle telemetry (Sections 02, 03, 37)
+  evaluateState(ctx) {
+    if (ctx.isDead || ctx.deathState === "death" || ctx.deathState === "wrecked") {
+      return "DEATH";
+    }
+    if (ctx.summitReached) {
+      return "VICTORY";
+    }
+    if (ctx.impactMagnitude > 0.52 || (ctx.deltaCompression > 0.34 && !ctx.airborne)) {
+      return "IMPACT";
+    }
+    if (ctx.airborne && ctx.stuntMagnitude >= 1) {
+      return "STUNT";
+    }
+    if (ctx.airborne && (ctx.airTimeMs > 780 || ctx.groundClearance > 115 || ctx.segNow?.jumpPotential === "Extreme")) {
+      return "GIANT_JUMP";
+    }
+    if (ctx.distMeters >= 7850) {
+      return "SUMMIT";
+    }
+    if (ctx.landmarkDistM < 42 || Boolean(ctx.segNow?.signature) || Boolean(ctx.segAhead?.signature)) {
+      return "LANDMARK";
+    }
+    if (ctx.isApproachingCrest) {
+      return "CREST_REVEAL";
+    }
+    if (ctx.isDeepValley) {
+      return "DEEP_VALLEY";
+    }
+    if (ctx.slopeDeg < -28 || ctx.segNow?.category === "EXTREME" || ctx.segAhead?.category === "EXTREME") {
+      return "EXTREME_CLIMB";
+    }
+    if (ctx.dangerLevel > 0.68) {
+      return "DANGER";
+    }
+    if (ctx.slopeDeg > 20 || ctx.segNow?.category === "DESCENT") {
+      return "DESCENT";
+    }
+    if (ctx.slopeDeg < -16 || ctx.segNow?.category === "CLIMB") {
+      return "ASCENT";
+    }
+    if (ctx.airborne) {
+      if (ctx.vy > 2.2 && ctx.groundClearance < 95) {
+        return "LANDING";
+      }
+      return ctx.airTimeMs > 280 ? "AIRBORNE" : "JUMP";
+    }
+    if (ctx.justLandedTimer > 0) {
+      return "LANDING";
+    }
+    if (ctx.speedKmh >= 68) {
+      return "HIGH_SPEED";
+    }
+    if (ctx.distToFeatureM < 28 && (ctx.segAhead?.category === "JUMP" || ctx.segAhead?.category === "VALLEY")) {
+      return "CINEMATIC_APPROACH";
+    }
+    if (ctx.speedKmh >= 28) {
+      return "CRUISE";
+    }
+    return "FOLLOW";
   }
 
   update(arg1, arg2, arg3, arg4) {
-    let targetPos, targetVel, airborne, dt, terrain = null, groundClearance = 0;
+    // Support both update(vehicle, terrain, dt, game) and legacy update(pos, vel, airborne, dt)
+    let vehicle = null, targetPos, targetVel, airborne = false, dt = 16.66, terrain = null, groundClearance = 0;
     if (arg1 && arg1.chassis) {
-      targetPos = arg1.chassis.position;
-      targetVel = arg1.chassis.velocity;
-      airborne = Boolean(arg1.airborne);
-      groundClearance = arg1.groundClearance || 0;
+      vehicle = arg1;
+      targetPos = vehicle.chassis.position;
+      targetVel = vehicle.chassis.velocity;
+      airborne = Boolean(vehicle.airborne);
+      groundClearance = vehicle.groundClearance || 0;
       terrain = arg2 && typeof arg2.heightAt === "function" ? arg2 : null;
       dt = typeof arg3 === "number" ? arg3 : (typeof arg2 === "number" ? arg2 : 16.66);
     } else {
@@ -1083,87 +1644,363 @@ class X0 {
       dt = typeof arg4 === "number" ? arg4 : 16.66;
     }
 
-    const camCfg = x.camera;
-    const safeDt = Number.isFinite(dt) && dt > 0 ? dt : 16.66;
-    const dtSeconds = safeDt / 1000;
-    const vx = Number.isFinite(targetVel?.x) ? targetVel.x : 0;
-    const vy = Number.isFinite(targetVel?.y) ? targetVel.y : 0;
-    const speed = Math.hypot(vx, vy);
+    const safeDt = Number.isFinite(dt) && dt > 0 ? b(dt, 1, 50) : 16.66;
+    const dtSec = safeDt / 1000;
+    const gameRef = typeof window !== "undefined" ? window.game : null;
 
     const posX = Number.isFinite(targetPos?.x) ? targetPos.x : (Number.isFinite(this.x) ? this.x : 220);
     const posY = Number.isFinite(targetPos?.y) ? targetPos.y : (Number.isFinite(this.y) ? this.y : 500);
+    const vx = Number.isFinite(targetVel?.x) ? targetVel.x : 0;
+    const vy = Number.isFinite(targetVel?.y) ? targetVel.y : 0;
+    const speedPx = Math.hypot(vx, vy);
+    const speedKmh = vehicle ? Math.abs(vehicle.forwardSpeed || vx) * 7.2 : speedPx * 7.2;
+    const dirSign = vx < -0.6 ? -1 : 1;
 
-    // Terrain-aware camera framing (Sections 46 & 47)
-    let slopeBiasY = 0;
-    let valleyLookAheadBonus = 0;
-    let terrainZoomOut = 0;
+    // 1. Gather Vehicle, Stunt, and Suspension Telemetry
+    const chassisAngle = vehicle?.chassis?.angle ?? 0;
+    const angVel = vehicle?.chassis?.angularVelocity ?? 0;
+    const compRear = vehicle?.wheels?.[0]?.compression ?? 0;
+    const compFront = vehicle?.wheels?.[1]?.compression ?? 0;
+    const maxCompression = Math.max(compRear, compFront);
+    const deltaCompression = Math.max(0, maxCompression - this.prevMaxCompression);
+    this.prevMaxCompression = maxCompression;
+
+    // Trigger subtle physical suspension compression impulse on heavy landing
+    if (deltaCompression > 0.28 && !airborne) {
+      this.impact.triggerImpact(b(deltaCompression * 0.85, 0.12, 0.75), 220, 0, -1);
+    }
+    this.impact.update(safeDt);
+
+    const stunts = gameRef?.stunts;
+    const airTimeMs = stunts?.airtime ?? (vehicle?.airborneTimer ?? 0);
+    const totalFlips = (stunts?.backflips ?? 0) + (stunts?.frontflips ?? 0);
+    const rawAirAngle = stunts?.cumulativeAngle ?? stunts?.airRotation ?? 0;
+    const rotCount = Math.abs(rawAirAngle) / 1.80;
+    const hasActiveFlip = /FLIP/i.test(stunts?.activeStuntName || "");
+    this.stuntMagnitude = Math.max(totalFlips, Math.floor(rotCount), hasActiveFlip ? 1 : 0);
+
+    // 2. Gather Multi-Point Terrain Telemetry Ahead
+    let slopeRad = 0;
+    let slopeAheadNear = 0;
+    let slopeAheadFar = 0;
+    let curvHere = 0;
+    let segNow = null;
+    let segAhead = null;
+    let distToFeatureM = 999;
 
     if (terrain) {
-      const slopeAhead = terrain.slopeAt(posX + 260);
-      const segAhead = terrain.segmentAt(posX + 220);
-      // Steep climb ahead: lift vertical framing toward the crest
-      if (slopeAhead < -0.25) {
-        slopeBiasY = slopeAhead * 110;
-      } else if (slopeAhead > 0.25) {
-        // Steep descent / deep valley: look further down and ahead to reveal the exit
-        slopeBiasY = slopeAhead * 95;
-        valleyLookAheadBonus = 55;
-        terrainZoomOut += 0.04;
+      slopeRad = terrain.slopeAt(posX);
+      slopeAheadNear = terrain.slopeAt(posX + 240 * dirSign);
+      slopeAheadFar = terrain.slopeAt(posX + 540 * dirSign);
+      curvHere = terrain.curvatureAt ? terrain.curvatureAt(posX + 140 * dirSign) : 0;
+      segNow = terrain.segmentAt ? terrain.segmentAt(posX) : null;
+      segAhead = terrain.segmentAt ? terrain.segmentAt(posX + 420 * dirSign) : null;
+      if (segAhead && segAhead !== segNow && Number.isFinite(segAhead.startX)) {
+        distToFeatureM = Math.max(0, (segAhead.startX - posX) / 40);
       }
-      if (segAhead && (segAhead.category === "VALLEY" || segAhead.category === "JUMP" || segAhead.category === "EXTREME")) {
-        valleyLookAheadBonus += 35;
-        terrainZoomOut += 0.035;
-      }
-      // Altitude scale perception (Section 47)
-      const altMeters = Math.max(0, (x.world.groundBase - posY) / 40);
-      terrainZoomOut += b(altMeters / 4000, 0, 0.055);
     }
 
-    const maxLook = camCfg.lookAhead + valleyLookAheadBonus;
-    const lookAheadX = b(vx * 13.5 + valleyLookAheadBonus * 0.4, -maxLook, maxLook);
-    const airOffsetY = airborne ? b(36.0 + groundClearance * 0.18, 36.0, 95.0) : 0.0;
+    const slopeDeg = (slopeRad * 180) / Math.PI;
+    const slopeAheadDeg = (slopeAheadNear * 180) / Math.PI;
+    const slopeFarDeg = (slopeAheadFar * 180) / Math.PI;
 
-    const targetX = posX + lookAheadX;
-    const targetY = posY + airOffsetY + slopeBiasY - 36;
+    // Detect Crest Reveal (climbing now, dropping ahead OR entering CREST/JUMP segment)
+    const isApproachingCrest =
+      (slopeDeg < -10 && slopeFarDeg > 6) ||
+      segNow?.category === "CREST" ||
+      segAhead?.category === "CREST";
 
-    if (!Number.isFinite(this.x)) this.x = targetX;
-    if (!Number.isFinite(this.y)) this.y = targetY;
+    // Detect Deep Valley / Compression Basin
+    const isDeepValley =
+      segNow?.category === "VALLEY" ||
+      segAhead?.category === "VALLEY" ||
+      (slopeDeg > 14 && slopeFarDeg < -12);
 
-    this.x = G0(this.x, targetX, camCfg.followSpeed * 65, safeDt);
-    this.y = G0(this.y, targetY, camCfg.followSpeed * 65, safeDt);
+    const lm = this.findNearestLandmark(posX);
+    this.nearestLandmark = lm.name;
+    this.distanceToLandmark = Math.round(lm.distM);
+    this.currentFeature = segAhead?.signature || segNow?.signature || segNow?.name || "Mountain Trail";
+    this.distanceToFeature = Math.round(distToFeatureM < 500 ? distToFeatureM : lm.distM);
 
-    const speedZoomFactor = b(speed * 0.012, 0, 1) * camCfg.speedZoom;
-    const airZoomFactor = airborne ? b(0.05 + groundClearance * 0.00025, 0.05, 0.11) : 0;
-    this.targetZoom = b(
-      camCfg.baseZoom - speedZoomFactor - airZoomFactor - terrainZoomOut + this.zoomPulse,
-      0.62,
-      1.05
+    const distMeters = Math.max(0, (posX - x.world.startX) / 40);
+    const altMeters = Math.max(0, (x.world.groundBase - posY) / 40);
+    const isInverted = Math.cos(chassisAngle) < -0.25;
+    const dangerLevel = isInverted ? 0.95 : b(Math.abs(angVel) * 3.2 + (Math.abs(slopeDeg) > 36 ? 0.35 : 0), 0, 1);
+
+    this._justLandedTimer = Math.max(0, (this._justLandedTimer || 0) - safeDt);
+    if (!airborne && this._wasAirborne) {
+      this._justLandedTimer = 420;
+    }
+    this._wasAirborne = airborne;
+
+    // 3. Evaluate Authoritative Camera State & Shot Director
+    const evalCtx = {
+      posX,
+      posY,
+      vx,
+      vy,
+      speedKmh,
+      airborne,
+      airTimeMs,
+      groundClearance,
+      slopeDeg,
+      slopeAheadDeg,
+      slopeFarDeg,
+      curvHere,
+      segNow,
+      segAhead,
+      distToFeatureM,
+      isApproachingCrest,
+      isDeepValley,
+      landmarkDistM: lm.distM,
+      distMeters,
+      altMeters,
+      maxCompression,
+      deltaCompression,
+      impactMagnitude: this.impact.lastImpactMagnitude,
+      stuntMagnitude: this.stuntMagnitude,
+      dangerLevel,
+      justLandedTimer: this._justLandedTimer,
+      deathState: gameRef?.deathState ?? "normal",
+      isDead: Boolean(gameRef?.isDead || vehicle?.dead),
+      summitReached: Boolean(gameRef?.summitReached),
+    };
+
+    const nextState = this.evaluateState(evalCtx);
+    if (nextState !== this.state) {
+      this.prevState = this.state;
+      this.state = nextState;
+      this.transitionCount++;
+      this.stateTimer = 0;
+    } else {
+      this.stateTimer += safeDt;
+    }
+
+    const stCfg = CAMERA_STATES[this.state] || CAMERA_STATES.FOLLOW;
+    this.priority = stCfg.priority;
+    this.shotType = this.shotDirector.selectShot(this.state, evalCtx, safeDt);
+
+    // 4. Compute Nonlinear Velocity Prediction (0.3s - 0.8s ahead) & Terrain Focus Point (Sections 05, 06, 36)
+    const rawLookPx = this.computeNonlinearLookAhead(speedKmh, dirSign) * stCfg.lookMult;
+    this.rawLookAhead = rawLookPx;
+
+    const predTimeSec = b(0.32 + (speedKmh / 110) * 0.46, 0.30, 0.80);
+    const predX = posX + vx * (predTimeSec * 60);
+    const predY = posY + vy * (predTimeSec * 28);
+    this.predictedPos = { x: predX, y: predY };
+
+    // Terrain Focus Point ahead along spline
+    let focusX = posX + rawLookPx * 0.65;
+    if (this.state === "LANDMARK" && lm.distM < 45) {
+      focusX = O0(focusX, lm.x, 0.35);
+    }
+    const focusY = terrain ? terrain.heightAt(focusX) - 42 : posY - 36;
+    this.terrainFocusPoint = { x: focusX, y: focusY };
+
+    // Ballistic Landing Zone Prediction when Airborne (Sections 16 & 20)
+    if (airborne) {
+      this.landingZone = this.predictLandingZone(posX, posY, vx, vy, terrain);
+    } else {
+      this.landingZone = { x: posX, y: posY, active: false };
+    }
+
+    // 5. Weighted Look Target (Vehicle + Velocity Prediction + Terrain Feature) & Rule-of-Thirds Framing (Sections 27, 28, 36)
+    const wTerrain = stCfg.terrainWeight;
+    const wVel = 0.25;
+    const wVeh = 1.0 - wTerrain - wVel;
+
+    let blendedTargetX = posX * wVeh + predX * wVel + focusX * wTerrain;
+    let blendedTargetY = posY * wVeh + predY * wVel + focusY * wTerrain;
+
+    // During airborne descent, blend toward predicted landing zone so landing is always readable
+    if (airborne && this.landingZone.active) {
+      const landBlend = b(vy > 0 ? 0.28 : 0.16, 0.12, 0.32);
+      blendedTargetX = O0(blendedTargetX, this.landingZone.x, landBlend);
+      blendedTargetY = O0(blendedTargetY, (posY + this.landingZone.y) * 0.5, landBlend);
+    }
+
+    // Apply Shot-Specific Framing Offsets (Drone, Side, Low, Reverse, Orbit, Reveal, Close, Wide, Summit)
+    let shotOffsetX = 0;
+    let shotOffsetY = stCfg.heightOff;
+    let shotZoomDelta = 0;
+    let shotFovDelta = 0;
+
+    if (this.shotType === "SHOT_DRONE") {
+      const dronePhase = (this.shotDirector.shotElapsed || 0) * 0.0012;
+      shotOffsetX += Math.sin(dronePhase) * 45 + 55 * dirSign;
+      shotOffsetY -= 58;
+      shotZoomDelta -= 0.06;
+      shotFovDelta += 5;
+    } else if (this.shotType === "SHOT_SIDE") {
+      shotOffsetX += 48 * dirSign;
+      shotOffsetY += 12;
+      shotZoomDelta -= 0.02;
+      shotFovDelta += 3;
+    } else if (this.shotType === "SHOT_LOW") {
+      shotOffsetX += 32 * dirSign;
+      shotOffsetY += 32; // Low to the ground for wheel/dust speed sensation
+      shotZoomDelta += 0.04;
+      shotFovDelta += 4;
+    } else if (this.shotType === "SHOT_REVERSE") {
+      // Look back from slightly behind/above while keeping forward climb readable
+      shotOffsetX -= 65 * dirSign;
+      shotOffsetY -= 28;
+      shotZoomDelta -= 0.05;
+    } else if (this.shotType === "SHOT_ORBIT") {
+      const isBackflip = rawAirAngle < 0;
+      const orbitSign = isBackflip ? -1 : 1;
+      const magScale = b(1 + this.stuntMagnitude * 0.25, 1, 1.8);
+      shotOffsetX += orbitSign * 42 * magScale;
+      shotOffsetY -= 26 * magScale;
+      shotZoomDelta -= 0.04 * this.stuntMagnitude;
+      shotFovDelta += 4;
+    } else if (this.shotType === "SHOT_WIDE") {
+      shotOffsetX += 65 * dirSign;
+      shotOffsetY -= 55;
+      shotZoomDelta -= 0.08;
+      shotFovDelta += 6;
+    } else if (this.shotType === "SHOT_CLOSE") {
+      shotOffsetY += 24; // Focus on wheel & suspension rebound
+      shotZoomDelta += 0.05;
+      shotFovDelta -= 3;
+    } else if (this.shotType === "SHOT_REVEAL") {
+      shotOffsetX += 75 * dirSign;
+      shotOffsetY -= 52; // Rise above crest to reveal what lies beyond
+      shotZoomDelta -= 0.05;
+    } else if (this.shotType === "SHOT_SUMMIT") {
+      shotOffsetY -= 75;
+      shotZoomDelta -= 0.10;
+      shotFovDelta += 8;
+    }
+
+    // Steep Climb & Deep Descent Vertical Framing (Sections 24 & 25)
+    let slopeVerticalLift = 0;
+    if (slopeAheadDeg < -18) {
+      // Climbing: raise camera to show climb face + crest above vehicle
+      slopeVerticalLift = b((slopeAheadDeg + 18) * 2.6, -115, 0);
+    } else if (slopeAheadDeg > 18) {
+      // Descending: look lower into the valley floor & exit climb
+      slopeVerticalLift = b((slopeAheadDeg - 18) * 2.4, 0, 105);
+    }
+
+    // Rule-of-Thirds Composition (Sections 27 & 28):
+    // Place vehicle on left third when driving right (negative thirdsX shifts camera right of vehicle)
+    const screenW = typeof window !== "undefined" ? (window.innerWidth || 1280) : 1280;
+    const maxSafeLeadX = Math.min(310, (screenW / Math.max(0.55, this.zoom)) * 0.24);
+    const desiredLeadX = b(
+      (blendedTargetX - posX) + (-stCfg.thirdsX * 240 * dirSign) + shotOffsetX,
+      -maxSafeLeadX * 0.65,
+      maxSafeLeadX
     );
-    if (!Number.isFinite(this.zoom)) this.zoom = camCfg.baseZoom;
-    this.zoom = G0(this.zoom, this.targetZoom, 4.5, safeDt);
+    this.lookAhead = desiredLeadX;
 
-    this.zoomPulse = Math.max(0, this.zoomPulse - dtSeconds * 0.35);
+    let finalTargetX = posX + desiredLeadX;
+    let finalTargetY = blendedTargetY + shotOffsetY + slopeVerticalLift;
 
-    for (let i = this.shakes.length - 1; i >= 0; i--) {
-      const s = this.shakes[i];
-      s.elapsed += safeDt;
-      if (s.elapsed >= s.duration) {
-        this.shakes.splice(i, 1);
+    // 6. Terrain Camera Collision & Minimum Clearance Guard (Section 50)
+    if (terrain) {
+      const groundAtCam = terrain.heightAt(finalTargetX);
+      const groundAtVehicle = terrain.heightAt(posX);
+      const ceilingLimitY = Math.min(groundAtCam, groundAtVehicle) + 45;
+      // Never let camera center drop below terrain surface or clip vehicle underground
+      if (finalTargetY > ceilingLimitY) {
+        finalTargetY = ceilingLimitY;
       }
     }
+
+    // Also clamp vertical distance from vehicle so vehicle is NEVER clipped off top/bottom of viewport (Section 59)
+    finalTargetY = b(finalTargetY, posY - 210, posY + 150);
+    this.targetPoint = { x: finalTargetX, y: finalTargetY };
+
+    // 7. Compute Dynamic Zoom & FOV (Sections 07, 08, 49)
+    const isReduced = Boolean(x.visual.reducedMotion || gameRef?.settings?.reducedMotion);
+    const speedZoomPullback = b((speedKmh / 110) * x.camera.speedZoom, 0, 0.16);
+    const airZoomPullback = airborne ? b(0.03 + groundClearance * 0.00028, 0.03, 0.12) : 0;
+    const altZoomPullback = b(altMeters / 4500, 0, 0.045);
+
+    const rawTargetZoom =
+      stCfg.baseZoom -
+      speedZoomPullback -
+      airZoomPullback -
+      altZoomPullback +
+      shotZoomDelta +
+      this.zoomPulse +
+      this.impact.zoomImpulse;
+
+    this.targetZoom = b(rawTargetZoom, x.camera.minZoom || 0.52, x.camera.maxZoom || 0.96);
+    this.targetFov = isReduced
+      ? (x.camera.baseFov || 55)
+      : b(
+          stCfg.fov + (speedKmh / 100) * 6 + shotFovDelta + this.impact.fovImpulse,
+          x.camera.minFov || 50,
+          x.camera.maxFov || 75
+        );
+
+    // 8. Horizon-Stable Camera Roll (Sections 34 & 35)
+    // Normal: 10-25% of vehicle/slope pitch, clamped heavily so horizon stays stable; Stunt: up to 36%
+    let desiredRoll = 0;
+    if (!isReduced) {
+      const normPitch = normalizeAngle(chassisAngle);
+      const maxRollRad = this.state === "STUNT" ? 0.16 : 0.065; // ~9 deg max in stunt, ~3.7 deg normal
+      desiredRoll = b(normPitch * stCfg.rollFrac, -maxRollRad, maxRollRad);
+    }
+    this.targetRoll = desiredRoll;
+
+    // 9. Step 2nd-Order Spring-Damper Transform System (Section 33)
+    const prevX = this.x;
+    const prevY = this.y;
+
+    this.x = this.springX.step(finalTargetX, dtSec, stCfg.kX, stCfg.cX, 1.0);
+    this.y = this.springY.step(finalTargetY, dtSec, stCfg.kY, stCfg.cY, 1.0);
+    this.zoom = this.springZoom.step(this.targetZoom, dtSec, stCfg.kZ, stCfg.cZ, 1.0);
+    this.fov = this.springFov.step(this.targetFov, dtSec, 16, 8.0, 1.0);
+    this.roll = isReduced ? 0 : this.springRoll.step(this.targetRoll, dtSec, 24, 9.5, 1.0);
+    this.springLookX.step(blendedTargetX, dtSec, 38, 12.0, 1.0);
+    this.springLookY.step(blendedTargetY, dtSec, 34, 11.5, 1.0);
+
+    this.cameraVelocity.x = (this.x - prevX) / Math.max(0.001, dtSec);
+    this.cameraVelocity.y = (this.y - prevY) / Math.max(0.001, dtSec);
+    this.zoomPulse = Math.max(0, this.zoomPulse - dtSec * 0.32);
+
+    // 10. Update Live Camera Telemetry (Section 53)
+    const springVelMag = Math.hypot(this.springX.velocity, this.springY.velocity);
+    const springErrMag = Math.hypot(this.springX.error, this.springY.error);
+    this.telemetry = {
+      cameraState: this.state,
+      shotType: this.shotType,
+      transitionCount: this.transitionCount,
+      cameraDistance: Math.round(Math.hypot(this.x - posX, this.y - posY)),
+      lookAhead: Math.round(this.rawLookAhead),
+      fov: Number(this.fov.toFixed(1)),
+      zoom: Number(this.zoom.toFixed(3)),
+      rollDeg: Number(((this.roll * 180) / Math.PI).toFixed(2)),
+      priority: this.priority,
+      impactMagnitude: Number(this.impact.lastImpactMagnitude.toFixed(2)),
+      airTime: Math.round(airTimeMs),
+      stuntMagnitude: this.stuntMagnitude,
+      terrainFeature: this.currentFeature,
+      distanceToFeature: this.distanceToFeature,
+      springVelocity: Math.round(springVelMag),
+      springError: Math.round(springErrMag),
+    };
   }
 
   get shakeOffset() {
-    let ox = 0, oy = 0;
-    for (const s of this.shakes) {
-      const progress = 1 - s.elapsed / s.duration;
-      const mag = s.intensity * progress * progress * 32 * x.camera.shakeIntensity;
-      const freq = s.elapsed * 0.06;
-      ox += Math.sin(freq * 9.1) * mag * (0.6 + Math.abs(s.dirX));
-      oy += Math.cos(freq * 7.3) * mag * (0.6 + Math.abs(s.dirY));
-    }
-    return { x: ox, y: oy };
+    const imp = this.impact.getOffset();
+    return { x: imp.x, y: imp.y };
   }
+
+  get totalRoll() {
+    const imp = this.impact.getOffset();
+    return this.roll + imp.roll;
+  }
+}
+
+const X0 = CameraDirector;
+if (typeof window !== "undefined") {
+  window.CameraDirector = CameraDirector;
+  window.CAMERA_STATES = CAMERA_STATES;
+  window.SHOT_CONFIGS = SHOT_CONFIGS;
 }
 
 
@@ -3300,15 +4137,22 @@ class ThreeVisualDepth {
 
     const targetX = (cam.x - 220) * 0.35;
     const targetY = (-cam.y + 560) * 0.35;
-    const targetZ = 850 / cam.zoom;
+    const targetZ = 850 / Math.max(0.45, cam.zoom);
+
+    if (Number.isFinite(cam.fov) && Math.abs(this.camera.fov - cam.fov * 0.78) > 0.05) {
+      this.camera.fov = cam.fov * 0.78;
+      this.camera.updateProjectionMatrix();
+    }
 
     this.camera.position.x = targetX;
     this.camera.position.y = targetY;
     this.camera.position.z = targetZ;
     this.camera.lookAt(targetX, targetY, 0);
+    this.camera.rotation.z = -(cam.totalRoll ?? cam.roll ?? 0);
 
     for (const m of this.mountains) {
       m.mesh.position.x = targetX * (1 + m.def.z * 0.0003);
+      m.mesh.position.y = targetY * (1 + m.def.z * 0.00022) - 60;
     }
 
     if (relics) {
@@ -3359,7 +4203,16 @@ class R0 {
 
     ctx.save();
     ctx.translate(width / 2, height / 2);
-    ctx.scale(camera.zoom, camera.zoom);
+
+    // Apply subtle horizon-stable camera roll & FOV-coupled spatial scale (Sections 34, 35, 49)
+    const camRoll = camera.totalRoll ?? camera.roll ?? 0;
+    if (Math.abs(camRoll) > 0.0005 && !x.visual.reducedMotion) {
+      ctx.rotate(-camRoll);
+    }
+    const fovFactor = 55 / Math.max(45, camera.fov || 55);
+    const effZoom = camera.zoom * (0.84 + 0.16 * fovFactor);
+    ctx.scale(effZoom, effZoom);
+
     const shake = camera.shakeOffset;
     ctx.translate(-camera.x + shake.x, -camera.y + shake.y);
 
@@ -4563,6 +5416,78 @@ class R0 {
       ctx.setLineDash([]);
     }
 
+    // 7. Cinematic Camera Director 2.0 Visual Reticles (Section 49)
+    if (camera) {
+      // 7a. Look-ahead velocity prediction point (Gold diamond + dashed vector)
+      if (camera.predictedPos) {
+        ctx.save();
+        ctx.strokeStyle = "rgba(216, 155, 60, 0.78)";
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([5, 4]);
+        ctx.beginPath();
+        ctx.moveTo(vehicle.chassis.position.x, vehicle.chassis.position.y);
+        ctx.lineTo(camera.predictedPos.x, camera.predictedPos.y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.fillStyle = "#d89b3c";
+        ctx.beginPath();
+        ctx.moveTo(camera.predictedPos.x, camera.predictedPos.y - 7);
+        ctx.lineTo(camera.predictedPos.x + 7, camera.predictedPos.y);
+        ctx.lineTo(camera.predictedPos.x, camera.predictedPos.y + 7);
+        ctx.lineTo(camera.predictedPos.x - 7, camera.predictedPos.y);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // 7b. Terrain Focus Point ahead (Teal crosshair)
+      if (camera.terrainFocusPoint) {
+        const tf = camera.terrainFocusPoint;
+        ctx.save();
+        ctx.strokeStyle = "#2ea3a5";
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.arc(tf.x, tf.y, 9, 0, Math.PI * 2);
+        ctx.moveTo(tf.x - 14, tf.y);
+        ctx.lineTo(tf.x + 14, tf.y);
+        ctx.moveTo(tf.x, tf.y - 14);
+        ctx.lineTo(tf.x, tf.y + 14);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // 7c. Ballistic Landing Zone marker when airborne
+      if (camera.landingZone && camera.landingZone.active) {
+        const lz = camera.landingZone;
+        ctx.save();
+        ctx.strokeStyle = "#e05a47";
+        ctx.fillStyle = "rgba(224, 90, 71, 0.22)";
+        ctx.lineWidth = 2.0;
+        ctx.beginPath();
+        ctx.arc(lz.x, lz.y, 14, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // 7d. Authoritative Camera Target Point (Burnt-orange target reticle)
+      if (camera.targetPoint) {
+        const tp = camera.targetPoint;
+        ctx.save();
+        ctx.strokeStyle = "#d4622a";
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.arc(tp.x, tp.y, 12, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(tp.x, tp.y, 3, 0, Math.PI * 2);
+        ctx.fillStyle = "#d4622a";
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
     ctx.restore();
   }
 
@@ -4630,6 +5555,7 @@ class R0 {
   drawDebugPanel(game, w, h) {
     const ctx = this.ctx;
     const v = game.vehicle;
+    const cam = game.camera;
     const chassis = v.chassis;
     const pos = chassis.position;
     const vel = chassis.velocity;
@@ -4647,8 +5573,25 @@ class R0 {
     const sf = v.wheels[1]?.slipRatio ?? 0;
     const sr = v.wheels[0]?.slipRatio ?? 0;
 
+    const camState = cam?.state || "FOLLOW";
+    const camShot = cam?.shotType || "SHOT_FOLLOW";
+    const camZoom = (cam?.zoom ?? 0.78).toFixed(3);
+    const camFov = (cam?.fov ?? 55).toFixed(1);
+    const camRollDeg = (((cam?.totalRoll ?? 0) * 180) / Math.PI).toFixed(2);
+    const camLook = Math.round(cam?.lookAheadDistance ?? 0);
+    const spVelX = (cam?.springVelocity?.x ?? 0).toFixed(1);
+    const spVelY = (cam?.springVelocity?.y ?? 0).toFixed(1);
+    const spErrX = (cam?.springError?.x ?? 0).toFixed(1);
+    const spErrY = (cam?.springError?.y ?? 0).toFixed(1);
+    const impInt = (cam?.impact?.intensity ?? 0).toFixed(2);
+    const cineRatio = (((cam?.shotDirector?.getCinematicRatio?.() ?? 0) * 100)).toFixed(0);
+
     const lines = [
       `DIAGNOSTICS (F3)  FPS: ${game.fps.toFixed(0)}  STEP: 8.33ms  SEED: ${game.seed}`,
+      `CAMERA DIRECTOR: STATE=[${camState}]  SHOT=[${camShot}]  CINE_BUDGET: ${cineRatio}%`,
+      `CAM OPTICS: ZOOM=${camZoom}x  FOV=${camFov}°  ROLL=${camRollDeg}°  LOOKAHEAD=${camLook}px`,
+      `CAM SPRING: VEL=(${spVelX}, ${spVelY})  ERR=(${spErrX}, ${spErrY})  IMPACT=${impInt}`,
+      `CAM FOCUS: TARGET=(${Math.round(cam?.targetPoint?.x || 0)}, ${Math.round(cam?.targetPoint?.y || 0)})  TERRAIN=(${Math.round(cam?.terrainFocusPoint?.x || 0)}, ${Math.round(cam?.terrainFocusPoint?.y || 0)})`,
       `VEHICLE: ${v.archetype.name.toUpperCase()}  WORLD BODIES: ${Matter.Composite.allBodies(game.engine.world).length}`,
       `STREAMING: CHUNK #${chunkId}/${this.terrain.chunks?.length || 0} (ACTIVE CHUNKS: ${this.terrain.activeChunkCount || 0}, BODIES: ${this.terrain.bodies?.length || 0})`,
       `BIOME: ${biome.act || "ACT I"} // ${biome.name.toUpperCase()}  WEATHER: ${biome.weather || "CLEAR"}`,
@@ -4665,17 +5608,17 @@ class R0 {
 
     ctx.save();
     ctx.fillStyle = "rgba(18, 22, 20, 0.88)";
-    const panelW = 520;
-    const panelH = lines.length * 15 + 18;
+    const panelW = 550;
+    const panelH = lines.length * 14.5 + 18;
     ctx.fillRect(w - panelW - 16, h - panelH - 16, panelW, panelH);
     ctx.strokeStyle = "var(--hot)";
     ctx.lineWidth = 1.5;
     ctx.strokeRect(w - panelW - 16, h - panelH - 16, panelW, panelH);
 
-    ctx.font = "10.5px 'Courier New', monospace";
+    ctx.font = "10.2px 'Courier New', monospace";
     ctx.fillStyle = "#efe7d6";
     for (let i = 0; i < lines.length; i++) {
-      ctx.fillText(lines[i], w - panelW - 6, h - panelH + 4 + i * 15);
+      ctx.fillText(lines[i], w - panelW - 6, h - panelH + 4 + i * 14.5);
     }
     ctx.restore();
   }
@@ -7197,6 +8140,11 @@ class q0 {
         compFront: Math.round(v.wheels[1].compression * 100) / 100,
         compRear: Math.round(v.wheels[0].compression * 100) / 100,
         slip: Math.round(v.wheels[0].slip * 100) / 100,
+        camState: this.camera.state,
+        camShot: this.camera.shotType,
+        camZoom: Math.round(this.camera.zoom * 1000) / 1000,
+        camFov: Math.round(this.camera.fov * 10) / 10,
+        camLookAhead: Math.round(this.camera.lookAheadDistance || 0),
         state: this.deathState
       });
       if (this.telemetrySamples.length > 2500) this.telemetrySamples.shift();

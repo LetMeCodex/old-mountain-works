@@ -128,15 +128,22 @@ class ThreeVisualDepth {
 
     const targetX = (cam.x - 220) * 0.35;
     const targetY = (-cam.y + 560) * 0.35;
-    const targetZ = 850 / cam.zoom;
+    const targetZ = 850 / Math.max(0.45, cam.zoom);
+
+    if (Number.isFinite(cam.fov) && Math.abs(this.camera.fov - cam.fov * 0.78) > 0.05) {
+      this.camera.fov = cam.fov * 0.78;
+      this.camera.updateProjectionMatrix();
+    }
 
     this.camera.position.x = targetX;
     this.camera.position.y = targetY;
     this.camera.position.z = targetZ;
     this.camera.lookAt(targetX, targetY, 0);
+    this.camera.rotation.z = -(cam.totalRoll ?? cam.roll ?? 0);
 
     for (const m of this.mountains) {
       m.mesh.position.x = targetX * (1 + m.def.z * 0.0003);
+      m.mesh.position.y = targetY * (1 + m.def.z * 0.00022) - 60;
     }
 
     if (relics) {
@@ -187,7 +194,16 @@ class R0 {
 
     ctx.save();
     ctx.translate(width / 2, height / 2);
-    ctx.scale(camera.zoom, camera.zoom);
+
+    // Apply subtle horizon-stable camera roll & FOV-coupled spatial scale (Sections 34, 35, 49)
+    const camRoll = camera.totalRoll ?? camera.roll ?? 0;
+    if (Math.abs(camRoll) > 0.0005 && !x.visual.reducedMotion) {
+      ctx.rotate(-camRoll);
+    }
+    const fovFactor = 55 / Math.max(45, camera.fov || 55);
+    const effZoom = camera.zoom * (0.84 + 0.16 * fovFactor);
+    ctx.scale(effZoom, effZoom);
+
     const shake = camera.shakeOffset;
     ctx.translate(-camera.x + shake.x, -camera.y + shake.y);
 
@@ -1391,6 +1407,78 @@ class R0 {
       ctx.setLineDash([]);
     }
 
+    // 7. Cinematic Camera Director 2.0 Visual Reticles (Section 49)
+    if (camera) {
+      // 7a. Look-ahead velocity prediction point (Gold diamond + dashed vector)
+      if (camera.predictedPos) {
+        ctx.save();
+        ctx.strokeStyle = "rgba(216, 155, 60, 0.78)";
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([5, 4]);
+        ctx.beginPath();
+        ctx.moveTo(vehicle.chassis.position.x, vehicle.chassis.position.y);
+        ctx.lineTo(camera.predictedPos.x, camera.predictedPos.y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.fillStyle = "#d89b3c";
+        ctx.beginPath();
+        ctx.moveTo(camera.predictedPos.x, camera.predictedPos.y - 7);
+        ctx.lineTo(camera.predictedPos.x + 7, camera.predictedPos.y);
+        ctx.lineTo(camera.predictedPos.x, camera.predictedPos.y + 7);
+        ctx.lineTo(camera.predictedPos.x - 7, camera.predictedPos.y);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // 7b. Terrain Focus Point ahead (Teal crosshair)
+      if (camera.terrainFocusPoint) {
+        const tf = camera.terrainFocusPoint;
+        ctx.save();
+        ctx.strokeStyle = "#2ea3a5";
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.arc(tf.x, tf.y, 9, 0, Math.PI * 2);
+        ctx.moveTo(tf.x - 14, tf.y);
+        ctx.lineTo(tf.x + 14, tf.y);
+        ctx.moveTo(tf.x, tf.y - 14);
+        ctx.lineTo(tf.x, tf.y + 14);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // 7c. Ballistic Landing Zone marker when airborne
+      if (camera.landingZone && camera.landingZone.active) {
+        const lz = camera.landingZone;
+        ctx.save();
+        ctx.strokeStyle = "#e05a47";
+        ctx.fillStyle = "rgba(224, 90, 71, 0.22)";
+        ctx.lineWidth = 2.0;
+        ctx.beginPath();
+        ctx.arc(lz.x, lz.y, 14, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // 7d. Authoritative Camera Target Point (Burnt-orange target reticle)
+      if (camera.targetPoint) {
+        const tp = camera.targetPoint;
+        ctx.save();
+        ctx.strokeStyle = "#d4622a";
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.arc(tp.x, tp.y, 12, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(tp.x, tp.y, 3, 0, Math.PI * 2);
+        ctx.fillStyle = "#d4622a";
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
     ctx.restore();
   }
 
@@ -1458,6 +1546,7 @@ class R0 {
   drawDebugPanel(game, w, h) {
     const ctx = this.ctx;
     const v = game.vehicle;
+    const cam = game.camera;
     const chassis = v.chassis;
     const pos = chassis.position;
     const vel = chassis.velocity;
@@ -1475,8 +1564,25 @@ class R0 {
     const sf = v.wheels[1]?.slipRatio ?? 0;
     const sr = v.wheels[0]?.slipRatio ?? 0;
 
+    const camState = cam?.state || "FOLLOW";
+    const camShot = cam?.shotType || "SHOT_FOLLOW";
+    const camZoom = (cam?.zoom ?? 0.78).toFixed(3);
+    const camFov = (cam?.fov ?? 55).toFixed(1);
+    const camRollDeg = (((cam?.totalRoll ?? 0) * 180) / Math.PI).toFixed(2);
+    const camLook = Math.round(cam?.lookAheadDistance ?? 0);
+    const spVelX = (cam?.springVelocity?.x ?? 0).toFixed(1);
+    const spVelY = (cam?.springVelocity?.y ?? 0).toFixed(1);
+    const spErrX = (cam?.springError?.x ?? 0).toFixed(1);
+    const spErrY = (cam?.springError?.y ?? 0).toFixed(1);
+    const impInt = (cam?.impact?.intensity ?? 0).toFixed(2);
+    const cineRatio = (((cam?.shotDirector?.getCinematicRatio?.() ?? 0) * 100)).toFixed(0);
+
     const lines = [
       `DIAGNOSTICS (F3)  FPS: ${game.fps.toFixed(0)}  STEP: 8.33ms  SEED: ${game.seed}`,
+      `CAMERA DIRECTOR: STATE=[${camState}]  SHOT=[${camShot}]  CINE_BUDGET: ${cineRatio}%`,
+      `CAM OPTICS: ZOOM=${camZoom}x  FOV=${camFov}°  ROLL=${camRollDeg}°  LOOKAHEAD=${camLook}px`,
+      `CAM SPRING: VEL=(${spVelX}, ${spVelY})  ERR=(${spErrX}, ${spErrY})  IMPACT=${impInt}`,
+      `CAM FOCUS: TARGET=(${Math.round(cam?.targetPoint?.x || 0)}, ${Math.round(cam?.targetPoint?.y || 0)})  TERRAIN=(${Math.round(cam?.terrainFocusPoint?.x || 0)}, ${Math.round(cam?.terrainFocusPoint?.y || 0)})`,
       `VEHICLE: ${v.archetype.name.toUpperCase()}  WORLD BODIES: ${Matter.Composite.allBodies(game.engine.world).length}`,
       `STREAMING: CHUNK #${chunkId}/${this.terrain.chunks?.length || 0} (ACTIVE CHUNKS: ${this.terrain.activeChunkCount || 0}, BODIES: ${this.terrain.bodies?.length || 0})`,
       `BIOME: ${biome.act || "ACT I"} // ${biome.name.toUpperCase()}  WEATHER: ${biome.weather || "CLEAR"}`,
@@ -1493,17 +1599,17 @@ class R0 {
 
     ctx.save();
     ctx.fillStyle = "rgba(18, 22, 20, 0.88)";
-    const panelW = 520;
-    const panelH = lines.length * 15 + 18;
+    const panelW = 550;
+    const panelH = lines.length * 14.5 + 18;
     ctx.fillRect(w - panelW - 16, h - panelH - 16, panelW, panelH);
     ctx.strokeStyle = "var(--hot)";
     ctx.lineWidth = 1.5;
     ctx.strokeRect(w - panelW - 16, h - panelH - 16, panelW, panelH);
 
-    ctx.font = "10.5px 'Courier New', monospace";
+    ctx.font = "10.2px 'Courier New', monospace";
     ctx.fillStyle = "#efe7d6";
     for (let i = 0; i < lines.length; i++) {
-      ctx.fillText(lines[i], w - panelW - 6, h - panelH + 4 + i * 15);
+      ctx.fillText(lines[i], w - panelW - 6, h - panelH + 4 + i * 14.5);
     }
     ctx.restore();
   }

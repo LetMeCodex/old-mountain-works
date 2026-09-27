@@ -729,8 +729,196 @@ async function run() {
     throw new Error('Mountain Generation 2.0 verification failed: ' + JSON.stringify(mtn2Test));
   }
 
-  // TEST 20: Error Audit
-  console.log('\n--- TEST 20: Browser Error Audit ---');
+  // TEST 20: Cinematic Camera Director 2.0 — 21-State Machine, Shot Director, Spring Physics, Lookahead & Terrain Guard
+  console.log('\n--- TEST 20: Cinematic Camera Director 2.0 (Section 54 Full Test Matrix) ---');
+  const cam2Test = await evaluate(`(() => {
+    const cam = game.camera;
+    const v = game.vehicle;
+    const t = game.terrain;
+    if (!cam || !window.CameraDirector || !window.CAMERA_STATES) {
+      return { ok: false, reason: 'CameraDirector or CAMERA_STATES missing' };
+    }
+
+    const stateCount = Object.keys(window.CAMERA_STATES).length;
+    const shotCount = Object.keys(window.SHOT_CONFIGS || {}).length;
+
+    // 1. Verify Nonlinear Look-Ahead Curve (Section 10: 0->100, 20->250, 50->500, 80->800)
+    const look0 = Math.round(cam.computeNonlinearLookAhead(0));
+    const look20 = Math.round(cam.computeNonlinearLookAhead(20));
+    const look50 = Math.round(cam.computeNonlinearLookAhead(50));
+    const look80 = Math.round(cam.computeNonlinearLookAhead(80));
+    const lookAheadCurveOk = (look0 === 100 && look20 === 250 && look50 === 500 && look80 === 800);
+
+    // Helper to step camera cleanly
+    const stepCam = (frames = 8, dt = 16.67) => {
+      for (let i = 0; i < frames; i++) {
+        cam.update(v, t, dt);
+      }
+    };
+
+    // 2. Idle state -> FOLLOW
+    game.reset();
+    Matter.Body.setVelocity(v.chassis, { x: 0, y: 0 });
+    v.forwardSpeed = 0;
+    v.airborne = false;
+    stepCam(10);
+    const stateIdle = cam.state;
+
+    // 3. High Speed (85 km/h -> forwardSpeed = 85 / 7.2 = 11.8)
+    const flatX = 300;
+    const flatY = t.heightAt(flatX) - 38;
+    Matter.Body.setPosition(v.chassis, { x: flatX, y: flatY });
+    Matter.Body.setVelocity(v.chassis, { x: 12.2, y: 0 });
+    v.forwardSpeed = 12.2;
+    v.airborne = false;
+    v.wheels[0].contact = true;
+    v.wheels[1].contact = true;
+    stepCam(18);
+    const stateHighSpeed = cam.state;
+    const fovHighSpeed = Number(cam.fov.toFixed(1));
+    const zoomHighSpeed = Number(cam.zoom.toFixed(3));
+
+    // 4. Extreme Climb (Find a steep climb sample or synthesize slope > 27 deg)
+    let steepSample = t.samples.find(s => (Math.atan(s.slope) * 180 / Math.PI) < -28);
+    if (steepSample) {
+      Matter.Body.setPosition(v.chassis, { x: steepSample.x, y: steepSample.y - 35 });
+      Matter.Body.setVelocity(v.chassis, { x: 4.5, y: -2.5 });
+      v.forwardSpeed = 5.0;
+      v.airborne = false;
+      v.wheels[0].contact = true;
+      v.wheels[1].contact = true;
+      stepCam(12);
+    }
+    const stateExtremeClimb = cam.state;
+
+    // 5. Giant Jump + Ballistic Landing Zone Prediction
+    Matter.Body.setPosition(v.chassis, { x: 4200, y: t.heightAt(4200) - 180 });
+    Matter.Body.setVelocity(v.chassis, { x: 11.5, y: -5.5 });
+    v.forwardSpeed = 11.5;
+    v.airborne = true;
+    v.airborneTime = 0.85;
+    v.wheels[0].contact = false;
+    v.wheels[1].contact = false;
+    game.stunts.airtime = 850;
+    game.stunts.cumulativeAngle = 0.2;
+    stepCam(12);
+    const stateGiantJump = cam.state;
+    const landingZoneActive = Boolean(cam.landingZone && cam.landingZone.active);
+
+    // 6. Mid-Air Backflip Stunt -> STUNT + SHOT_ORBIT
+    game.stunts.cumulativeAngle = -3.6;
+    game.stunts.activeStuntName = 'BACKFLIP';
+    cam.shotDirector.cooldowns.clear();
+    stepCam(12);
+    const stateStunt = cam.state;
+    const shotStunt = cam.shotType;
+
+    // 7. Hard Landing Compression -> LANDING / IMPACT
+    v.airborne = false;
+    v.airborneTime = 0;
+    v.wheels[0].contact = true;
+    v.wheels[1].contact = true;
+    game.stunts.airtime = 0;
+    game.stunts.cumulativeAngle = 0;
+    game.stunts.activeStuntName = '';
+    v.wheels[0].compression = 0.72;
+    v.wheels[1].compression = 0.75;
+    cam.prevMaxCompression = 0.10;
+    stepCam(4);
+    const stateLanding = cam.state;
+
+    // 8. Impact System 3-Frequency Impulse
+    cam.addShake(1.0, Math.PI, 8500);
+    stepCam(3);
+    const stateImpact = cam.state;
+    const impactIntensity = Number(cam.impact.intensity.toFixed(2));
+
+    // 9. Summit Approach (x > 318,000 px / 7,950 m)
+    cam.impact.reset();
+    cam._justLandedTimer = 0;
+    const summitX = 322000;
+    Matter.Body.setPosition(v.chassis, { x: summitX, y: t.heightAt(summitX) - 36 });
+    Matter.Body.setVelocity(v.chassis, { x: 5.0, y: 0 });
+    v.forwardSpeed = 5.0;
+    v.wheels[0].compression = 0.15;
+    v.wheels[1].compression = 0.15;
+    cam.prevMaxCompression = 0.15;
+    cam.shotDirector.cooldowns.clear();
+    stepCam(12);
+    const stateSummit = cam.state;
+    const shotSummit = cam.shotType;
+
+    // 10. Death & Victory Camera States
+    v.dead = true;
+    stepCam(8);
+    const stateDeath = cam.state;
+
+    v.dead = false;
+    game.summitReached = true;
+    stepCam(8);
+    const stateVictory = cam.state;
+
+    // 11. Reduced Motion Accessibility Mode
+    game.summitReached = false;
+    x.visual.reducedMotion = true;
+    cam.addShake(1.0, 0, 5000);
+    stepCam(10);
+    const reducedRoll = Math.abs(cam.totalRoll);
+    const reducedFov = Math.round(cam.fov);
+    x.visual.reducedMotion = false;
+
+    // 12. Reset back to clean start & verify zero NaNs
+    game.reset();
+    stepCam(5);
+    const hasNaN = [cam.x, cam.y, cam.zoom, cam.fov, cam.totalRoll, cam.lookAheadDistance].some(val => !Number.isFinite(val));
+
+    return {
+      ok: (
+        stateCount >= 21 &&
+        lookAheadCurveOk &&
+        stateHighSpeed === 'HIGH_SPEED' &&
+        stateGiantJump === 'GIANT_JUMP' &&
+        landingZoneActive &&
+        stateStunt === 'STUNT' &&
+        shotStunt === 'SHOT_ORBIT' &&
+        stateImpact === 'IMPACT' &&
+        stateSummit === 'SUMMIT' &&
+        stateDeath === 'DEATH' &&
+        stateVictory === 'VICTORY' &&
+        reducedRoll < 0.01 &&
+        !hasNaN
+      ),
+      stateCount,
+      shotCount,
+      lookAheadCurve: { look0, look20, look50, look80 },
+      stateIdle,
+      stateHighSpeed,
+      fovHighSpeed,
+      zoomHighSpeed,
+      stateExtremeClimb,
+      stateGiantJump,
+      landingZoneActive,
+      stateStunt,
+      shotStunt,
+      stateLanding,
+      stateImpact,
+      impactIntensity,
+      stateSummit,
+      shotSummit,
+      stateDeath,
+      stateVictory,
+      reducedRoll,
+      reducedFov,
+      hasNaN
+    };
+  })()`);
+  console.log('Cinematic Camera Director 2.0 Verification Result:', cam2Test);
+  if (!cam2Test.ok) {
+    throw new Error('Cinematic Camera Director 2.0 verification failed: ' + JSON.stringify(cam2Test));
+  }
+
+  // TEST 21: Error Audit
+  console.log('\n--- TEST 21: Browser Error Audit ---');
   if (errors.length > 0) {
     console.error('FOUND CONSOLE EXCEPTIONS:', errors);
     throw new Error('Browser execution reported exceptions!');
@@ -741,7 +929,7 @@ async function run() {
   ws.close();
   chrome.kill();
   console.log('\n======================================================');
-  console.log('>>> ALL 20 DEEP VERIFICATION CDP TESTS PASSED! <<<');
+  console.log('>>> ALL 21 DEEP VERIFICATION CDP TESTS PASSED! <<<');
   console.log('======================================================\n');
 }
 
