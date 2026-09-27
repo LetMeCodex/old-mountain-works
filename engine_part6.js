@@ -95,7 +95,6 @@ class q0 {
 
     this.bus.on("echo:collected", (relic) => {
       this.score += 500;
-      this.stunts.showToast(`ECHO: ${relic.name}`, 3);
       if (!this.career.echoesCollected.includes(relic.id)) {
         this.career.echoesCollected.push(relic.id);
       }
@@ -544,6 +543,9 @@ class q0 {
 
     if (!isAirborne && this.wasAirborne) {
       this.stunts.onLanding(v, this.terrain);
+      this.bus.emit("vehicle:land", {
+        compression: Math.max(v.wheels[0]?.compression ?? 0.4, v.wheels[1]?.compression ?? 0.4),
+      });
     }
     this.wasAirborne = isAirborne;
 
@@ -731,33 +733,6 @@ game.bus.on("stunt:awarded", (data) => {
   }
 });
 
-setInterval(() => {
-  if (hudDist) hudDist.textContent = liveStats.distance.toFixed(0) + " m";
-  if (hudSpeed) hudSpeed.textContent = liveStats.speed.toFixed(0) + " km/h";
-  if (hudAlt) hudAlt.textContent = (liveStats.altitude || 0).toFixed(0) + " m";
-  if (hudIncline) hudIncline.textContent = `${liveStats.incline}°`;
-  if (hudEchoes) hudEchoes.textContent = `${liveStats.echoCount}/${liveStats.echoTotal}`;
-  if (hudZone) hudZone.textContent = liveStats.biomeName;
-  if (hudScore) hudScore.textContent = String(liveStats.score);
-  if (hudVehicle) hudVehicle.textContent = liveStats.vehicleName;
-  if (hudRpm) hudRpm.style.width = Math.min(100, liveStats.rpm * 100).toFixed(0) + "%";
-
-  if (hudAir) {
-    hudAir.textContent = liveStats.airborne
-      ? "AIR " + (liveStats.airtime / 1000).toFixed(1) + "s"
-      : "";
-  }
-
-  if (hudCombo) {
-    if (liveStats.comboMultiplier > 1 && liveStats.comboTimer > 0) {
-      hudCombo.style.display = "block";
-      hudCombo.textContent = `COMBO x${liveStats.comboMultiplier} (${liveStats.comboTimer.toFixed(1)}s)`;
-    } else {
-      hudCombo.style.display = "none";
-    }
-  }
-}, 80);
-
 function updateCareerRecap() {
   const recapDist = $el("recap-dist");
   const recapAlt = $el("recap-alt");
@@ -824,6 +799,8 @@ $el("start-btn")?.addEventListener("click", () => {
   hasStarted = true;
   $el("title").style.display = "none";
   $el("hud").style.display = "block";
+  const hudThree = $el("hud-three-canvas");
+  if (hudThree) hudThree.style.display = "block";
   const pedals = $el("pedals");
   if (pedals) pedals.style.display = "flex";
   window.hudManager?.animations?.animateHUDIntro(window.hudManager);

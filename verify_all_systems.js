@@ -554,8 +554,94 @@ async function run() {
     throw new Error('Telemetry system failed to record entries!');
   }
 
-  // TEST 18: Error Audit
-  console.log('\n--- TEST 18: Browser Error Audit ---');
+  // TEST 18: Master HUD 2.0 — Living Expedition Instrument System & Edge Cases
+  console.log('\n--- TEST 18: Master HUD 2.0 Living Expedition Instruments & Edge Cases ---');
+  const hud2Test = await evaluate(`(() => {
+    const hm = window.hudManager;
+    if (!hm) return { ok: false, reason: 'hudManager missing' };
+
+    // 1. Verify all 10 Speedometer layers exist
+    const speedoLayers = [
+      'speedo-layer-housing',
+      'speedo-layer-ring',
+      'speedo-layer-ticks',
+      'speedo-layer-scale',
+      'hud-speed-orange-zone',
+      'hud-speed-needle-shadow',
+      'hud-speed-needle',
+      'hud-speed-pivot',
+      'hud-speed-big',
+      'speedo-layer-cal'
+    ];
+    const missingLayers = speedoLayers.filter(id => !document.getElementById(id));
+
+    // 2. Verify Geological Altimeter, Spirit-Level Inclinometer, Terrain Scanner, Compass, Stunt Gyro, Archival Echo
+    const requiredIds = [
+      'hud-altimeter-svg', 'hud-alt-tape', 'hud-alt-pointer',
+      'hud-inclinometer-svg', 'hud-incline-bubble', 'hud-incline-bar',
+      'hud-scanner-svg', 'hud-scanner-past', 'hud-scanner-line', 'hud-scanner-strata', 'hud-scanner-callout', 'hud-scanner-reticle',
+      'hud-compass-card', 'hud-compass-needle', 'hud-compass-needle-shadow',
+      'hud-airtime-chrono', 'hud-stunt-gyro-svg', 'hud-stunt-gyro-arc',
+      'hud-echo-annotation', 'hud-three-canvas'
+    ];
+    const missingInstruments = requiredIds.filter(id => !document.getElementById(id));
+
+    // 3. Simulate high-speed driving & airborne stunt & edge cases (0, 250 km/h, extreme pitch)
+    hm.update({
+      speed: 124,
+      rpm: 0.88,
+      altitude: 68,
+      incline: 24,
+      distance: 420,
+      fuel: 0.18,
+      engineTemp: 0.82,
+      score: 1450,
+      comboMultiplier: 3,
+      comboTimer: 2.5,
+      airtime: 1420,
+      airborne: true,
+      vehicleName: 'Trail Buggy',
+      biomeName: ' Pine Ridge ',
+      echoCount: 2,
+      echoTotal: 6,
+      activeStunt: 'BACKFLIP x1'
+    }, 50);
+
+    const stateWhenAirborne = hm.stateMachine.state;
+    const speedBigText = document.getElementById('hud-speed-big')?.textContent;
+    const scannerPathD = document.getElementById('hud-scanner-line')?.getAttribute('d') || '';
+    const scannerCalloutText = document.getElementById('hud-scanner-callout')?.textContent || '';
+    const fuelLowDisplay = document.getElementById('hud-fuel-low')?.style.display;
+
+    // 4. Test rapid R reset 10 times in a row (Section 29 Edge Case Audit)
+    for (let i = 0; i < 10; i++) {
+      game.reset();
+    }
+    const stateAfterReset = hm.stateMachine.state;
+    const speedAfterReset = document.getElementById('hud-speed-big')?.textContent;
+    const anyNaN = document.getElementById('hud')?.innerText.includes('NaN');
+
+    return {
+      ok: missingLayers.length === 0 && missingInstruments.length === 0 && !anyNaN,
+      missingLayers,
+      missingInstruments,
+      stateWhenAirborne,
+      speedBigText,
+      scannerPathValid: scannerPathD.startsWith('M ') && !scannerPathD.includes('NaN'),
+      scannerCalloutText,
+      fuelLowDisplay,
+      stateAfterReset,
+      speedAfterReset,
+      anyNaN
+    };
+  })()`);
+  console.log('Master HUD 2.0 Verification Result:', hud2Test);
+  if (!hud2Test.ok || !hud2Test.scannerPathValid || hud2Test.anyNaN) {
+    throw new Error('Master HUD 2.0 verification failed: ' + JSON.stringify(hud2Test));
+  }
+
+  // TEST 19: Error Audit
+  console.log('\n--- TEST 19: Browser Error Audit ---');
   if (errors.length > 0) {
     console.error('FOUND CONSOLE EXCEPTIONS:', errors);
     throw new Error('Browser execution reported exceptions!');
@@ -566,7 +652,7 @@ async function run() {
   ws.close();
   chrome.kill();
   console.log('\n======================================================');
-  console.log('>>> ALL 18 DEEP VERIFICATION CDP TESTS PASSED! <<<');
+  console.log('>>> ALL 19 DEEP VERIFICATION CDP TESTS PASSED! <<<');
   console.log('======================================================\n');
 }
 
