@@ -17,6 +17,7 @@ class q0 {
   stunts;
   propManager;
   echoManager;
+  worldSim = null;
   threeDepth = null;
   engine;
   terrain;
@@ -71,6 +72,7 @@ class q0 {
 
     this.stunts = new StuntDirector(this.bus, this.audio, this.camera);
     this.echoManager = new MountainEchoManager(this.audio, this.particles, this.bus);
+    this.worldSim = new WorldSimulationManager(this.seed);
 
     const threeCanvas = document.getElementById("three-canvas");
     if (threeCanvas) {
@@ -86,13 +88,25 @@ class q0 {
       this.debug = !this.debug;
     };
 
-    // Diagnostic Seeds & Telemetry Hotkeys
+    // Diagnostic Seeds, Living World Controls & Telemetry Hotkeys
     window.addEventListener("keydown", (e) => {
       if (e.key === "1") this.setTestSeed("SEED_FLAT");
       else if (e.key === "2") this.setTestSeed("SEED_STEEP");
       else if (e.key === "3") this.setTestSeed("SEED_JUMP");
       else if (e.key === "4") this.setTestSeed("SEED_VALLEY");
-      else if (e.key === "t" || e.key === "T") {
+      else if (e.key === "5" && this.worldSim) {
+        const phase = this.worldSim.advanceTimeHours(3);
+        this.stunts.showToast(`WORLD CLOCK +3H -> ${phase}`, 2);
+      } else if (e.key === "6" && this.worldSim) {
+        const w = this.worldSim.cycleWeather();
+        this.stunts.showToast(`WORLD WEATHER -> ${w}`, 2);
+      } else if (e.key === "7" && this.worldSim) {
+        const s = this.worldSim.cycleSeason();
+        this.stunts.showToast(`WORLD SEASON -> ${s}`, 2);
+      } else if (e.key === "8" && this.worldSim) {
+        const ev = this.worldSim.triggerShowcaseEvent(this);
+        this.stunts.showToast(`WORLD EVENT -> ${ev}`, 2);
+      } else if (e.key === "t" || e.key === "T") {
         if (this.debug) this.exportTelemetry();
       }
     });
@@ -131,8 +145,8 @@ class q0 {
       gravity: { x: 0, y: x.physics.gravity, scale: 0.001 },
       enableSleeping: true,
     });
-    this.engine.positionIterations = 8;
-    this.engine.velocityIterations = 8;
+    this.engine.positionIterations = 6;
+    this.engine.velocityIterations = 6;
 
     this.terrain = new P0(this.seed);
     this.terrainSet = new Set(this.terrain.bodies);
@@ -142,6 +156,8 @@ class q0 {
     this.propManager.initProps(this.terrain, this.seed);
 
     this.echoManager.initEchoes(this.terrain);
+    if (!this.worldSim) this.worldSim = new WorldSimulationManager(this.seed);
+    this.worldSim.initForTerrain(this.terrain);
 
     this.startX = x.world.startX;
     const initCfg = VEHICLE_ARCHETYPES[x.activeArchetype] ?? VEHICLE_ARCHETYPES.buggy;
@@ -287,46 +303,58 @@ class q0 {
       const other = vBody === bodyA ? bodyB : bodyA;
 
       const vel = vBody.velocity;
-      const speed = Math.hypot(vel.x, vel.y);
-      const energy = 0.5 * vBody.mass * speed * speed * 0.045;
-
       const pt = pair.collision?.supports?.[0] ?? vBody.position;
       const normal = pair.collision?.normal ?? { x: 0, y: -1 };
 
-      // Interactive destructible prop collision
+      // Interactive destructible prop collision (use full speed)
       if (other.propDef) {
+        const speed = Math.hypot(vel.x, vel.y);
+        const energy = 0.5 * vBody.mass * speed * speed * 0.045;
         this.propManager.onHit(other, energy, pt, vel);
         this.score += 50;
         continue;
       }
 
       if (!this.terrainSet.has(other)) continue;
-      if (energy < 0.06) continue;
+
+      const isChassis = vBody === this.vehicle.chassis;
+      // For terrain segments, compute velocity perpendicular to the terrain slope so rolling across 18px seams never triggers false impacts
+      const tNorm = this.terrain ? this.terrain.normalAt(vBody.position.x) : normal;
+      const impactVn = Math.max(0, vel.x * (-tNorm.x) + vel.y * (-tNorm.y));
+      if (!isChassis && !this.wasAirborne && this.vehicle.airborneTimer < 80 && impactVn < 3.5) {
+        continue;
+      }
+
+      const energy = 0.5 * vBody.mass * impactVn * impactVn * 0.055;
+      if (energy < 0.14) continue;
+
+      // Cooldown so multi-wheel or seam contacts don't double-fire in the same landing
+      if (!isChassis && this.time - (this.lastTerrainImpactTime || 0) < 160) continue;
+      this.lastTerrainImpactTime = this.time;
 
       const severity = this.classify(energy);
-      const isChassis = vBody === this.vehicle.chassis;
       const mat = MATERIALS[other.materialKind] ?? MATERIALS.dirt;
 
       this.audio.impact(b(energy / 3, 0.05, 1), other.materialKind, isChassis);
-      this.particles.spawnLandingBurst(pt.x, pt.y, b(energy * 1.4, 0.4, 3.2), mat);
+      this.particles.spawnLandingBurst(pt.x, pt.y, b(energy * 1.2, 0.4, 2.4), mat);
 
       if (severity !== "light") {
         if (mat.name === "rock" || isChassis) {
-          this.particles.spawnSparks(pt.x, pt.y, normal.x, normal.y, Math.round(energy * 4));
+          this.particles.spawnSparks(pt.x, pt.y, normal.x, normal.y, Math.min(8, Math.round(energy * 3)));
         }
       }
 
-      const shakeMags = { light: 0.05, medium: 0.14, heavy: 0.24, critical: 0.42 };
-      this.camera.shake(shakeMags[severity], severity === "light" ? 140 : 280, normal.x, normal.y);
-      this.camera.pulseZoom(severity === "light" ? 0.008 : 0.03);
+      const shakeMags = { light: 0.04, medium: 0.12, heavy: 0.22, critical: 0.38 };
+      this.camera.shake(shakeMags[severity], severity === "light" ? 120 : 240, normal.x, normal.y);
+      this.camera.pulseZoom(severity === "light" ? 0.008 : 0.025);
 
       this.vehicle.driver.applyShock(energy);
 
-      // Crash state machine & slow motion (Spec #48)
-      if (severity === "critical") {
+      // Crash state machine & slow motion only on true critical chassis impact
+      if (isChassis && severity === "critical") {
         this.deathState = "crashed";
         if (!x.visual.reducedMotion) {
-          this.timeScale = 0.32;
+          this.timeScale = 0.45;
           this.timeScaleTarget = 1.0;
         }
       }
@@ -334,6 +362,7 @@ class q0 {
       this.score += Math.round(energy * 12);
       this.bus.emit("vehicle:impact", {
         energy,
+        tier: severity,
         x: pt.x,
         y: pt.y,
         nx: normal.x,
@@ -363,7 +392,7 @@ class q0 {
 
     this.vehicle.update(inputState, dt, this.terrain);
     Matter.Engine.update(this.engine, dt);
-    this.vehicle.solvePrismaticSuspension();
+    this.vehicle.solvePrismaticSuspension(this.terrain);
 
     const activePairs = this.engine.pairs.list.filter((p) => p.isActive);
     this.vehicle.markContacts(this.terrainSet, activePairs, this.terrain, dt);
@@ -583,6 +612,11 @@ class q0 {
     // Camera follow & zoom
     this.camera.update(v, this.terrain, dt);
 
+    // Living World Simulation 2.0 update (autonomous clock, weather, wind, wildlife, NPCs, events)
+    if (this.worldSim) {
+      this.worldSim.update(dt, this);
+    }
+
     // Track expedition records
     const distMeters = Math.max(0, (v.chassis.position.x - this.startX) / 40);
     if (distMeters > this.maxDistance) {
@@ -620,6 +654,9 @@ class q0 {
         camZoom: Math.round(this.camera.zoom * 1000) / 1000,
         camFov: Math.round(this.camera.fov * 10) / 10,
         camLookAhead: Math.round(this.camera.lookAheadDistance || 0),
+        worldPhase: this.worldSim?.state?.phaseName || "MORNING",
+        worldSeason: this.worldSim?.state?.season || "AUTUMN",
+        worldWeather: this.worldSim?.state?.weather || "CLEAR",
         state: this.deathState
       });
       if (this.telemetrySamples.length > 2500) this.telemetrySamples.shift();
@@ -656,7 +693,7 @@ class q0 {
   draw() {
     const w = this.canvas.width;
     const h = this.canvas.height;
-    const allBodies = Matter.Composite.allBodies(this.engine.world);
+    const allBodies = this.debug ? Matter.Composite.allBodies(this.engine.world) : [];
     this.renderer.render(
       this.camera,
       this.vehicle,
@@ -677,11 +714,13 @@ class q0 {
 // ----------------------------------------------------------------------------
 const canvas = document.getElementById("game");
 const resize = () => {
-  const dpr = Math.min(window.devicePixelRatio ?? 1, 2);
-  const w = window.innerWidth;
-  const h = window.innerHeight;
-  canvas.width = Math.floor(w * dpr);
-  canvas.height = Math.floor(h * dpr);
+  const w = window.innerWidth || 1280;
+  const h = window.innerHeight || 720;
+  // Cap internal Canvas 2D buffer to 1600px max dimension at 1x logical scale so 4K/Retina/Mobile devices maintain 60 FPS
+  const maxDim = 1600;
+  const scale = Math.min(1, maxDim / Math.max(w, h, 1)) * (x.visual.renderScale || 1);
+  canvas.width = Math.max(640, Math.floor(w * scale));
+  canvas.height = Math.max(360, Math.floor(h * scale));
   const threeCanvas = document.getElementById("three-canvas");
   if (threeCanvas && window.game?.threeDepth) {
     window.game.threeDepth.resize(w, h);

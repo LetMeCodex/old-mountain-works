@@ -342,6 +342,92 @@ class T0 {
     osc.stop(now + 0.18);
   }
 
+  // Living World Simulation: Distance-Delayed Rolling Thunder (Section 9 & 34)
+  playThunder(volume = 0.65) {
+    if (!this.ctx || !this.started || this.muted || !this.noiseBuffer) return;
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const noise = ctx.createBufferSource();
+    noise.buffer = this.noiseBuffer;
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.frequency.setValueAtTime(190, now);
+    filter.frequency.exponentialRampToValueAtTime(55, now + 1.4);
+
+    const gain = ctx.createGain();
+    const peak = b(volume * 0.45, 0.05, 0.5);
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.linearRampToValueAtTime(peak, now + 0.08);
+    gain.gain.exponentialRampToValueAtTime(peak * 0.45, now + 0.45);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 1.65);
+
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.envBus || this.sfxBus);
+    noise.start(now);
+    noise.stop(now + 1.7);
+  }
+
+  // Living World Simulation: Spatialized Birds, Night Crickets & Rain Patter (Section 34)
+  updateLivingWorldAmbience(ws) {
+    if (!this.ctx || !this.started || this.muted || !ws) return;
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+
+    // 1. Modulate wind filter by global world wind speed + rain
+    if (this.windGain && this.windFilter) {
+      const windNorm = b((ws.windSpeed || 4) / 26, 0, 1);
+      const rainNorm = b(ws.rainIntensity || 0, 0, 1);
+      const envVol = 0.02 + windNorm * 0.065 + rainNorm * 0.055;
+      this.windGain.gain.setTargetAtTime(envVol, now, 0.25);
+      this.windFilter.frequency.setTargetAtTime(240 + windNorm * 360 + rainNorm * 520, now, 0.25);
+    }
+
+    // 2. Occasional spatialized bird call during calm morning/daylight
+    if (ws.sun.elevation > 0.02 && ws.rainIntensity < 0.25 && Math.random() < 0.42) {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const baseFreq = 1650 + Math.random() * 850;
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(baseFreq, now);
+      osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.24, now + 0.06);
+      osc.frequency.exponentialRampToValueAtTime(baseFreq * 0.92, now + 0.14);
+
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.022, now + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+
+      if (typeof ctx.createStereoPanner === "function") {
+        const panner = ctx.createStereoPanner();
+        panner.pan.value = (Math.random() - 0.5) * 1.6; // Left or distant right (Section 34)
+        osc.connect(gain);
+        gain.connect(panner);
+        panner.connect(this.envBus || this.sfxBus);
+      } else {
+        osc.connect(gain);
+        gain.connect(this.envBus || this.sfxBus);
+      }
+      osc.start(now);
+      osc.stop(now + 0.18);
+    }
+
+    // 3. Subtle dusk/night cricket trill when warm/humid
+    if (ws.sun.elevation <= 0.05 && ws.season !== "WINTER" && ws.rainIntensity < 0.3 && Math.random() < 0.45) {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(3850, now);
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.012, now + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+      osc.connect(gain);
+      gain.connect(this.envBus || this.sfxBus);
+      osc.start(now);
+      osc.stop(now + 0.1);
+    }
+  }
+
   dispose() {
     this.osc = [];
     this.ctx?.close();
@@ -471,7 +557,8 @@ class M0 {
 // ----------------------------------------------------------------------------
 class S0 {
   pool = [];
-  capacity = 700;
+  capacity = 260;
+  cursor = 0;
 
   constructor() {
     for (let i = 0; i < this.capacity; i++) {
@@ -496,56 +583,65 @@ class S0 {
 
   clear() {
     for (const p of this.pool) p.active = false;
+    this.cursor = 0;
   }
 
   alloc() {
-    for (const p of this.pool) {
-      if (!p.active) return p;
+    for (let i = 0; i < this.capacity; i++) {
+      const idx = (this.cursor + i) % this.capacity;
+      if (!this.pool[idx].active) {
+        this.cursor = (idx + 1) % this.capacity;
+        return this.pool[idx];
+      }
     }
-    return this.pool[0];
+    const p = this.pool[this.cursor];
+    this.cursor = (this.cursor + 1) % this.capacity;
+    return p;
   }
 
   spawnWheelSpray(xPos, yPos, baseVx, baseVy, intensity, mat) {
-    const count = Math.round(intensity * 4);
+    const density = x.visual.dustDensity ?? 1;
+    const count = Math.min(3, Math.max(1, Math.round(intensity * 1.8 * density)));
     for (let i = 0; i < count; i++) {
       const p = this.alloc();
       p.active = true;
       p.x = xPos + (Math.random() - 0.5) * 8;
       p.y = yPos + (Math.random() - 0.5) * 4;
       p.vx = baseVx * (0.3 + Math.random() * 0.5) + (Math.random() - 0.5) * 3;
-      p.vy = -Math.random() * 3.5 - 0.5;
+      p.vy = -Math.random() * 3.2 - 0.5;
       p.life = 0;
-      p.maxLife = 350 + Math.random() * 400;
-      p.size = 2.0 + Math.random() * 2.8;
+      p.maxLife = 280 + Math.random() * 260;
+      p.size = 2.0 + Math.random() * 2.6;
       p.color = mat.dustColors[Math.floor(Math.random() * mat.dustColors.length)];
-      p.alpha = 0.85;
+      p.alpha = 0.82;
       p.gravity = 0.22;
       p.kind = mat.dustKind;
-      p.angle = Math.random() * Math.PI * 2;
-      p.angularVelocity = (Math.random() - 0.5) * 0.2;
+      p.angle = 0;
+      p.angularVelocity = 0;
     }
   }
 
   spawnLandingBurst(xPos, yPos, force, mat) {
-    const count = Math.min(48, Math.round(force * 14));
+    const density = x.visual.dustDensity ?? 1;
+    const count = Math.min(22, Math.max(4, Math.round(force * 7 * density)));
     for (let i = 0; i < count; i++) {
       const p = this.alloc();
       p.active = true;
       p.x = xPos;
       p.y = yPos;
       const angle = (Math.random() * 0.8 + 0.1) * Math.PI;
-      const speed = Math.random() * force * 3.8 + 1.2;
+      const speed = Math.random() * force * 3.4 + 1.0;
       p.vx = Math.cos(angle) * speed * (Math.random() < 0.5 ? 1 : -1);
       p.vy = -Math.sin(angle) * speed;
       p.life = 0;
-      p.maxLife = 450 + Math.random() * 550;
-      p.size = 2.5 + Math.random() * 3.8;
+      p.maxLife = 360 + Math.random() * 380;
+      p.size = 2.4 + Math.random() * 3.4;
       p.color = mat.dustColors[Math.floor(Math.random() * mat.dustColors.length)];
-      p.alpha = 0.95;
+      p.alpha = 0.92;
       p.gravity = 0.35;
       p.kind = mat.dustKind;
-      p.angle = Math.random() * Math.PI * 2;
-      p.angularVelocity = (Math.random() - 0.5) * 0.35;
+      p.angle = 0;
+      p.angularVelocity = 0;
     }
   }
 

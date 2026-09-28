@@ -152,10 +152,10 @@ class HUDThreeInstruments {
       this.renderer = new THREE.WebGLRenderer({
         canvas: this.canvas,
         alpha: true,
-        antialias: true,
+        antialias: false,
         powerPreference: "high-performance",
       });
-      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      this.renderer.setPixelRatio(1);
       this.scene = new THREE.Scene();
 
       this.width = window.innerWidth || 1280;
@@ -257,6 +257,8 @@ class HUDThreeInstruments {
 
   update(telemetry, dt = 16.666) {
     if (!this.enabled || !this.renderer || !this.scene || !this.camera) return;
+    this.frameCount = (this.frameCount || 0) + 1;
+    if (this.frameCount % 3 !== 0) return;
     if (this.canvas && this.canvas.style.display !== "block") {
       const hudEl = document.getElementById("hud");
       if (hudEl && hudEl.style.display === "block") {
@@ -293,7 +295,7 @@ class HUDThreeInstruments {
       this.drivetrainGroup.rotation.x = 0.22;
       this.drivetrainGroup.rotation.y = -0.38;
       this.drivetrainGroup.rotation.z = reduce ? 0 : b(-pitchRad * 0.65, -0.6, 0.6);
-      const spinStep = (telemetry.wheelSpin || 0) * (dt / 1000) * 1.6;
+      const spinStep = (telemetry.wheelSpin || 0) * (dt / 1000) * 4.8;
       for (const wMesh of this.wheelMeshes) {
         wMesh.rotation.z -= spinStep;
       }
@@ -1139,9 +1141,9 @@ class Compass {
       this.cardEl.style.transform = `rotateX(${rx.toFixed(1)}deg) rotateY(${ry.toFixed(1)}deg)`;
     }
 
-    // World Clock (starts at 06:24 AM and progresses with expedition distance/time)
-    const elapsedMin = Math.floor((data.distance || 0) / 18 + (window.game?.time || 0) / 15000);
-    const totalMin = 6 * 60 + 24 + elapsedMin;
+    // Authoritative WorldState Clock, Temperature & Weather (Living World Simulation 2.0)
+    const ws = window.game?.worldSim?.state;
+    const totalMin = ws ? Math.floor(ws.timeMinutes) : (6 * 60 + 24 + Math.floor((data.distance || 0) / 18 + (window.game?.time || 0) / 15000));
     const hrs24 = Math.floor(totalMin / 60) % 24;
     const mins = totalMin % 60;
     const hrs12 = hrs24 % 12 === 0 ? 12 : hrs24 % 12;
@@ -1152,21 +1154,25 @@ class Compass {
       if (this.ampmEl) this.ampmEl.textContent = hrs24 >= 12 ? "PM" : "AM";
     }
 
-    // Altitude-driven Alpine Temperature
-    const tempC = Math.round(12 - (data.altitude || 0) * 0.22);
+    // Altitude + Time + Season + Weather Temperature
+    const tempC = ws ? Math.round(ws.temperature) : Math.round(12 - (data.altitude || 0) * 0.22);
     const tempStr = `${tempC}°C`;
     if (tempStr !== this.lastTempStr && this.tempEl) {
       this.lastTempStr = tempStr;
       this.tempEl.textContent = tempStr;
     }
 
-    // Biome Weather Condition
-    const zone = (data.biomeName || "").toLowerCase();
+    // Live WorldState Weather & Season Condition
     let wStr = "CLEAR";
-    if (zone.includes("crag")) wStr = "RIDGE WIND";
-    else if (zone.includes("canyon")) wStr = "GORGE MIST";
-    else if (zone.includes("iron") || zone.includes("works")) wStr = "ASH HAZE";
-    else if (zone.includes("summit") || zone.includes("frozen")) wStr = "GLACIER SNOW";
+    if (ws) {
+      wStr = ws.weather.replace("_", " ");
+    } else {
+      const zone = (data.biomeName || "").toLowerCase();
+      if (zone.includes("crag")) wStr = "RIDGE WIND";
+      else if (zone.includes("canyon")) wStr = "GORGE MIST";
+      else if (zone.includes("iron") || zone.includes("works")) wStr = "ASH HAZE";
+      else if (zone.includes("summit") || zone.includes("frozen")) wStr = "GLACIER SNOW";
+    }
 
     if (wStr !== this.lastWeatherStr && this.weatherEl) {
       this.lastWeatherStr = wStr;
@@ -1820,16 +1826,17 @@ class HUDManager {
     // 1. Evaluate HUD State Machine
     this.stateMachine.evaluate(this.snapshot, dt);
 
-    // 2. HIGH FREQUENCY (60Hz every frame): Speedometer, RPM, Spirit-Level Inclinometer, Compass, Stunt Gyro, Pedals, 3D Layer
+    // 2. HIGH FREQUENCY (60Hz every frame): Speedometer, RPM, Spirit-Level Inclinometer, Compass, Pedals, 3D Layer
     this.speedometer.update(this.snapshot, dt);
     this.rpmGauge.update(this.snapshot, dt);
     this.compass.update(this.snapshot, dt);
-    this.stuntGauge.update(this.snapshot);
-    this.vehicleStatus.update(this.snapshot);
     this.controls.update(this.game.input, this.snapshot.rpm);
     this.threeInstruments.update(this.snapshot, dt);
+    if (this.snapshot.airborne) {
+      this.stuntGauge.update(this.snapshot);
+    }
 
-    // 3. MEDIUM FREQUENCY (20Hz / every 50ms): Telemetry text, Altimeter, Fuel Gauge, Route & Terrain Scanner
+    // 3. MEDIUM FREQUENCY (20Hz / every 45ms): Telemetry text, Altimeter, Fuel Gauge, Route & Terrain Scanner, Stunt & Drivetrain DOM
     this.medFreqTimer += dt;
     if (this.medFreqTimer >= 45) {
       const stepDt = this.medFreqTimer;
@@ -1837,6 +1844,10 @@ class HUDManager {
       this.telemetry.update(this.snapshot, stepDt);
       this.fuelGauge.update(this.snapshot, stepDt);
       this.routeScanner.update(this.snapshot, stepDt);
+      if (!this.snapshot.airborne) {
+        this.stuntGauge.update(this.snapshot);
+      }
+      this.vehicleStatus.update(this.snapshot);
     } else {
       // Keep spirit-level bubble at 60Hz even between text updates
       this.telemetry.updateSpiritLevelInclinometer(this.snapshot.incline, dt);

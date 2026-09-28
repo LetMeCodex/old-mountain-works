@@ -917,8 +917,143 @@ async function run() {
     throw new Error('Cinematic Camera Director 2.0 verification failed: ' + JSON.stringify(cam2Test));
   }
 
-  // TEST 21: Error Audit
-  console.log('\n--- TEST 21: Browser Error Audit ---');
+  // TEST 21: Living World Simulation 2.0 — Idle Test, Systemic WorldState, Weather/Seasons, Boids & Animal Reactivity
+  console.log('\n--- TEST 21: Living World Simulation 2.0 (Sections 1-48) ---');
+  const worldSimTest = await evaluate(`(() => {
+    const wsSim = game.worldSim;
+    if (!wsSim || !wsSim.state) return { ok: false, reason: 'worldSim missing' };
+    const s = wsSim.state;
+
+    // 1. Verify Weather & Season Catalogs
+    const weatherCount = window.WEATHER_TYPES ? Object.keys(window.WEATHER_TYPES).length : 0;
+    const seasonCount = window.SEASONS ? window.SEASONS.length : 0;
+
+    // 2. IDLE WORLD TEST (Section 48: Stop vehicle completely and observe autonomous world evolution)
+    const v = game.vehicle;
+    Matter.Body.setVelocity(v.chassis, { x: 0, y: 0 });
+    v.forwardSpeed = 0;
+    const t0 = s.timeMinutes;
+    const cloud0 = wsSim.weather.clouds[0]?.x ?? 0;
+    const bird0 = wsSim.wildlife.boids[0]?.x ?? 0;
+
+    for (let i = 0; i < 60; i++) {
+      wsSim.update(50, game);
+    }
+    const idleTimeAdvanced = s.timeMinutes > t0;
+    const idleCloudsMoved = Math.abs((wsSim.weather.clouds[0]?.x ?? 0) - cloud0) > 0.5;
+    const idleBirdsMoved = Math.abs((wsSim.wildlife.boids[0]?.x ?? 0) - bird0) > 0.5;
+
+    // 3. Time & Celestial Progression (Sunrise -> Noon -> Sunset -> Night)
+    wsSim.advanceTimeHours(4); // Afternoon / Golden Hour
+    wsSim.update(32, game);
+    const phaseAfternoon = s.phaseName;
+    const shadowAfternoon = s.sun.shadowDirX;
+
+    // Set to Night (23:00)
+    s.timeMinutes = 23 * 60;
+    wsSim.update(32, game);
+    const phaseNight = s.phaseName;
+    const sunElevNight = s.sun.elevation;
+    const trafficHeadlightsAtNight = wsSim.npc.ridgeVehicles.some(t => t.headlightsOn);
+
+    // 4. Weather State Machine & NPC Rain Umbrella Reactivity
+    wsSim.weather.setWeather(s, 'HEAVY_RAIN', true);
+    for (let i = 0; i < 30; i++) wsSim.update(50, game);
+    const rainPrecip = s.precipitation;
+    const rainWetness = s.memory.wetness;
+    const npcUmbrellaInRain = wsSim.npc.npcs.some(n => n.hasUmbrella);
+
+    // 5. Winter Blizzard & Freezing Water Reactivity
+    s.seasonIndex = 3;
+    s.season = 'WINTER';
+    wsSim.weather.setWeather(s, 'BLIZZARD', true);
+    for (let i = 0; i < 30; i++) wsSim.update(50, game);
+    const winterTemp = s.temperature;
+    const winterSnowCover = s.memory.snowCover;
+
+    // 6. Wildlife Animal Reactivity (FEED -> ALERT -> FLEE) & Bird Startle Chain
+    const testAnimal = wsSim.wildlife.animals[0];
+    const testBird = wsSim.wildlife.boids[0];
+    if (testAnimal && testBird) {
+      testAnimal.x = v.chassis.position.x + 50;
+      testAnimal.state = 'FEED';
+      testBird.x = testAnimal.x + 20;
+      testBird.y = game.terrain.heightAt(testBird.x) - 5;
+      testBird.state = 'PERCHED';
+      testBird.perchTimer = 10;
+      v.forwardSpeed = 16;
+      wsSim.update(50, game);
+    }
+    const animalReacted = testAnimal ? (testAnimal.state === 'FLEE' || testAnimal.state === 'ALERT') : false;
+    const birdScattered = testBird ? (testBird.state === 'SCATTER' || testBird.state === 'FLYING') : false;
+
+    // 7. World Event Director Showcase Events
+    const triggeredEvents = [];
+    for (let i = 0; i < 5; i++) {
+      triggeredEvents.push(wsSim.triggerShowcaseEvent(game));
+      wsSim.update(32, game);
+    }
+
+    // 8. Reset back to clean morning state & verify rendering + HUD sync
+    s.timeMinutes = 9.5 * 60;
+    s.season = 'AUTUMN';
+    s.targetSeason = 'AUTUMN';
+    s.weather = 'CLEAR';
+    s.targetWeather = 'PARTLY_CLOUDY';
+    wsSim.update(32, game);
+    game.draw();
+
+    const hasNaN = [s.timeMinutes, s.temperature, s.windSpeed, s.sun.elevation, s.simStepMs].some(val => !Number.isFinite(val));
+
+    return {
+      ok: (
+        weatherCount >= 12 &&
+        seasonCount === 4 &&
+        idleTimeAdvanced &&
+        idleCloudsMoved &&
+        idleBirdsMoved &&
+        sunElevNight < 0 &&
+        trafficHeadlightsAtNight &&
+        rainPrecip > 0.2 &&
+        rainWetness > 0 &&
+        npcUmbrellaInRain &&
+        winterTemp < 5 &&
+        winterSnowCover > 0 &&
+        animalReacted &&
+        birdScattered &&
+        triggeredEvents.length === 5 &&
+        !hasNaN
+      ),
+      weatherCount,
+      seasonCount,
+      idleTimeAdvanced,
+      idleCloudsMoved,
+      idleBirdsMoved,
+      phaseAfternoon,
+      shadowAfternoon: Number(shadowAfternoon.toFixed(2)),
+      phaseNight,
+      sunElevNight: Number(sunElevNight.toFixed(2)),
+      trafficHeadlightsAtNight,
+      rainPrecip: Number(rainPrecip.toFixed(2)),
+      rainWetness: Number(rainWetness.toFixed(3)),
+      npcUmbrellaInRain,
+      winterTemp: Number(winterTemp.toFixed(1)),
+      winterSnowCover: Number(winterSnowCover.toFixed(3)),
+      animalReacted,
+      birdScattered,
+      triggeredEvents,
+      entityCounts: s.entityCounts,
+      simStepMs: Number(s.simStepMs.toFixed(3)),
+      hasNaN
+    };
+  })()`);
+  console.log('Living World Simulation 2.0 Verification Result:', worldSimTest);
+  if (!worldSimTest.ok) {
+    throw new Error('Living World Simulation 2.0 verification failed: ' + JSON.stringify(worldSimTest));
+  }
+
+  // TEST 22: Error Audit
+  console.log('\n--- TEST 22: Browser Error Audit ---');
   if (errors.length > 0) {
     console.error('FOUND CONSOLE EXCEPTIONS:', errors);
     throw new Error('Browser execution reported exceptions!');
@@ -929,7 +1064,7 @@ async function run() {
   ws.close();
   chrome.kill();
   console.log('\n======================================================');
-  console.log('>>> ALL 21 DEEP VERIFICATION CDP TESTS PASSED! <<<');
+  console.log('>>> ALL 22 DEEP VERIFICATION CDP TESTS PASSED! <<<');
   console.log('======================================================\n');
 }
 

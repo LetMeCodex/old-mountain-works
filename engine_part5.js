@@ -29,8 +29,8 @@ class ThreeVisualDepth {
         antialias: false,
         powerPreference: "high-performance"
       });
-      this.renderer.setSize(window.innerWidth, window.innerHeight);
-      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+      this.renderer.setSize(Math.max(1, Math.floor(window.innerWidth * 0.5)), Math.max(1, Math.floor(window.innerHeight * 0.5)), false);
+      this.renderer.setPixelRatio(1);
 
       this.scene = new THREE.Scene();
       this.scene.fog = new THREE.FogExp2(0xded2be, 0.00035);
@@ -44,12 +44,12 @@ class ThreeVisualDepth {
       this.camera.position.set(0, 0, 1100);
 
       // Warm directional sunlight + ambient fill
-      const sun = new THREE.DirectionalLight(0xffecd2, 1.25);
-      sun.position.set(500, 1000, 800);
-      this.scene.add(sun);
+      this.sunLight = new THREE.DirectionalLight(0xffecd2, 1.25);
+      this.sunLight.position.set(500, 1000, 800);
+      this.scene.add(this.sunLight);
 
-      const hemiLight = new THREE.HemisphereLight(0xb4c7be, 0x48534e, 0.65);
-      this.scene.add(hemiLight);
+      this.hemiLight = new THREE.HemisphereLight(0xb4c7be, 0x48534e, 0.65);
+      this.scene.add(this.hemiLight);
 
       this.buildMountainSilhouettes();
       this.enabled = true;
@@ -73,8 +73,8 @@ class ThreeVisualDepth {
       for (let i = 0; i < pos.count; i++) {
         const y = pos.getY(i);
         if (y > 0) {
-          const x = pos.getX(i);
-          const ridge = Math.sin(x * 0.004) * 80 + Math.sin(x * 0.012) * 45;
+          const px = pos.getX(i);
+          const ridge = Math.sin(px * 0.004) * 80 + Math.sin(px * 0.012) * 45;
           pos.setY(i, y + ridge);
         }
       }
@@ -120,8 +120,11 @@ class ThreeVisualDepth {
     }
   }
 
-  sync(cam, vehicle, relics) {
+  sync(cam, vehicle, relics, worldSim = null) {
     if (!this.enabled || !this.renderer || !this.camera) return;
+    this.syncCount = (this.syncCount || 0) + 1;
+    // Throttle background WebGL pass on normal frames while always rendering on first call or explicit sync
+    if (worldSim && this.syncCount > 2 && (this.syncCount % 5 !== 0)) return;
 
     const targetX = (cam.x - 220) * 0.35;
     const targetY = (-cam.y + 560) * 0.35;
@@ -137,6 +140,17 @@ class ThreeVisualDepth {
     this.camera.position.z = targetZ;
     this.camera.lookAt(targetX, targetY, 0);
     this.camera.rotation.z = -(cam.totalRoll ?? cam.roll ?? 0);
+
+    // Synchronize 3D directional sun, ambient fill & fog with Living World State
+    if (worldSim?.state && this.sunLight && this.hemiLight) {
+      const ws = worldSim.state;
+      this.sunLight.intensity = 0.25 + ws.sun.intensity * 1.15 + ws.lighting.lightningFlash * 0.8;
+      this.sunLight.position.set((ws.sun.x - 0.5) * 1800, Math.max(80, ws.sun.elevation * 1200), 800);
+      this.hemiLight.intensity = 0.22 + ws.lighting.ambientIntensity * 0.52;
+      if (this.scene?.fog) {
+        this.scene.fog.density = 0.00025 + ws.fogDensity * 0.00055;
+      }
+    }
 
     for (const m of this.mountains) {
       m.mesh.position.x = targetX * (1 + m.def.z * 0.0003);
@@ -154,7 +168,7 @@ class ThreeVisualDepth {
     if (!this.renderer || !this.camera) return;
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
-    this.renderer.setSize(w, h);
+    this.renderer.setSize(Math.max(1, Math.floor(w * 0.5)), Math.max(1, Math.floor(h * 0.5)), false);
   }
 }
 
@@ -167,6 +181,15 @@ class R0 {
   lastBiomeId = "meadow";
   biomeTransition = 1.0;
   grainCanvas = null;
+  grainPattern = null;
+  vigGrad = null;
+  vigW = 0;
+  vigH = 0;
+  parallaxNoises = {
+    31: K0(31),
+    44: K0(44),
+    57: K0(57),
+  };
 
   constructor(ctx, terrain) {
     this.ctx = ctx;
@@ -180,14 +203,19 @@ class R0 {
   render(camera, vehicle, particles, propManager, width, height, time, debug, allBodies = [], game = null) {
     const ctx = this.ctx;
     const biome = this.terrain.biomeAt(camera.x);
+    const worldSim = game?.worldSim || null;
 
     // Sync Three.js 2.5D visual depth layer
     if (game?.threeDepth) {
-      game.threeDepth.sync(camera, vehicle, game.echoManager?.relics);
+      game.threeDepth.sync(camera, vehicle, game.echoManager?.relics, worldSim);
     }
 
     ctx.save();
-    this.drawSky(width, height, camera, biome);
+    if (worldSim) {
+      worldSim.drawSkyLayer(ctx, width, height, camera, biome);
+    } else {
+      this.drawSky(width, height, camera, biome);
+    }
 
     ctx.save();
     ctx.translate(width / 2, height / 2);
@@ -204,25 +232,45 @@ class R0 {
     const shake = camera.shakeOffset;
     ctx.translate(-camera.x + shake.x, -camera.y + shake.y);
 
-    this.drawParallax(camera, width, height, time, biome);
-    this.drawTerrain(camera, width, height, biome);
-    this.drawProps(propManager, camera);
+    const safeLayer = (fn) => {
+      ctx.save();
+      try {
+        fn();
+      } catch (err) {
+        console.warn("[Renderer] Layer error:", err);
+      } finally {
+        ctx.restore();
+      }
+    };
+
+    safeLayer(() => this.drawParallax(camera, width, height, time, biome, worldSim));
+    if (worldSim) {
+      safeLayer(() => worldSim.drawMidgroundLife(ctx, camera, this.terrain));
+    }
+    safeLayer(() => this.drawTerrain(camera, width, height, biome, worldSim));
+    safeLayer(() => this.drawProps(propManager, camera));
 
     if (game?.echoManager) {
-      this.drawMountainEchoes(game.echoManager, camera);
+      safeLayer(() => this.drawMountainEchoes(game.echoManager, camera));
     }
 
-    this.drawParticles(particles, ["dust", "snow", "grass", "wood"]);
-    this.drawVehicle(vehicle, biome);
-    this.drawParticles(particles, ["spark", "grit", "stone"]);
+    safeLayer(() => this.drawParticles(particles, ["dust", "snow", "grass", "wood"]));
+    safeLayer(() => this.drawVehicle(vehicle, biome, worldSim));
+    safeLayer(() => this.drawParticles(particles, ["spark", "grit", "stone"]));
 
     if (debug) {
-      this.drawDebug(allBodies, vehicle, camera, game);
+      safeLayer(() => this.drawDebug(allBodies, vehicle, camera, game));
     }
 
     ctx.restore();
 
-    this.drawGrain(width, height);
+    if (worldSim) {
+      worldSim.drawAtmosphericOverlay(ctx, width, height, camera, vehicle);
+    }
+
+    if ((x.visual.renderScale ?? 1) >= 0.88) {
+      this.drawGrain(width, height);
+    }
     this.drawVignette(width, height);
 
     if (debug && game) {
@@ -259,22 +307,27 @@ class R0 {
     ctx.restore();
   }
 
-  drawParallax(cam, w, h, time, biome) {
+  drawParallax(cam, w, h, time, biome, worldSim = null) {
     const ctx = this.ctx;
+    const amb = worldSim?.state?.lighting?.ambientIntensity ?? 1.0;
+    const darken = b(1.0 - amb, 0, 0.58);
+    const tintLayer = (hex) => (typeof lerpHexColor === "function" ? lerpHexColor(hex, "#141b22", darken) : hex);
+
     const layers = [
-      { speed: 0.08, base: 240, amp: 145, freq: 0.0018, color: biome.far, opacity: 0.62, seed: 31 },
-      { speed: 0.22, base: 165, amp: 112, freq: 0.0026, color: biome.mid, opacity: 0.78, seed: 44 },
-      { speed: 0.42, base: 95,  amp: 78,  freq: 0.0038, color: biome.near, opacity: 0.92, seed: 57 },
+      { speed: 0.08, base: 240, amp: 145, freq: 0.0018, color: tintLayer(biome.far), opacity: 0.62, seed: 31 },
+      { speed: 0.22, base: 165, amp: 112, freq: 0.0026, color: tintLayer(biome.mid), opacity: 0.78, seed: 44 },
+      { speed: 0.42, base: 95,  amp: 78,  freq: 0.0038, color: tintLayer(biome.near), opacity: 0.92, seed: 57 },
     ];
 
     const spanX = w / cam.zoom;
-    const left = cam.x - spanX * 0.8;
-    const right = cam.x + spanX * 0.8;
-    const bottomY = Math.max(cam.y + (h / cam.zoom) + 1200, 16000);
-    const step = 20;
+    const left = cam.x - spanX * 0.68;
+    const right = cam.x + spanX * 0.68;
+    const bottomY = Math.max(cam.y + (h / cam.zoom) + 900, 12000);
+    const step = 38;
 
-    layers.forEach((l) => {
-      const noise = K0(l.seed);
+    for (let li = 0; li < layers.length; li++) {
+      const l = layers[li];
+      const noise = this.parallaxNoises[l.seed] || K0(l.seed);
       ctx.save();
       ctx.fillStyle = l.color;
       ctx.globalAlpha = l.opacity;
@@ -285,8 +338,7 @@ class R0 {
         const z = px - cam.x * (1 - l.speed);
         const ridge =
           noise(z * l.freq) * l.amp +
-          noise(z * l.freq * 2.6) * (l.amp * 0.42) +
-          Math.abs(noise(z * l.freq * 5.8)) * (l.amp * 0.18);
+          noise(z * l.freq * 2.6) * (l.amp * 0.42);
         const py = x.world.groundBase + camElevOffset - l.base - ridge;
         ctx.lineTo(px, py);
       }
@@ -294,15 +346,15 @@ class R0 {
       ctx.closePath();
       ctx.fill();
       ctx.restore();
-    });
+    }
   }
 
-  drawTerrain(cam, w, h, biome) {
+  drawTerrain(cam, w, h, biome, worldSim = null) {
     const ctx = this.ctx;
     const terrain = this.terrain;
     const spanX = w / cam.zoom;
-    const left = cam.x - spanX * 0.75;
-    const right = cam.x + spanX * 0.75;
+    const left = cam.x - spanX * 0.66;
+    const right = cam.x + spanX * 0.66;
 
     const firstX = terrain.samples[0]?.x ?? 0;
     const step = terrain.step;
@@ -313,7 +365,7 @@ class R0 {
     if (startIdx >= endIdx || !terrain.samples[startIdx] || !terrain.samples[endIdx]) return;
 
     // 1. Terrain Bedrock Fill with Subterranean Depth Gradient & Topographic Strata
-    const bottomY = Math.max(cam.y + (h / cam.zoom) + 1200, 16000);
+    const bottomY = Math.max(cam.y + (h / cam.zoom) + 900, 12000);
     ctx.save();
     const gradTop = cam.y - 80;
     const gradBot = cam.y + 340;
@@ -334,30 +386,28 @@ class R0 {
     ctx.closePath();
     ctx.fill();
 
-    // Subterranean Topographic Contour Lines (clipped inside bedrock)
-    ctx.save();
-    ctx.clip();
-    ctx.strokeStyle = "rgba(239, 231, 214, 0.048)";
+    // Subterranean Topographic Contour Lines (batched single stroke)
+    ctx.strokeStyle = "rgba(239, 231, 214, 0.045)";
     ctx.lineWidth = 1.0;
-    for (let layer = 1; layer <= 6; layer++) {
-      const depthOffset = 85 + layer * 34;
-      ctx.beginPath();
+    ctx.beginPath();
+    for (let layer = 1; layer <= 3; layer++) {
+      const depthOffset = 75 + layer * 55;
       let cMoved = false;
-      for (let i = startIdx; i <= endIdx; i += 2) {
+      for (let i = startIdx; i <= endIdx; i += 6) {
         const p = terrain.samples[i];
         if (!p) continue;
-        const wave = Math.sin(p.x * 0.0045 + layer * 1.7) * 18 + Math.cos(p.x * 0.011 - layer * 0.9) * 9;
+        const wave = Math.sin(p.x * 0.0045 + layer * 1.7) * 16;
         const cy = p.y + depthOffset + wave;
         if (!cMoved) { ctx.moveTo(p.x, cy); cMoved = true; }
         else ctx.lineTo(p.x, cy);
       }
-      ctx.stroke();
     }
-    ctx.restore();
+    ctx.stroke();
 
-    // 2. Illustrated Top Crust / Foliage Ribbon
+    // 2. Illustrated Top Crust / Foliage Ribbon (modulated by seasonal snow cover)
+    const snowCov = worldSim?.state?.memory?.snowCover ?? 0;
     ctx.lineWidth = 9.0;
-    ctx.strokeStyle = biome.groundTop;
+    ctx.strokeStyle = snowCov > 0.35 ? "#dde5eb" : biome.groundTop;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
     ctx.beginPath();
@@ -372,7 +422,7 @@ class R0 {
 
     // 3. Highlight Ink Line
     ctx.lineWidth = 2.4;
-    ctx.strokeStyle = biome.groundTopLight;
+    ctx.strokeStyle = snowCov > 0.25 ? "#f4f8fb" : biome.groundTopLight;
     ctx.beginPath();
     moved = false;
     for (let i = startIdx; i <= endIdx; i++) {
@@ -398,50 +448,57 @@ class R0 {
     ctx.restore();
 
     this.drawTerrainDetails(terrain, left, right, biome);
-    this.drawLandmarks(cam, left, right);
+    if (worldSim) {
+      worldSim.drawWorldEcosystem(ctx, cam, terrain, left, right, biome);
+    }
+    this.drawLandmarks(cam, left, right, worldSim);
   }
 
   drawTerrainDetails(terrain, left, right, biome) {
     const ctx = this.ctx;
     ctx.save();
-    const step = 32;
+    const step = 48;
     const start = Math.floor(left / step) * step;
     const end = Math.ceil(right / step) * step;
 
+    ctx.strokeStyle = biome.accent;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
     for (let q = start; q <= end; q += step) {
-      const y = terrain.heightAt(q);
-      const slope = terrain.slopeAt(q);
       const mat = terrain.materialAt(q);
-
       if (mat.name === "grass") {
-        ctx.strokeStyle = biome.accent;
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
+        const y = terrain.heightAt(q);
         ctx.moveTo(q, y - 2);
         ctx.lineTo(q + 3, y - 8);
         ctx.moveTo(q + 4, y - 2);
         ctx.lineTo(q + 8, y - 9);
-        ctx.stroke();
-      } else if (mat.name === "rock" || mat.name === "gravel") {
-        ctx.fillStyle = "#1b1f1d";
-        ctx.beginPath();
-        ctx.arc(q + 2, y - 2, 2.0, 0, Math.PI * 2);
-        ctx.arc(q + 10, y - 1, 1.4, 0, Math.PI * 2);
-        ctx.fill();
-      } else if (mat.name === "snow") {
-        ctx.fillStyle = "rgba(255,255,255,0.7)";
-        ctx.beginPath();
-        ctx.ellipse(q + 5, y - 2, 5, 2, slope, 0, Math.PI * 2);
-        ctx.fill();
       }
     }
+    ctx.stroke();
+
+    ctx.fillStyle = "#1b1f1d";
+    ctx.beginPath();
+    for (let q = start; q <= end; q += step) {
+      const mat = terrain.materialAt(q);
+      if (mat.name === "rock" || mat.name === "gravel") {
+        const y = terrain.heightAt(q);
+        ctx.moveTo(q + 4, y - 2);
+        ctx.arc(q + 2, y - 2, 2.0, 0, Math.PI * 2);
+      }
+    }
+    ctx.fill();
     ctx.restore();
   }
 
-  drawLandmarks(cam, left, right) {
+  drawLandmarks(cam, left, right, worldSim = null) {
     const ctx = this.ctx;
-    for (const b of BIOMES) {
-      const lm = b.landmark;
+    const ws = worldSim?.state;
+    const windX = ws ? ws.windVector.x : 4;
+    const isNight = ws ? ws.sun.elevation < 0.16 : false;
+    const snowCov = ws?.memory?.snowCover ?? 0;
+
+    for (const bItem of BIOMES) {
+      const lm = bItem.landmark;
       if (!lm || lm.x < left - 80 || lm.x > right + 80) continue;
       const ly = this.terrain.heightAt(lm.x);
 
@@ -453,7 +510,7 @@ class R0 {
         ctx.save();
         ctx.translate(0, -95);
         ctx.scale(0.68, 0.68);
-        ctx.globalAlpha = 0.65;
+        ctx.globalAlpha = 0.72;
 
         // Timber foundation stilts on the background cliff
         ctx.strokeStyle = "#5a4d41";
@@ -473,8 +530,17 @@ class R0 {
         ctx.fillRect(-32, -34, 64, 34);
         ctx.strokeRect(-32, -34, 64, 34);
 
-        // Window with warm lantern light
-        ctx.fillStyle = "#efd07b";
+        // Window with warm lantern light (brighter halo at night/dusk)
+        if (isNight) {
+          const glow = ctx.createRadialGradient(-10, -18, 2, -10, -18, 28);
+          glow.addColorStop(0, "rgba(255, 215, 110, 0.65)");
+          glow.addColorStop(1, "rgba(255, 215, 110, 0)");
+          ctx.fillStyle = glow;
+          ctx.beginPath();
+          ctx.arc(-10, -18, 28, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.fillStyle = isNight ? "#ffe484" : "#efd07b";
         ctx.fillRect(-16, -24, 12, 12);
         ctx.strokeRect(-16, -24, 12, 12);
         ctx.beginPath();
@@ -497,13 +563,36 @@ class R0 {
         ctx.fill();
         ctx.stroke();
 
-        // Radio mast & windsock
+        if (snowCov > 0.15) {
+          ctx.strokeStyle = `rgba(245, 250, 255, ${Math.min(0.95, snowCov)})`;
+          ctx.lineWidth = 4.5;
+          ctx.beginPath();
+          ctx.moveTo(-36, -35);
+          ctx.lineTo(0, -56);
+          ctx.lineTo(36, -35);
+          ctx.stroke();
+          ctx.strokeStyle = "#1b1f1d";
+          ctx.lineWidth = 2.4;
+        }
+
+        // Radio mast & wind-reactive windsock
         ctx.beginPath();
         ctx.moveTo(22, -56);
         ctx.lineTo(22, -92);
         ctx.moveTo(16, -76);
         ctx.lineTo(28, -76);
         ctx.stroke();
+
+        const sockLen = b(8 + Math.abs(windX) * 0.9, 8, 22) * (windX >= 0 ? 1 : -1);
+        const sockFlutter = Math.sin(Date.now() * 0.012) * 2.5;
+        ctx.fillStyle = "#d4622a";
+        ctx.beginPath();
+        ctx.moveTo(22, -90);
+        ctx.lineTo(22 + sockLen, -88 + sockFlutter);
+        ctx.lineTo(22 + sockLen, -84 + sockFlutter);
+        ctx.lineTo(22, -85);
+        ctx.closePath();
+        ctx.fill();
 
         ctx.fillStyle = "#d4622a";
         ctx.beginPath();
@@ -512,7 +601,7 @@ class R0 {
 
         ctx.restore();
       } else if (lm.type === "cairn") {
-        // High Crag Cairn & Prayer Flag String
+        // High Crag Cairn & Wind-Reactive Prayer Flag String
         ctx.fillStyle = "#565e61";
         ctx.strokeStyle = "#1b1f1d";
         ctx.lineWidth = 1.8;
@@ -530,11 +619,14 @@ class R0 {
         ctx.stroke();
 
         const flags = ["#d4622a", "#2ea3a5", "#efd07b", "#efe7d6"];
+        const tNow = Date.now() * 0.01;
         for (let f = 0; f < flags.length; f++) {
+          const flutter = Math.sin(tNow + f * 1.3) * (1.5 + Math.abs(windX) * 0.25);
+          const stretch = b(windX * 0.4, -5, 8);
           ctx.fillStyle = flags[f];
           ctx.beginPath();
           ctx.moveTo(-18 + f * 9, -50 + f * 3);
-          ctx.lineTo(-12 + f * 9, -44 + f * 3);
+          ctx.lineTo(-11 + f * 9 + stretch, -44 + f * 3 + flutter);
           ctx.lineTo(-18 + f * 9, -42 + f * 3);
           ctx.closePath();
           ctx.fill();
@@ -590,12 +682,12 @@ class R0 {
 
     for (const item of propManager.activeProps.values()) {
       const def = item.def;
-      const b = item.bodies[0];
-      if (!b) continue;
+      const bBody = item.bodies[0];
+      if (!bBody) continue;
 
       ctx.save();
-      ctx.translate(b.position.x, b.position.y);
-      ctx.rotate(b.angle);
+      ctx.translate(bBody.position.x, bBody.position.y);
+      ctx.rotate(bBody.angle);
 
       if (def.type === "sign") {
         ctx.fillStyle = item.smashed ? "#745839" : "#a88965";
@@ -654,10 +746,31 @@ class R0 {
     }
   }
 
-  drawVehicle(vehicle, biome) {
+  drawVehicle(vehicle, biome, worldSim = null) {
     const ctx = this.ctx;
     const chassis = vehicle.chassis;
     const vCfg = vehicle.archetype;
+    const ws = worldSim?.state;
+
+    // 0. Dynamic Sun-Angle Ground Shadow on Terrain Surface
+    if (this.terrain) {
+      const groundY = this.terrain.heightAt(chassis.position.x);
+      const heightAbove = Math.max(0, groundY - chassis.position.y);
+      if (heightAbove < 280) {
+        const shadowDirX = ws?.sun?.shadowDirX ?? 0.35;
+        const shadowAlpha = (ws?.lighting?.shadowAlpha ?? 0.22) * b(1 - heightAbove / 280, 0.15, 1);
+        const shadowSpread = 1 + heightAbove * 0.004;
+        const gSlope = this.terrain.slopeAt(chassis.position.x);
+        ctx.save();
+        ctx.translate(chassis.position.x + shadowDirX * (12 + heightAbove * 0.35), groundY + 1.5);
+        ctx.rotate(Math.atan(gSlope));
+        ctx.fillStyle = `rgba(12, 16, 15, ${shadowAlpha.toFixed(3)})`;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, (vCfg.chassisWidth * 0.58 + Math.abs(shadowDirX) * 18) * shadowSpread, 5.5 * shadowSpread, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
 
     ctx.save();
     ctx.translate(chassis.position.x, chassis.position.y);
@@ -714,7 +827,7 @@ class R0 {
     ctx.restore();
 
     // Articulated Driver
-    this.drawArticulatedDriver(vehicle.driver, vehicle);
+    this.drawArticulatedDriver(vehicle.driver, vehicle, worldSim);
 
     // Roll cage bar
     ctx.beginPath();
@@ -725,11 +838,12 @@ class R0 {
     ctx.strokeStyle = "#1b1f1d";
     ctx.stroke();
 
-    // Whip Antenna & Expedition Pennant Flag
+    // Whip Antenna & Expedition Pennant Flag (coupled to global WindSystem + vehicle velocity)
     const antX = -w / 2 + 16;
     const antBaseY = -h / 2 - 28;
     const antTopY = antBaseY - 24;
-    const antBend = Math.sin(Date.now() * 0.006) * 3 - (vehicle.forwardSpeed || 0) * 0.6;
+    const windPush = (ws?.windVector?.x ?? 0) * 0.55;
+    const antBend = Math.sin(Date.now() * 0.006) * 3 + windPush - (vehicle.forwardSpeed || 0) * 0.6;
     ctx.strokeStyle = "#1b1f1d";
     ctx.lineWidth = 1.6;
     ctx.beginPath();
@@ -737,20 +851,22 @@ class R0 {
     ctx.quadraticCurveTo(antX + antBend * 0.5, antBaseY - 12, antX + antBend, antTopY);
     ctx.stroke();
     // Triangular pennant flag
+    const flagDir = antBend > 1.5 ? 1 : -1;
     ctx.fillStyle = vCfg.accentColor;
     ctx.strokeStyle = "#1b1f1d";
     ctx.lineWidth = 1.2;
     ctx.beginPath();
     ctx.moveTo(antX + antBend, antTopY);
-    ctx.lineTo(antX + antBend - 14, antTopY + 4);
+    ctx.lineTo(antX + antBend + flagDir * 14, antTopY + 4 + Math.sin(Date.now() * 0.012) * 1.6);
     ctx.lineTo(antX + antBend, antTopY + 8);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
 
-    // Front Rally Auxiliary Spot Lamps
+    // Front Rally Auxiliary Spot Lamps (with volumetric long-beam cone at dusk/night/fog/storm)
     const lampX = w / 2 - 8;
     const lampY = -h / 2 + 2;
+    const lowLight = ws ? (ws.sun.elevation < 0.22 || ws.fogDensity > 0.35 || ws.precipitation > 0.35) : false;
     ctx.save();
     ctx.strokeStyle = "#1b1f1d";
     ctx.lineWidth = 2.0;
@@ -763,16 +879,21 @@ class R0 {
     ctx.arc(lampX + 5, lampY - 2, 4.5, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
-    ctx.fillStyle = "#fadb6a";
+    ctx.fillStyle = lowLight ? "#fff29c" : "#fadb6a";
     ctx.beginPath();
     ctx.ellipse(lampX + 6.5, lampY - 2, 2.2, 3.8, 0, 0, Math.PI * 2);
     ctx.fill();
     // Warm halogen beam forward
-    ctx.fillStyle = "rgba(255, 235, 150, 0.14)";
+    const beamLen = lowLight ? 185 : 52;
+    const beamSpread = lowLight ? 38 : 12;
+    const beamGrad = ctx.createLinearGradient(lampX + 7, lampY - 2, lampX + beamLen, lampY - 2);
+    beamGrad.addColorStop(0, lowLight ? "rgba(255, 240, 165, 0.42)" : "rgba(255, 235, 150, 0.16)");
+    beamGrad.addColorStop(1, "rgba(255, 235, 150, 0)");
+    ctx.fillStyle = beamGrad;
     ctx.beginPath();
     ctx.moveTo(lampX + 7, lampY - 4);
-    ctx.lineTo(lampX + 48, lampY - 14);
-    ctx.lineTo(lampX + 48, lampY + 8);
+    ctx.lineTo(lampX + beamLen, lampY - beamSpread);
+    ctx.lineTo(lampX + beamLen, lampY + beamSpread * 0.75);
     ctx.lineTo(lampX + 7, lampY);
     ctx.closePath();
     ctx.fill();
@@ -916,7 +1037,7 @@ class R0 {
     }
   }
 
-  drawArticulatedDriver(driver, vehicle) {
+  drawArticulatedDriver(driver, vehicle, worldSim = null) {
     const ctx = this.ctx;
     // Driver seated naturally inside the cockpit (or driven by physical Matter.js crash ragdoll)
     let hipX = -26;
@@ -968,8 +1089,9 @@ class R0 {
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
 
-    // 1. Dynamic Wind-Blown Expedition Scarf (Trailing silk ribbon)
-    const spd = vehicle ? Math.abs(vehicle.forwardSpeed || 0) : 0;
+    // 1. Dynamic Wind-Blown Expedition Scarf (Trailing silk ribbon coupled to global wind + vehicle speed)
+    const windRel = (worldSim?.state?.windVector?.x ?? 0) * 0.35;
+    const spd = (vehicle ? Math.abs(vehicle.forwardSpeed || 0) : 0) + Math.abs(windRel);
     const time = Date.now() * 0.008;
     const scarfDir = (vehicle && vehicle.forwardSpeed < -0.5) ? 1 : -1;
     const scarfWave1 = Math.sin(time * 3.5) * (3 + spd * 0.4);
@@ -1252,54 +1374,57 @@ class R0 {
 
   drawParticles(particleSystem, kinds) {
     const ctx = this.ctx;
-    const kindSet = new Set(kinds);
-
-    for (const p of particleSystem.pool) {
-      if (!p.active || !kindSet.has(p.kind)) continue;
-      ctx.save();
+    ctx.save();
+    for (let i = 0; i < particleSystem.pool.length; i++) {
+      const p = particleSystem.pool[i];
+      if (!p.active || !kinds.includes(p.kind)) continue;
       ctx.globalAlpha = p.alpha;
       ctx.fillStyle = p.color;
-      ctx.translate(p.x, p.y);
-      ctx.rotate(p.angle);
-      ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
-      ctx.restore();
+      const half = p.size * 0.5;
+      ctx.fillRect(p.x - half, p.y - half, p.size, p.size);
     }
+    ctx.restore();
   }
 
   drawGrain(w, h) {
+    const ctx = this.ctx;
     if (!this.grainCanvas) {
       const c = document.createElement("canvas");
-      c.width = 180;
-      c.height = 180;
+      c.width = 160;
+      c.height = 160;
       const gctx = c.getContext("2d");
-      const img = gctx.createImageData(180, 180);
+      const img = gctx.createImageData(160, 160);
       for (let i = 0; i < img.data.length; i += 4) {
-        const val = Math.random() * 255;
+        const val = Math.random() > 0.5 ? 24 : 225;
         img.data[i] = val;
         img.data[i + 1] = val;
         img.data[i + 2] = val;
-        img.data[i + 3] = 18;
+        img.data[i + 3] = 6;
       }
       gctx.putImageData(img, 0, 0);
       this.grainCanvas = c;
+      this.grainPattern = ctx.createPattern(c, "repeat");
     }
 
-    const ctx = this.ctx;
+    if (!this.grainPattern) return;
     ctx.save();
-    ctx.globalCompositeOperation = "multiply";
-    const pat = ctx.createPattern(this.grainCanvas, "repeat");
-    ctx.fillStyle = pat;
+    ctx.fillStyle = this.grainPattern;
     ctx.fillRect(0, 0, w, h);
     ctx.restore();
   }
 
   drawVignette(w, h) {
     const ctx = this.ctx;
+    if (!this.vigGrad || this.vigW !== w || this.vigH !== h) {
+      this.vigW = w;
+      this.vigH = h;
+      const vig = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.45, w / 2, h / 2, Math.max(w, h) * 0.75);
+      vig.addColorStop(0, "rgba(27,31,29,0)");
+      vig.addColorStop(1, "rgba(27,31,29,0.18)");
+      this.vigGrad = vig;
+    }
     ctx.save();
-    const vig = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.45, w / 2, h / 2, Math.max(w, h) * 0.75);
-    vig.addColorStop(0, "rgba(27,31,29,0)");
-    vig.addColorStop(1, "rgba(27,31,29,0.18)");
-    ctx.fillStyle = vig;
+    ctx.fillStyle = this.vigGrad;
     ctx.fillRect(0, 0, w, h);
     ctx.restore();
   }
@@ -1337,8 +1462,8 @@ class R0 {
     // 2. Static & Dynamic Wireframes
     ctx.strokeStyle = "rgba(212,98,42,0.85)";
     ctx.lineWidth = 1;
-    for (const b of bodies) {
-      const verts = b.vertices;
+    for (const bBody of bodies) {
+      const verts = bBody.vertices;
       if (!verts || verts.length === 0) continue;
       ctx.beginPath();
       ctx.moveTo(verts[0].x, verts[0].y);
@@ -1574,16 +1699,33 @@ class R0 {
     const impInt = (cam?.impact?.intensity ?? 0).toFixed(2);
     const cineRatio = (((cam?.shotDirector?.getCinematicRatio?.() ?? 0) * 100)).toFixed(0);
 
+    const ws = game.worldSim?.state;
+    const wHours = ws ? Math.floor(ws.timeMinutes / 60) : 9;
+    const wMins = ws ? Math.floor(ws.timeMinutes % 60) : 30;
+    const wTimeStr = `${String(wHours).padStart(2, "0")}:${String(wMins).padStart(2, "0")} (${ws?.phaseName || "MORNING"})`;
+    const wSeason = ws ? `${ws.season}${ws.seasonTransition > 0.05 ? `->${ws.targetSeason}` : ""}` : "AUTUMN";
+    const wWeather = ws ? `${ws.weather} (${Math.round((ws.precipitation || 0) * 100)}% PRECIP)` : (biome.weather || "CLEAR");
+    const wTemp = ws ? `${ws.temperature.toFixed(1)}°C` : "8.0°C";
+    const wHum = ws ? `${Math.round(ws.humidity * 100)}%` : "45%";
+    const wWind = ws ? `${ws.windVector.x.toFixed(1)} m/s (GUST ${ws.windGust.toFixed(1)})` : "2.5 m/s";
+    const wEnt = ws?.entityCounts || {};
+    const wLod = ws?.lodCounts || { near: 0, mid: 0, far: 0 };
+    const wEvents = ws?.activeEvents?.length ? ws.activeEvents.join(", ") : "IDLE_ECOSYSTEM";
+    const wSimMs = (ws?.simStepMs ?? 0.2).toFixed(2);
+
     const lines = [
-      `DIAGNOSTICS (F3)  FPS: ${game.fps.toFixed(0)}  STEP: 8.33ms  SEED: ${game.seed}`,
+      `DIAGNOSTICS (F3)  FPS: ${game.fps.toFixed(0)}  STEP: 8.33ms  WORLD_SIM: ${wSimMs}ms  SEED: ${game.seed}`,
+      `WORLD STATE: TIME=${wTimeStr}  SEASON=${wSeason}  TEMP=${wTemp}  HUM=${wHum}`,
+      `WORLD ATMO: WEATHER=[${wWeather}]  WIND=${wWind}  MOON=${ws?.moon?.phaseName || "CRESCENT"}`,
+      `WORLD ENTITIES: BIRDS=${wEnt.birds || 0} ANIM=${wEnt.animals || 0} INS=${wEnt.insects || 0} NPC=${wEnt.npcs || 0} VEH=${wEnt.traffic || 0} CLD=${wEnt.clouds || 0}`,
+      `WORLD LOD & EVENTS: NEAR=${wLod.near} MID=${wLod.mid} FAR=${wLod.far}  EVENTS=[${wEvents}]`,
       `CAMERA DIRECTOR: STATE=[${camState}]  SHOT=[${camShot}]  CINE_BUDGET: ${cineRatio}%`,
       `CAM OPTICS: ZOOM=${camZoom}x  FOV=${camFov}°  ROLL=${camRollDeg}°  LOOKAHEAD=${camLook}px`,
       `CAM SPRING: VEL=(${spVelX}, ${spVelY})  ERR=(${spErrX}, ${spErrY})  IMPACT=${impInt}`,
       `CAM FOCUS: TARGET=(${Math.round(cam?.targetPoint?.x || 0)}, ${Math.round(cam?.targetPoint?.y || 0)})  TERRAIN=(${Math.round(cam?.terrainFocusPoint?.x || 0)}, ${Math.round(cam?.terrainFocusPoint?.y || 0)})`,
       `VEHICLE: ${v.archetype.name.toUpperCase()}  WORLD BODIES: ${Matter.Composite.allBodies(game.engine.world).length}`,
       `STREAMING: CHUNK #${chunkId}/${this.terrain.chunks?.length || 0} (ACTIVE CHUNKS: ${this.terrain.activeChunkCount || 0}, BODIES: ${this.terrain.bodies?.length || 0})`,
-      `BIOME: ${biome.act || "ACT I"} // ${biome.name.toUpperCase()}  WEATHER: ${biome.weather || "CLEAR"}`,
-      `SEGMENT: ${seg.name} [${seg.type}]  DIFF: ${seg.difficulty ?? 0.2} (${seg.diffCategory || "MOD"})`,
+      `BIOME: ${biome.act || "ACT I"} // ${biome.name.toUpperCase()}  SEG: ${seg.name} [${seg.type}]`,
       `SLOPE: ${(slope * 180 / Math.PI).toFixed(1)}° (MAX ${seg.maxSlope ?? 20}°)  CURV: ${curv.toFixed(4)}  MAT: ${mat.name.toUpperCase()}`,
       `UPCOMING (+15m): ${nextSeg.name} [${nextSeg.type}]  JUMP_POT: ${nextSeg.jumpPotential || "Low"}`,
       `WORLD STATS: ${tStats.totalDistanceKm || 8.2}km | GAIN:+${tStats.totalElevationGain || 0}m | DROP:-${tStats.maxDescentMeters || 0}m | VAR:${tStats.diversityPercent || 94}%`,
@@ -1591,22 +1733,22 @@ class R0 {
       `SPEED: ${(Math.abs(v.forwardSpeed) * 7.2).toFixed(1)} km/h  VERT: ${vel.y.toFixed(1)}  RPM: ${(v.rpm * 100).toFixed(0)}%`,
       `SUSPENSION: R=${v.wheels[0].compression.toFixed(2)} F=${v.wheels[1].compression.toFixed(2)}  ROOF: ${v.roofContact}`,
       `AIRBORNE: ${v.airborne}  AIRTIME: ${(game.stunts.airtime / 1000).toFixed(2)}s  STUNT: ${game.stunts.activeStuntName || "NONE"}`,
-      `SEEDS: [1]FLAT(1001) [2]STEEP(48192) [3]JUMP(77234) [4]VALLEY(33109)  [T] EXPORT JSON`,
+      `HOTKEYS: [1-4]SEEDS [5]+3H_TIME [6]WEATHER [7]SEASON [8]WORLD_EVENT [T]EXPORT`,
     ];
 
     ctx.save();
     ctx.fillStyle = "rgba(18, 22, 20, 0.88)";
-    const panelW = 550;
-    const panelH = lines.length * 14.5 + 18;
+    const panelW = 575;
+    const panelH = lines.length * 14.2 + 18;
     ctx.fillRect(w - panelW - 16, h - panelH - 16, panelW, panelH);
     ctx.strokeStyle = "var(--hot)";
     ctx.lineWidth = 1.5;
     ctx.strokeRect(w - panelW - 16, h - panelH - 16, panelW, panelH);
 
-    ctx.font = "10.2px 'Courier New', monospace";
+    ctx.font = "10.0px 'Courier New', monospace";
     ctx.fillStyle = "#efe7d6";
     for (let i = 0; i < lines.length; i++) {
-      ctx.fillText(lines[i], w - panelW - 6, h - panelH + 4 + i * 14.5);
+      ctx.fillText(lines[i], w - panelW - 6, h - panelH + 4 + i * 14.2);
     }
     ctx.restore();
   }

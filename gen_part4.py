@@ -343,14 +343,28 @@ class f0 {
   // Projects wheel strictly onto the chassis local suspension strut axis (C_perp = 0)
   // and enforces physical bump-stop & droop-stop travel limits [minY, maxY].
   // --------------------------------------------------------------------------
-  solvePrismaticSuspension() {
+  solvePrismaticSuspension(terrain = null) {
     const vCfg = this.archetype;
-    const cPos = this.chassis.position;
-    const cVel = this.chassis.velocity;
+    let cPos = this.chassis.position;
+    let cVel = this.chassis.velocity;
     const theta = this.chassis.angle;
     const omega = this.chassis.angularVelocity;
     const cos = Math.cos(theta);
     const sin = Math.sin(theta);
+
+    // Anti-tunneling guard for chassis center against continuous terrain spline
+    if (terrain && Number.isFinite(cPos.x) && Number.isFinite(cPos.y)) {
+      const cGroundY = terrain.heightAt(cPos.x);
+      const minChassisSurfaceY = cGroundY - 10;
+      if (cPos.y > minChassisSurfaceY) {
+        Matter.Body.setPosition(this.chassis, { x: cPos.x, y: minChassisSurfaceY });
+        if (cVel.y > 0) {
+          Matter.Body.setVelocity(this.chassis, { x: cVel.x, y: 0 });
+        }
+        cPos = this.chassis.position;
+        cVel = this.chassis.velocity;
+      }
+    }
 
     // Local chassis basis vectors: tHat = forward, nHat = downward strut axis
     const tHat = { x: cos, y: sin };
@@ -379,8 +393,21 @@ class f0 {
 
       // Project position onto prismatic strut line if lateral drift or travel limit exceeded
       if (Math.abs(errX) > 0.15 || Math.abs(errY) > 0.05) {
-        const newWorldX = cPos.x + targetX * tHat.x + clampedY * nHat.x;
-        const newWorldY = cPos.y + targetX * tHat.y + clampedY * nHat.y;
+        let newWorldX = cPos.x + targetX * tHat.x + clampedY * nHat.x;
+        let newWorldY = cPos.y + targetX * tHat.y + clampedY * nHat.y;
+
+        // Prevent bump-stop projection from pushing wheel below terrain spline
+        if (terrain && Number.isFinite(newWorldX) && Number.isFinite(newWorldY)) {
+          const wheelFloorY = terrain.heightAt(newWorldX) - vCfg.wheelRadius + 2.5;
+          if (newWorldY > wheelFloorY) {
+            const penY = newWorldY - wheelFloorY;
+            newWorldY = wheelFloorY;
+            if (cos > 0.15 && penY > 0.5) {
+              Matter.Body.setPosition(this.chassis, { x: cPos.x, y: cPos.y - penY * 0.65 });
+              cPos = this.chassis.position;
+            }
+          }
+        }
 
         // Mount velocity in world space: v_mount = v_c + omega x r_mount
         const mountVx = cVel.x - omega * (targetX * sin + clampedY * cos);
@@ -417,7 +444,7 @@ class f0 {
     const dtSec = Math.max(0.001, dt / 1000);
 
     // 1. Enforce 1D Prismatic Strut Axis & Travel Limits before applying forces
-    this.solvePrismaticSuspension();
+    this.solvePrismaticSuspension(terrain);
 
     if (this.airborne) {
       this.airborneTimer += dt;

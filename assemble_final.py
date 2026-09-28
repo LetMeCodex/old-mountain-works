@@ -6,6 +6,7 @@ import gen_part1
 import gen_part2
 import gen_part3
 import gen_part4
+import gen_world
 import gen_part5
 import gen_hud
 import gen_part6
@@ -17,6 +18,7 @@ for part_file in [
     'engine_part2.js',
     'engine_part3.js',
     'engine_part4.js',
+    'engine_world.js',
     'engine_part5.js',
     'engine_hud.js',
     'engine_part6.js',

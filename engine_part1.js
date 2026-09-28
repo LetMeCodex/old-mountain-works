@@ -114,7 +114,7 @@ const VEHICLE_ARCHETYPES = {
 const n0 = {
   gravity: 1.65,
   fixedDelta: 1000 / 120, // 8.333ms high-precision substep
-  maxSubSteps: 6,
+  maxSubSteps: 4,
 };
 
 const r0 = {
@@ -140,6 +140,8 @@ const i0 = {
   screenShake: true,
   reducedMotion: false,
   muted: false,
+  quality: "auto", // auto | high | medium | low
+  renderScale: 1.0,
 };
 
 const x = {
@@ -154,7 +156,7 @@ const x = {
     groundBase: 560,
     startX: 220,
     chunkSamples: 20, // 360px (9m) per physics collision chunk
-    activePhysicsRadius: 3200, // vehicle X +- 3,200px active collision window
+    activePhysicsRadius: 2160, // vehicle X +- 2,160px active collision window
   },
 };
 

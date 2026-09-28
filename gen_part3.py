@@ -1043,9 +1043,9 @@ class P0 {
   }
 
   getBiomeAtDist(distMeters) {
-    for (const b of BIOMES) {
-      if (distMeters >= b.minDist && distMeters < b.maxDist) {
-        return b;
+    for (const bItem of BIOMES) {
+      if (distMeters >= bItem.minDist && distMeters < bItem.maxDist) {
+        return bItem;
       }
     }
     return BIOMES[BIOMES.length - 1];
