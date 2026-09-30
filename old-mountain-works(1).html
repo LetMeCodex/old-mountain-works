@@ -1839,78 +1839,84 @@ function K0(seed) {
 const I0 = (p) => Number.isFinite(p.x) && Number.isFinite(p.y);
 
 // ----------------------------------------------------------------------------
-// Vehicle Archetypes (Natural-Frequency Matched Prismatic Suspension)
+// Vehicle Archetypes (Vehicle Physics Rebirth: Agile, Spring-Damper Driven)
 // ----------------------------------------------------------------------------
 const VEHICLE_ARCHETYPES = {
   buggy: {
     id: "buggy",
     name: "Trail Buggy",
-    desc: "Balanced agile expedition chassis with progressive prismatic suspension.",
+    desc: "Balanced agile expedition chassis with 38px spring-damper travel and responsive air authority.",
     chassisWidth: 108,
     chassisHeight: 24,
-    chassisMass: 7.4,
+    chassisMass: 6.4,
+    inertiaMultiplier: 1.05,
     wheelRadius: 22,
-    wheelMass: 1.25,
+    wheelMass: 0.92,
     wheelBase: 112,
-    wheelOffsetY: 36,
-    engineTorque: 0.085,
-    brakeTorque: 0.110,
-    maxWheelSpeed: 1.48,
+    wheelOffsetY: 38,
+    engineTorque: 0.118,
+    brakeTorque: 0.145,
+    maxWheelSpeed: 2.25,
+    topSpeed: 29.0,
     suspensionStiffness: 0.16,
-    suspensionDamping: 0.065,
-    suspensionTravel: 24,
-    tireGrip: 1.58,
-    airControl: 0.042,
-    angularDamping: 0.035,
-    centerOfMassOffsetY: 6.0,
+    suspensionDamping: 0.046,
+    suspensionTravel: 38,
+    tireGrip: 1.36,
+    airControl: 0.058,
+    angularDamping: 0.010,
+    centerOfMassOffsetY: 3.5,
     accentColor: "#d4622a",
     chassisColor: "#c8bda6",
   },
   crawler: {
     id: "crawler",
     name: "Mountain Crawler",
-    desc: "Heavy reinforced frame, oversized tires, supreme grip and hill climbing torque.",
+    desc: "Heavy reinforced frame, oversized high-grip tires, 42px travel and deep climbing torque.",
     chassisWidth: 116,
     chassisHeight: 26,
     chassisMass: 9.8,
+    inertiaMultiplier: 1.22,
     wheelRadius: 25,
-    wheelMass: 1.65,
+    wheelMass: 1.32,
     wheelBase: 120,
-    wheelOffsetY: 40,
-    engineTorque: 0.105,
-    brakeTorque: 0.130,
-    maxWheelSpeed: 1.28,
+    wheelOffsetY: 42,
+    engineTorque: 0.146,
+    brakeTorque: 0.168,
+    maxWheelSpeed: 1.78,
+    topSpeed: 23.0,
     suspensionStiffness: 0.19,
-    suspensionDamping: 0.075,
-    suspensionTravel: 28,
-    tireGrip: 1.75,
-    airControl: 0.036,
-    angularDamping: 0.042,
-    centerOfMassOffsetY: 8.0,
+    suspensionDamping: 0.058,
+    suspensionTravel: 42,
+    tireGrip: 1.66,
+    airControl: 0.044,
+    angularDamping: 0.014,
+    centerOfMassOffsetY: 5.5,
     accentColor: "#357a62",
     chassisColor: "#b5a88f",
   },
   rally: {
     id: "rally",
     name: "Alpine Rally",
-    desc: "Lightweight tuned racer with explosive acceleration and high airborne pitch authority.",
+    desc: "Lightweight tuned racer with explosive acceleration, huge airtime and high flip authority.",
     chassisWidth: 102,
     chassisHeight: 22,
     chassisMass: 5.8,
+    inertiaMultiplier: 0.96,
     wheelRadius: 20,
-    wheelMass: 1.0,
+    wheelMass: 0.80,
     wheelBase: 106,
-    wheelOffsetY: 34,
-    engineTorque: 0.092,
-    brakeTorque: 0.115,
-    maxWheelSpeed: 1.74,
+    wheelOffsetY: 36,
+    engineTorque: 0.128,
+    brakeTorque: 0.152,
+    maxWheelSpeed: 2.55,
+    topSpeed: 33.5,
     suspensionStiffness: 0.15,
-    suspensionDamping: 0.058,
-    suspensionTravel: 22,
-    tireGrip: 1.52,
-    airControl: 0.048,
-    angularDamping: 0.030,
-    centerOfMassOffsetY: 5.0,
+    suspensionDamping: 0.040,
+    suspensionTravel: 35,
+    tireGrip: 1.26,
+    airControl: 0.068,
+    angularDamping: 0.008,
+    centerOfMassOffsetY: 2.5,
     accentColor: "#c23a3a",
     chassisColor: "#d2c7b5",
   },
@@ -5251,7 +5257,7 @@ class Driver {
 }
 
 // ----------------------------------------------------------------------------
-// Expedition Vehicle (f0) - Prismatic Suspension & Surface-Tangent Traction
+// Expedition Vehicle (f0) - Vehicle Physics Rebirth: Force-Driven Spring-Damper Core
 // ----------------------------------------------------------------------------
 class f0 {
   archetype;
@@ -5265,6 +5271,10 @@ class f0 {
   groundClearance = 0;
   fuel = 1.0;
   engineTemp = 0.28;
+  centerOfMassOffset = { x: 0, y: -3.5 };
+  bottomOutCooldown = 0;
+  lastLandingQuality = "GROUND";
+  landingPrediction = "LEVEL";
 
   constructor(xPos, yPos, archetypeId = "buggy", audio = null) {
     this.audio = audio;
@@ -5289,19 +5299,22 @@ class f0 {
         label: "chassis",
         collisionFilter: { group: -3 },
         density: vCfg.chassisMass / (vCfg.chassisWidth * vCfg.chassisHeight),
-        friction: 0.12,
-        frictionAir: 0.004,
-        restitution: 0.02,
+        friction: 0.10,
+        frictionAir: 0.0016,
+        restitution: 0.06,
         chamfer: { radius: [6, 6, 12, 12] },
       }
     );
 
-    // High polar moment of inertia prevents twitchy pitching and gives weighty stability
+    // Section 05: Responsive polar moment of inertia (~1.0x instead of over-heavy 2.4x)
     const defInertia = (vCfg.chassisMass * (vCfg.chassisWidth * vCfg.chassisWidth + vCfg.chassisHeight * vCfg.chassisHeight)) / 12;
-    Matter.Body.setInertia(this.chassis, defInertia * 2.4);
+    const inertiaMult = vCfg.inertiaMultiplier ?? 1.05;
+    Matter.Body.setInertia(this.chassis, defInertia * inertiaMult);
 
-    // Low Center of Mass for natural hill-climbing balance
-    Matter.Body.setCentre(this.chassis, { x: 0, y: 4 }, true);
+    // Section 06: Realistic Center of Mass offset (stable climbing, natural wheelies/stoppies/rollover)
+    const comY = vCfg.centerOfMassOffsetY ?? 3.5;
+    this.centerOfMassOffset = { x: 0, y: -comY };
+    Matter.Body.setCentre(this.chassis, { x: 0, y: comY }, true);
 
     const wheelOffsets = [
       { x: -vCfg.wheelBase / 2, y: vCfg.wheelOffsetY }, // Rear wheel (0)
@@ -5322,14 +5335,14 @@ class f0 {
           collisionFilter: { group: -3 },
           density: vCfg.wheelMass / (Math.PI * vCfg.wheelRadius * vCfg.wheelRadius),
           friction: vCfg.tireGrip,
-          frictionStatic: vCfg.tireGrip * 1.5,
-          frictionAir: 0.003,
-          restitution: 0.0, // Zero superball bounce on terrain polygon seams!
+          frictionStatic: vCfg.tireGrip * 1.25,
+          frictionAir: 0.0012,
+          restitution: 0.02,
           slop: 0.01,
         }
       );
 
-      // Symmetric Wishbone + Primary Coilover Strut (paired with exact 1D Prismatic Axis projection)
+      // Symmetric Wishbone + Primary Coilover Strut (Matter.js native spring-damper authority)
       const springStrut = d.default.Constraint.create({
         bodyA: this.chassis,
         pointA: { x: off.x, y: 0 },
@@ -5339,23 +5352,23 @@ class f0 {
         damping: vCfg.suspensionDamping,
       });
 
-      const guideSpread = 22;
+      const guideSpread = 28;
       const guideLen = Math.hypot(guideSpread, vCfg.wheelOffsetY);
       const guideLeft = d.default.Constraint.create({
         bodyA: this.chassis,
         pointA: { x: off.x - guideSpread, y: 0 },
         bodyB: wheel,
         length: guideLen,
-        stiffness: vCfg.suspensionStiffness * 0.85,
-        damping: vCfg.suspensionDamping,
+        stiffness: vCfg.suspensionStiffness * 0.72,
+        damping: vCfg.suspensionDamping * 0.75,
       });
       const guideRight = d.default.Constraint.create({
         bodyA: this.chassis,
         pointA: { x: off.x + guideSpread, y: 0 },
         bodyB: wheel,
         length: guideLen,
-        stiffness: vCfg.suspensionStiffness * 0.85,
-        damping: vCfg.suspensionDamping,
+        stiffness: vCfg.suspensionStiffness * 0.72,
+        damping: vCfg.suspensionDamping * 0.75,
       });
 
       this.constraints.push(springStrut, guideLeft, guideRight);
@@ -5364,11 +5377,13 @@ class f0 {
         body: wheel,
         restOffset: off,
         compression: 0,
+        compressionVelocity: 0,
         lastCompression: 0,
         contact: true,
-        contactGrace: 100,
+        contactGrace: 30,
         slip: 0,
         slipRatio: 0,
+        rpm: 0,
         material: "grass",
       });
     }
@@ -5404,16 +5419,23 @@ class f0 {
     return b(maxSpin / this.archetype.maxWheelSpeed, 0, 1.4);
   }
 
+  get wheelRpm() {
+    const maxSpin = Math.max(...this.wheels.map((w) => Math.abs(w.body.angularVelocity)));
+    return Math.round((maxSpin * 60 * 60) / (Math.PI * 2));
+  }
+
   get airborne() {
     return !this.wheels.some((w) => w.contact);
   }
 
   // --------------------------------------------------------------------------
-  // PRISMATIC LINE CONSTRAINT SOLVER (Inspired by AngeTheGreat line_constraint)
-  // Projects wheel strictly onto the chassis local suspension strut axis (C_perp = 0)
-  // and enforces physical bump-stop & droop-stop travel limits [minY, maxY].
+  // TELESCOPIC STRUT AXIS & BUMP-STOP SOLVER (Sections 03, 09, 10, 11, 12, 13)
+  // Keeps wheel aligned on the axle's longitudinal strut axis (localX = targetX)
+  // while leaving vertical suspension travel (localY & axialVel) 100% free
+  // inside the generous [minAxialY, maxAxialY] window so Matter.js springs
+  // compress, rebound, and unload naturally over crests without any terrain glue!
   // --------------------------------------------------------------------------
-  solvePrismaticSuspension(terrain = null) {
+  solvePrismaticSuspension(terrain = null, dt = 8.333) {
     const vCfg = this.archetype;
     let cPos = this.chassis.position;
     let cVel = this.chassis.velocity;
@@ -5422,12 +5444,15 @@ class f0 {
     const cos = Math.cos(theta);
     const sin = Math.sin(theta);
 
-    // Anti-tunneling guard for chassis center against continuous terrain spline
+    if (this.bottomOutCooldown > 0) {
+      this.bottomOutCooldown = Math.max(0, this.bottomOutCooldown - dt);
+    }
+
+    // Catastrophic anti-tunneling guard ONLY if chassis center penetrates deep below terrain surface
     if (terrain && Number.isFinite(cPos.x) && Number.isFinite(cPos.y)) {
       const cGroundY = terrain.heightAt(cPos.x);
-      const minChassisSurfaceY = cGroundY - 10;
-      if (cPos.y > minChassisSurfaceY) {
-        Matter.Body.setPosition(this.chassis, { x: cPos.x, y: minChassisSurfaceY });
+      if (cPos.y > cGroundY + 18) {
+        Matter.Body.setPosition(this.chassis, { x: cPos.x, y: cGroundY - 10 });
         if (cVel.y > 0) {
           Matter.Body.setVelocity(this.chassis, { x: cVel.x, y: 0 });
         }
@@ -5440,8 +5465,9 @@ class f0 {
     const tHat = { x: cos, y: sin };
     const nHat = { x: -sin, y: cos };
 
-    const minAxialY = Math.max(16, vCfg.wheelOffsetY - vCfg.suspensionTravel * 0.72);
-    const maxAxialY = vCfg.wheelOffsetY + vCfg.suspensionTravel * 0.42;
+    const travel = vCfg.suspensionTravel; // 35 - 42 px generous suspension travel
+    const minAxialY = Math.max(12, vCfg.wheelOffsetY - travel * 0.82);
+    const maxAxialY = vCfg.wheelOffsetY + travel * 0.58;
 
     for (let i = 0; i < this.wheels.length; i++) {
       const w = this.wheels[i];
@@ -5461,50 +5487,56 @@ class f0 {
       const errX = localX - targetX;
       const errY = localY - clampedY;
 
-      // Project position onto prismatic strut line if lateral drift or travel limit exceeded
-      if (Math.abs(errX) > 0.15 || Math.abs(errY) > 0.05) {
-        let newWorldX = cPos.x + targetX * tHat.x + clampedY * nHat.x;
-        let newWorldY = cPos.y + targetX * tHat.y + clampedY * nHat.y;
+      // Mount velocity in world space: v_mount = v_c + omega x r_mount
+      const mountVx = cVel.x - omega * (targetX * sin + clampedY * cos);
+      const mountVy = cVel.y + omega * (targetX * cos - clampedY * sin);
+      const relVx = wVel.x - mountVx;
+      const relVy = wVel.y - mountVy;
+      let axialVel = relVx * nHat.x + relVy * nHat.y;
+      const compressionVel = -axialVel;
 
-        // Prevent bump-stop projection from pushing wheel below terrain spline
-        if (terrain && Number.isFinite(newWorldX) && Number.isFinite(newWorldY)) {
-          const wheelFloorY = terrain.heightAt(newWorldX) - vCfg.wheelRadius + 2.5;
-          if (newWorldY > wheelFloorY) {
-            const penY = newWorldY - wheelFloorY;
-            newWorldY = wheelFloorY;
-            if (cos > 0.15 && penY > 0.5) {
-              Matter.Body.setPosition(this.chassis, { x: cPos.x, y: cPos.y - penY * 0.65 });
-              cPos = this.chassis.position;
-            }
+      // Active spring-damper assist force F = -k*x - c*v within safe Matter.js force scale
+      const compressionPx = vCfg.wheelOffsetY - clampedY;
+      w.compression = b(compressionPx / travel, -1.0, 1.25);
+      w.compressionVelocity = compressionVel;
+
+      // Rebound unloading boost: when compressed spring extends over a crest, push chassis up naturally (Section 12)
+      const springPush = (compressionPx * vCfg.suspensionStiffness * 0.00018 - axialVel * vCfg.suspensionDamping * 0.00045) * this.chassis.mass;
+      if (Math.abs(springPush) > 0.00001 && Number.isFinite(springPush)) {
+        const mountWorld = {
+          x: cPos.x + targetX * tHat.x,
+          y: cPos.y + targetX * tHat.y,
+        };
+        Matter.Body.applyForce(this.chassis, mountWorld, {
+          x: -nHat.x * springPush,
+          y: -nHat.y * springPush,
+        });
+      }
+
+      // Only correct longitudinal axle drift (errX) or hard bump/droop stop limits (errY)
+      if (Math.abs(errX) > 0.35 || Math.abs(errY) > 0.15) {
+        const newWorldX = cPos.x + targetX * tHat.x + clampedY * nHat.x;
+        const newWorldY = cPos.y + targetX * tHat.y + clampedY * nHat.y;
+
+        // Section 11: Bottom-out rebound & impact feedback instead of dead clamping
+        if (localY <= minAxialY && axialVel < 0) {
+          if (compressionVel > 3.5 && this.bottomOutCooldown <= 0) {
+            this.bottomOutCooldown = 180;
+            if (this.audio) this.audio.impact(0.55, "metal", true);
           }
+          axialVel = -axialVel * 0.32; // Physical rubber bump-stop rebound!
+        }
+        if (localY >= maxAxialY && axialVel > 0) {
+          axialVel = 0;
         }
 
-        // Mount velocity in world space: v_mount = v_c + omega x r_mount
-        const mountVx = cVel.x - omega * (targetX * sin + clampedY * cos);
-        const mountVy = cVel.y + omega * (targetX * cos - clampedY * sin);
-
-        // Preserve axial velocity along nHat while damping lateral error velocity along tHat
-        const relVx = wVel.x - mountVx;
-        const relVy = wVel.y - mountVy;
-        let axialVel = relVx * nHat.x + relVy * nHat.y;
-        if (localY <= minAxialY && axialVel < 0) axialVel = 0;
-        if (localY >= maxAxialY && axialVel > 0) axialVel = 0;
-
-        const lateralVel = (relVx * tHat.x + relVy * tHat.y) * 0.15;
-
+        const lateralVel = (relVx * tHat.x + relVy * tHat.y) * 0.12;
         const nextVx = mountVx + tHat.x * lateralVel + nHat.x * axialVel;
         const nextVy = mountVy + tHat.y * lateralVel + nHat.y * axialVel;
 
         Matter.Body.setPosition(w.body, { x: newWorldX, y: newWorldY });
         Matter.Body.setVelocity(w.body, { x: nextVx, y: nextVy });
       }
-
-      // Compute normalized suspension compression [-1, 1]
-      w.compression = b(
-        (vCfg.wheelOffsetY - clampedY) / vCfg.suspensionTravel,
-        -1,
-        1
-      );
     }
   }
 
@@ -5513,13 +5545,23 @@ class f0 {
     const throttleBrake = input.throttle - input.brake;
     const dtSec = Math.max(0.001, dt / 1000);
 
-    // 1. Enforce 1D Prismatic Strut Axis & Travel Limits before applying forces
-    this.solvePrismaticSuspension(terrain);
+    // 1. Update telescopic strut axis & genuine spring-damper forces
+    this.solvePrismaticSuspension(terrain, dt);
 
     if (this.airborne) {
+      if (this.airborneTimer === 0) {
+        this.airRotation = 0;
+        this.lastAirAngle = this.chassis.angle;
+      } else {
+        const dAng = normalizeAngle(this.chassis.angle - (this.lastAirAngle ?? this.chassis.angle));
+        this.airRotation += dAng;
+        this.lastAirAngle = this.chassis.angle;
+      }
       this.airborneTimer += dt;
     } else {
       this.airborneTimer = 0;
+      this.airRotation = 0;
+      this.lastAirAngle = this.chassis.angle;
     }
 
     // Compute true ground clearance under the tires
@@ -5534,19 +5576,21 @@ class f0 {
       this.groundClearance = this.airborne ? 200 : 0;
     }
 
-    // Dynamic Normal Load Distribution & Center of Mass (Sections 11, 12):
+    // Dynamic Normal Load Distribution & Center of Mass (Sections 06, 20, 22, 23):
     const theta = normalizeAngle(this.chassis.angle);
-    const ax = b((this.forwardSpeed - (this.lastForwardSpeed ?? this.forwardSpeed)) / dtSec, -45, 45);
+    const fwdSpd = this.forwardSpeed;
+    const ax = b((fwdSpd - (this.lastForwardSpeed ?? fwdSpd)) / dtSec, -55, 55);
+    this.lastForwardSpeed = fwdSpd;
     const m = this.chassis.mass;
     const g = 9.81 * 8.0;
     const W = m * g;
     const L = vCfg.wheelBase;
     const b_dist = L / 2;
     const a_dist = L / 2;
-    const h = vCfg.centerOfMassOffsetY ?? 6.0;
+    const h = (vCfg.centerOfMassOffsetY ?? 3.5) + 12.0;
 
-    const nFront = Math.max(0.10, (W * (b_dist * Math.cos(theta) - h * Math.sin(theta)) - m * h * ax * 0.32) / L);
-    const nRear = Math.max(0.10, (W * (a_dist * Math.cos(theta) + h * Math.sin(theta)) + m * h * ax * 0.32) / L);
+    const nFront = Math.max(0.10, (W * (b_dist * Math.cos(theta) - h * Math.sin(theta)) - m * h * ax * 0.38) / L);
+    const nRear = Math.max(0.10, (W * (a_dist * Math.cos(theta) + h * Math.sin(theta)) + m * h * ax * 0.38) / L);
     this.normalLoads = { front: nFront, rear: nRear };
 
     // Local terrain slope & curvature under chassis
@@ -5556,51 +5600,77 @@ class f0 {
     this.lastEngineForce = 0;
     this.lastBrakeForce = 0;
 
-    // Momentum-Based Climbing Curve (Sections 3, 14, 23):
-    // Steep uphill climbs (groundSlope < -0.44 rad / > 25 deg) require entering with momentum!
-    // Low momentum causes engine lugging and wheel slip; insufficient momentum stalls & rolls backward!
-    const uphillSteepness = Math.max(0, -groundSlope); // positive when climbing uphill
-    const fwdSpd = this.forwardSpeed;
+    // -------------------------------------------------------------------------
+    // MOMENTUM vs. STEEP CLIMB TUNING ZONES (Sections 18 & 19):
+    // 15° (0.26 rad): climbs comfortably
+    // 25° (0.44 rad): momentum starts mattering (faster entry = much faster climb)
+    // 30° (0.52 rad): driver must manage speed
+    // 35° (0.61 rad): serious challenge (low gear crawl at low speed, fast with momentum)
+    // 38°–42°+ (0.665+ rad): extreme climb — starting without momentum (< 2.3 m/s) stalls & rolls backward!
+    // -------------------------------------------------------------------------
+    const uphillSteepness = Math.max(0, -groundSlope);
     let momentumClimbFactor = 1.0;
-    if (uphillSteepness > 0.44) {
-      // Above 25 deg uphill: reward high entry speed (> 6.5), penalize dead-stop crawling (< 3.5)
-      const speedCarry = b((fwdSpd - 1.2) / 6.5, 0.0, 1.35);
-      const steepPenalty = b((uphillSteepness - 0.44) / 0.36, 0, 1);
-      momentumClimbFactor = b(0.32 + speedCarry * 0.88 - steepPenalty * 0.38, 0.22, 1.32);
+    if (uphillSteepness > 0.665) {
+      // Extreme 38°–42°+ wall: requires entry momentum (> 2.3 m/s) or tires break loose & roll backward
+      const speedCarry = b((fwdSpd - 2.3) / 3.2, 0.0, 1.45);
+      const steepnessZone = b((uphillSteepness - 0.665) / 0.16, 0, 1.0);
+      momentumClimbFactor = b(0.08 + speedCarry * 1.18 - steepnessZone * 0.16, 0.06, 1.38);
+    } else if (uphillSteepness > 0.40) {
+      // 23°–38° mountain climb: low-RPM torque always climbs (0.78x), high momentum flies up (1.38x)
+      const speedCarry = b((fwdSpd - 1.0) / 8.0, 0.0, 1.0);
+      const slopeLoad = b((uphillSteepness - 0.40) / 0.265, 0.0, 1.0);
+      momentumClimbFactor = b(0.96 - slopeLoad * 0.18 + speedCarry * 0.54, 0.78, 1.38);
     }
 
-    // Active Disc Braking Mechanic (Section 4):
-    // Pressing Brake (A) while moving forward (> 0.8) applies high-authority braking force & front weight transfer!
-    const isBrakingForward = input.brake > 0.05 && input.throttle < 0.1 && fwdSpd > 0.8;
-    // Pressing Brake (A) while rolling backward on a steep climb arrests the rollback!
-    const isHoldingHillBrake = input.brake > 0.05 && input.throttle < 0.1 && fwdSpd < -0.2 && uphillSteepness > 0.32;
+    // Active Mechanical Disc Braking & Hill-Hold Assist (Sections 20 & 21):
+    // Holds vehicle on steep uphill for 650ms when braking to a stop, then allows reversing down the slope
+    if (input.brake > 0.05 && input.throttle < 0.1 && fwdSpd < 0.5 && uphillSteepness > 0.30) {
+      this.hillHoldTimer = (this.hillHoldTimer ?? 0) + dt;
+    } else {
+      this.hillHoldTimer = 0;
+    }
+    const isBrakingForward = input.brake > 0.05 && input.throttle < 0.1 && fwdSpd > 0.65;
+    const isHoldingHillBrake = input.brake > 0.05 && input.throttle < 0.1 && fwdSpd < -0.18 && uphillSteepness > 0.30 && (this.hillHoldTimer ?? 0) < 650;
 
     for (let i = 0; i < this.wheels.length; i++) {
       const w = this.wheels[i];
       const isRear = i === 0;
-      const torqueShare = isRear ? 0.56 : 0.44;
+      const torqueShare = isRear ? 0.58 : 0.42;
       const spin = w.body.angularVelocity;
-      const speedRatio = b(1 - Math.abs(spin) / vCfg.maxWheelSpeed, 0, 1);
+      const rpmRatio = b(Math.abs(spin) / vCfg.maxWheelSpeed, 0, 1.25);
+      w.rpm = Math.round((Math.abs(spin) * 60 * 60) / (Math.PI * 2));
 
-      // Wheel Slip Ratio & Saturating Traction Curve S(kappa)
+      // Section 16: 3-Band Engine Torque Character (LOW RPM strong torque, MID RPM peak powerband, HIGH RPM taper)
+      let engineBand = 1.0;
+      if (rpmRatio < 0.30) {
+        engineBand = 0.92 + (rpmRatio / 0.30) * 0.14;
+      } else if (rpmRatio <= 0.72) {
+        engineBand = 1.06 + Math.sin(((rpmRatio - 0.30) / 0.42) * Math.PI) * 0.12;
+      } else {
+        engineBand = Math.max(0.16, 1.06 * (1 - (rpmRatio - 0.72) / 0.52));
+      }
+
+      // Section 15: Controllable Traction & Wheelspin Model
       const R = vCfg.wheelRadius;
       const rw = spin * R;
-      const vx = this.forwardSpeed;
-      const denom = Math.max(Math.abs(rw), Math.abs(vx), 0.1);
+      const vx = fwdSpd;
+      const denom = Math.max(Math.abs(rw), Math.abs(vx), 0.5);
       w.slipRatio = b((rw - vx) / denom, -1.5, 1.5);
+      const wheelspinPenalty = Math.abs(w.slipRatio) > 0.36
+        ? 1.0 - b((Math.abs(w.slipRatio) - 0.36) * 0.28, 0, 0.24)
+        : 1.0;
 
       if (throttleBrake !== 0) {
-        const isDriving = Math.sign(throttleBrake) === Math.sign(spin) || Math.abs(spin) < 0.03;
+        const isDriving = Math.sign(throttleBrake) === Math.sign(spin) || Math.abs(spin) < 0.04;
         const torque = isDriving
-          ? vCfg.engineTorque * (0.25 + 0.75 * speedRatio) * throttleBrake * momentumClimbFactor
+          ? vCfg.engineTorque * engineBand * throttleBrake * momentumClimbFactor
           : vCfg.brakeTorque * throttleBrake;
 
-        const targetSpinDelta = torque * torqueShare * 0.32 * (dt / 8.333);
+        const targetSpinDelta = torque * torqueShare * 0.38 * (dt / 8.333);
         const nextSpin = b(spin + targetSpinDelta, -vCfg.maxWheelSpeed, vCfg.maxWheelSpeed);
         d.default.Body.setAngularVelocity(w.body, nextSpin);
 
-        // True Surface-Tangent Rolling Traction & Disc Braking (only when wheel is on ground & car is upright!)
-        if (w.contact && Math.cos(theta) > 0.20) {
+        if (w.contact && Math.cos(theta) > 0.18) {
           const mat = MATERIALS[w.material] ?? MATERIALS.dirt;
           const wheelSlope = terrain ? terrain.slopeAt(w.body.position.x) : theta;
           const tangentDir = {
@@ -5609,28 +5679,26 @@ class f0 {
           };
 
           if (isBrakingForward) {
-            // Dedicated Mechanical Disc Brake Force opposing forward motion along the slope
-            const loadShare = isRear ? (nRear / (nFront + nRear)) : (nFront / (nFront + nRear)) * 1.35;
-            const brakeMag = input.brake * vCfg.brakeTorque * loadShare * mat.friction * 0.34;
+            const loadShare = isRear ? (nRear / (nFront + nRear)) * 0.75 : (nFront / (nFront + nRear)) * 1.45;
+            const brakeMag = input.brake * vCfg.brakeTorque * loadShare * mat.friction * 0.38;
             this.lastBrakeForce += brakeMag * 1000;
             Matter.Body.applyForce(this.chassis, this.chassis.position, {
               x: -tangentDir.x * brakeMag,
               y: -tangentDir.y * brakeMag,
             });
-          } else if (isHoldingHillBrake && fwdSpd > -3.2) {
-            // Holding brake on a failed climb arrests backward rollback before reversing
-            const holdMag = input.brake * vCfg.brakeTorque * torqueShare * mat.friction * 0.26;
+          } else if (isHoldingHillBrake && fwdSpd > -4.0) {
+            const holdMag = input.brake * vCfg.brakeTorque * torqueShare * mat.friction * 0.30;
             this.lastBrakeForce += holdMag * 1000;
             Matter.Body.applyForce(this.chassis, this.chassis.position, {
               x: tangentDir.x * holdMag,
               y: tangentDir.y * holdMag,
             });
           } else {
-            const topSpeedLimiter = b(1 - Math.abs(this.forwardSpeed) / 17.5, 0.08, 1.0);
-            const tractiveMag = torque * torqueShare * mat.friction * 0.185 * topSpeedLimiter;
+            const topSpd = vCfg.topSpeed ?? 29.0;
+            const topSpeedLimiter = b(1 - Math.abs(fwdSpd) / topSpd, 0.06, 1.0);
+            const tractiveMag = torque * torqueShare * mat.friction * wheelspinPenalty * 0.215 * topSpeedLimiter;
             this.lastEngineForce += Math.abs(tractiveMag) * 1000;
 
-            // Pure surface-tangent propulsion (NO downward suction on convex crests so car launches naturally into the air!)
             Matter.Body.applyForce(this.chassis, this.chassis.position, {
               x: tangentDir.x * tractiveMag,
               y: tangentDir.y * tractiveMag,
@@ -5638,114 +5706,132 @@ class f0 {
           }
         }
       } else {
-        d.default.Body.setAngularVelocity(w.body, spin * 0.985);
+        d.default.Body.setAngularVelocity(w.body, spin * 0.993);
       }
 
       const deltaComp = w.compression - w.lastCompression;
-      if (deltaComp > 0.26 && w.compression > 0.35 && this.audio) {
+      if (deltaComp > 0.24 && w.compression > 0.32 && this.audio) {
         this.audio.creak(deltaComp);
       }
       w.lastCompression = w.compression;
-      w.slip = Math.abs(spin * vCfg.wheelRadius - this.forwardSpeed);
+      w.slip = Math.abs(spin * vCfg.wheelRadius - fwdSpd);
     }
 
-    // Extra gravitational slope drag on steep climbs (> 28 deg) so insufficient momentum stalls & rolls backward (Sections 3 & 14)
-    if (!this.airborne && uphillSteepness > 0.48 && Math.cos(theta) > 0.25) {
+    // Section 18 & 19: Steep Hill Gravity vs. Momentum (no artificial stop — let gravity & low momentum stall & roll back on 38°+ walls)
+    if (!this.airborne && uphillSteepness > 0.665 && Math.cos(theta) > 0.22) {
       const tangentX = Math.cos(groundSlope);
       const tangentY = Math.sin(groundSlope);
-      const extraSlopeGravity = (uphillSteepness - 0.44) * 0.0042 * this.chassis.mass * (1.15 - momentumClimbFactor * 0.45);
+      const extraSlopeGravity = (uphillSteepness - 0.58) * 0.0115 * this.chassis.mass * (1.25 - momentumClimbFactor * 0.65);
       if (extraSlopeGravity > 0) {
         Matter.Body.applyForce(this.chassis, this.chassis.position, {
           x: -tangentX * extraSlopeGravity,
           y: -tangentY * extraSlopeGravity,
         });
       }
-      this.climbingStalled = fwdSpd < 0.4 && uphillSteepness > 0.52;
+      this.climbingStalled = fwdSpd < 0.8 && uphillSteepness > 0.665;
     } else {
       this.climbingStalled = false;
     }
 
-    // Natural Ballistic Crest Launch Impulse (Sections 6 & 7):
-    // When cresting a convex peak (groundCurv > 0.0020) at speed, release ground stickiness so vehicle becomes genuinely airborne!
-    if (!this.airborne && groundCurv > 0.0020 && Math.abs(fwdSpd) > 5.2) {
-      const launchPop = b((groundCurv - 0.0018) * 180, 0.1, 1.0) * b((Math.abs(fwdSpd) - 4.5) / 8.0, 0.15, 1.2);
-      Matter.Body.applyForce(this.chassis, this.chassis.position, {
-        x: 0,
-        y: -0.0038 * this.chassis.mass * launchPop,
-      });
-      if (groundCurv > 0.0032 && Math.abs(fwdSpd) > 7.2) {
-        this.wheels.forEach((w) => {
-          w.contact = false;
-          w.contactGrace = 0;
-        });
-      }
-    }
-
     // -------------------------------------------------------------------------
-    // PHYSICAL CENTER-OF-MASS PITCH, WHEELIE & ROLLOVER DYNAMICS (Sections 10 & 11)
+    // WHEELIE, STOPPIE & PURE PROJECTILE AIRBORNE DYNAMICS (Sections 22-28, 47-48)
     // -------------------------------------------------------------------------
     const relPitch = normalizeAngle(theta - groundSlope);
-    const comHeightFactor = (vCfg.centerOfMassOffsetY ?? 6.0) / 6.0;
+    const comHeightFactor = (vCfg.centerOfMassOffsetY ?? 3.5) / 3.5;
 
     if (!this.airborne) {
-      // ON GROUND: Physical weight transfer & rollover risk!
-      // 1. Throttle Wheelie Torque: Stronger on steep climbs where rear load is heavy; can flip backward if you don't feather throttle or brake!
-      if (input.throttle > 0.1 && Math.cos(theta) > 0.1) {
-        const slopeWheelieBoost = 1.0 + uphillSteepness * 2.1;
-        this.chassis.torque += -0.00165 * this.chassis.mass * comHeightFactor * slopeWheelieBoost * input.throttle;
-      }
-      // 2. Braking Nose-Dive / Stoppie Torque: Strong forward pitch when braking on descents or before crests!
-      if (input.brake > 0.1 && Math.cos(theta) > 0.1) {
-        const downhillSteepness = Math.max(0, groundSlope);
-        const brakeDiveBoost = 1.0 + downhillSteepness * 1.9;
-        this.chassis.torque += 0.00185 * this.chassis.mass * comHeightFactor * brakeDiveBoost * input.brake;
+      // Section 22: Physical Wheelie Torque (depend on COM, torque, rear contact, and slope)
+      if (input.throttle > 0.1 && this.wheels[0].contact && Math.cos(theta) > 0.15) {
+        const slopeWheelie = Math.max(0, uphillSteepness - 0.10) * 1.95;
+        const launchBurst = b(1.0 - Math.abs(fwdSpd) / 11.0, 0.15, 0.85);
+        const wheelieLimit = b(1.0 - Math.max(0, -relPitch - 0.20) / 0.30, 0.05, 1.0);
+        const wheelieTorque = -0.00092 * this.chassis.mass * comHeightFactor * (launchBurst * 0.42 + slopeWheelie) * wheelieLimit * input.throttle;
+        this.chassis.torque += wheelieTorque;
       }
 
-      // 3. Suspension pitch restoring spring ONLY within normal suspension travel (+-28 deg / 0.49 rad).
-      //    Beyond +-34 deg (0.60 rad), Center of Mass passes the tire pivot and gravity pulls the vehicle into a real physical rollover!
-      if (Math.cos(theta) > 0.15) {
-        if (Math.abs(relPitch) < 0.52) {
-          this.chassis.torque += -relPitch * 0.011 * this.chassis.mass;
-          this.chassis.torque += -this.chassis.angularVelocity * 0.024 * this.chassis.mass;
-        } else {
-          // Past the CoM balance point: gravity tips the vehicle over unless the player counter-steers with brake/throttle!
-          const tipDir = Math.sign(relPitch);
-          this.chassis.torque += tipDir * 0.0018 * this.chassis.mass * comHeightFactor;
-        }
+      // Section 23: Physical Stoppie / Nose-Dive Torque when braking hard at speed or downhill
+      if (input.brake > 0.1 && this.wheels[1].contact && fwdSpd > 1.2 && Math.cos(theta) > 0.15) {
+        const downhillFactor = 1.0 + Math.max(0, groundSlope) * 1.90;
+        const speedFactor = b(fwdSpd / 11.0, 0.25, 1.35);
+        const stoppieTorque = 0.00125 * this.chassis.mass * comHeightFactor * downhillFactor * speedFactor * input.brake;
+        this.chassis.torque += stoppieTorque;
       }
+
+      // Dual-wheel suspension pitch coupling (active ONLY when both wheels are on the ground and within balance point)
+      if (this.wheels[0].contact && this.wheels[1].contact && Math.cos(theta) > 0.20 && Math.abs(relPitch) < 0.48) {
+        this.chassis.torque += -relPitch * 0.0045 * this.chassis.mass;
+        this.chassis.torque += -this.chassis.angularVelocity * 0.012 * this.chassis.mass;
+      } else if (Math.abs(relPitch) > 0.56 && Math.cos(theta) > 0.10) {
+        // Past the CoM balance point: gravity tips the vehicle into a rollover unless saved!
+        this.chassis.torque += Math.sign(relPitch) * 0.0014 * this.chassis.mass * comHeightFactor;
+      }
+
+      const gndFactor = 1 - Math.min(vCfg.angularDamping * 0.65 * (dt / 16.666), 0.12);
+      d.default.Body.setAngularVelocity(
+        this.chassis,
+        b(this.chassis.angularVelocity * gndFactor, -0.16, 0.16)
+      );
+      this.landingPrediction = "GROUNDED";
     } else {
-      // IN MID-AIR (Section 8: Skill-Based Air Control on all jumps!):
-      const canRotateInAir = this.groundClearance > 10 || this.airborneTimer >= 55;
-      if (canRotateInAir && throttleBrake !== 0) {
-        // D (Throttle > 0) -> Counter-clockwise (dir = -1 -> pitch nose UP / BACKFLIP)
-        // A (Brake > 0)    -> Clockwise         (dir = +1 -> pitch nose DOWN / FRONTFLIP / LEVEL FOR DOWNHILL)
+      // Sections 24, 25, 26, 27, 28: PURE PROJECTILE AIRBORNE PHYSICS + RESPONSIVE AIR CONTROL
+      const canRotateInAir = this.groundClearance > 6 || this.airborneTimer >= 32;
+      const absAirRot = Math.abs(this.airRotation ?? 0);
+      const completedFlipNearGround = absAirRot >= 5.75 && this.groundClearance < 36 && this.chassis.velocity.y > 1.2 && Math.abs(relPitch) < 0.34;
+
+      if (completedFlipNearGround) {
+        // Player completed a full 360° flip and is touching down aligned with the slope:
+        // feather rotation into the landing slope so holding D for throttle doesn't over-rotate onto the roof!
+        d.default.Body.setAngularVelocity(
+          this.chassis,
+          b(this.chassis.angularVelocity * 0.76 - relPitch * 0.08, -0.10, 0.10)
+        );
+      } else if (canRotateInAir && throttleBrake !== 0) {
         const dir = -Math.sign(throttleBrake);
         const angVel = this.chassis.angularVelocity;
-        const maxFlipRate = 0.122;
-        const spinLimit = b(1 - Math.abs(angVel) / maxFlipRate, 0, 1);
-        const opposing = Math.sign(dir) !== Math.sign(angVel) ? 1.35 : spinLimit;
-        const airTorque = dir * Math.abs(throttleBrake) * vCfg.airControl * opposing * this.chassis.mass * 36.0;
+        const maxFlipRate = 0.172;
+        const spinHeadroom = b(1 - Math.abs(angVel) / maxFlipRate, 0.05, 1);
+        let counterAuthority = Math.sign(dir) !== Math.sign(angVel) ? 1.45 : spinHeadroom;
+        // If committed past 145° into a flip and descending toward ground, give slight tuck authority to finish the flip
+        if (absAirRot > 2.5 && absAirRot < 5.75 && this.chassis.velocity.y > 0.5 && this.groundClearance < 65) {
+          counterAuthority = Math.max(counterAuthority, 0.68);
+        }
+        const airTorque = dir * Math.abs(throttleBrake) * vCfg.airControl * counterAuthority * this.chassis.mass * 23.5;
         this.chassis.torque += airTorque;
       }
+
+      const airFactor = 1 - Math.min(vCfg.angularDamping * 0.22 * (dt / 16.666), 0.04);
+      d.default.Body.setAngularVelocity(
+        this.chassis,
+        b(this.chassis.angularVelocity * airFactor, -0.22, 0.22)
+      );
+
+      // Real-Time Landing Prediction Telemetry (Section 49)
+      const lookX = this.chassis.position.x + this.chassis.velocity.x * 18;
+      const predSlope = terrain ? terrain.slopeAt(lookX) : groundSlope;
+      const predRelAngle = normalizeAngle(this.chassis.angle + this.chassis.angularVelocity * 10 - predSlope);
+      const absPred = Math.abs(predRelAngle);
+      if (absPred < 0.24) this.landingPrediction = "PERFECT";
+      else if (absPred < 0.42) this.landingPrediction = "SOFT";
+      else if (absPred > 0.95) this.landingPrediction = "CRASH_RISK";
+      else if (predRelAngle > 0) this.landingPrediction = "FRONT_HEAVY";
+      else this.landingPrediction = "REAR_HEAVY";
     }
 
-    // Inverted Self-Righting Roll Recovery (when resting upside down on roof)
-    const isUpsideDown = !this.airborne && (Math.abs(theta) > 1.65 || this.roofContact);
-    if (isUpsideDown && throttleBrake !== 0) {
+    // Section 39: Physical Self-Righting Roll Recovery (rock the vehicle using throttle/brake when inverted near ground)
+    const distToGround = terrain ? (terrain.heightAt(this.chassis.position.x) - this.chassis.position.y) : 999;
+    const isInvertedOnGround = (this.roofContact || distToGround < 52) && (Math.abs(theta) > 1.42 || this.roofContact);
+    if (isInvertedOnGround && throttleBrake !== 0) {
       const rollDir = Math.sign(throttleBrake);
-      this.chassis.torque += rollDir * this.chassis.mass * 0.32;
+      this.chassis.torque += rollDir * this.chassis.mass * 4.8;
+      d.default.Body.setAngularVelocity(
+        this.chassis,
+        b(this.chassis.angularVelocity + rollDir * 0.028 * (dt / 8.333), -0.18, 0.18)
+      );
       Matter.Body.applyForce(this.chassis, this.chassis.position, {
         x: rollDir * 0.014 * this.chassis.mass,
         y: -0.024 * this.chassis.mass,
       });
     }
-
-    // Angular velocity damping & realistic rollover cap
-    const damping = this.airborne ? vCfg.angularDamping * 0.55 : vCfg.angularDamping * 1.8;
-    const factor = 1 - Math.min(damping * (dt / 16.666), 0.38);
-    const maxAllowedAngVel = this.airborne ? 0.130 : 0.085;
-    const clampedAngVel = b(this.chassis.angularVelocity * factor, -maxAllowedAngVel, maxAllowedAngVel);
-    d.default.Body.setAngularVelocity(this.chassis, clampedAngVel);
 
     // Expedition Fuel / Energy Reserve & Engine Thermal Telemetry
     const fuelDtSec = Math.min(0.033, Math.max(0.001, dt / 1000));
@@ -5753,8 +5839,7 @@ class f0 {
     const throttleAbs = Math.abs(throttleBrake);
     if (throttleAbs > 0.05) {
       this.fuel = Math.max(0.08, this.fuel - (0.0022 + climbLoad * 0.0035) * throttleAbs * fuelDtSec);
-    } else if (this.forwardSpeed > 2.0 && Math.sin(groundSlope) > 0.05) {
-      // Regenerative downhill kinetic recovery
+    } else if (fwdSpd > 2.0 && Math.sin(groundSlope) > 0.05) {
       this.fuel = Math.min(1.0, this.fuel + 0.004 * fuelDtSec);
     }
     const targetTemp = b(0.24 + this.rpm * 0.52 + climbLoad * throttleAbs * 0.32, 0.20, 0.98);
@@ -5763,6 +5848,9 @@ class f0 {
     this.driver.update(this, input, dt);
   }
 
+  // --------------------------------------------------------------------------
+  // PHYSICAL CONTACT vs. GAMEPLAY AIRBORNE STATE (Section 14)
+  // --------------------------------------------------------------------------
   markContacts(terrainSet, activePairs, terrain = null, dt = 8.333) {
     this.roofContact = false;
     const pairHit = [false, false];
@@ -5776,7 +5864,7 @@ class f0 {
           if (terrainSet.has(other)) {
             pairHit[i] = true;
             w.contact = true;
-            w.contactGrace = 45;
+            w.contactGrace = 18;
             w.material = other.materialKind ?? "grass";
           }
         }
@@ -5800,35 +5888,42 @@ class f0 {
       }
     }
 
-    // Spline proximity & grace hysteresis (reduced on convex crests so vehicle launches cleanly into the air!)
+    // Clean unloading over crests: if wheel is separating from terrain or cresting a peak, release contact immediately!
     const vCfg = this.archetype;
     const upright = Math.cos(this.chassis.angle) > 0.15;
     const curv = (terrain && terrain.curvatureAt) ? terrain.curvatureAt(this.chassis.position.x) : 0;
-    const onSharpCrest = curv > 0.0022 && Math.abs(this.forwardSpeed) > 5.0;
+    const unloadingAtCrest = curv > 0.0015 && Math.abs(this.forwardSpeed) > 3.8;
 
     for (let i = 0; i < this.wheels.length; i++) {
       const w = this.wheels[i];
-      if (pairHit[i]) continue;
+      if (pairHit[i]) {
+        if (unloadingAtCrest && w.compression < -0.15 && this.chassis.velocity.y < -1.0) {
+          w.contact = false;
+          w.contactGrace = 0;
+        }
+        continue;
+      }
 
-      let nearSpline = false;
-      if (terrain && upright && !onSharpCrest && w.body.velocity.y >= -1.8) {
+      let nearRollingSeam = false;
+      if (terrain && upright && !unloadingAtCrest && w.body.velocity.y >= -0.8) {
         const ty = terrain.heightAt(w.body.position.x);
         const tireBottom = w.body.position.y + vCfg.wheelRadius;
-        if (Math.abs(ty - tireBottom) <= 4.0) {
-          nearSpline = true;
+        // Tight 2.2px seam bridge ONLY for flat/concave polygon seams when not moving upward
+        if (Math.abs(ty - tireBottom) <= 2.2) {
+          nearRollingSeam = true;
           w.material = terrain.materialAt(w.body.position.x)?.name ?? "grass";
         }
       }
 
-      if (nearSpline) {
+      if (nearRollingSeam) {
         w.contact = true;
-        w.contactGrace = 35;
+        w.contactGrace = 14;
       } else {
-        w.contactGrace = onSharpCrest ? 0 : Math.max(0, (w.contactGrace ?? 0) - dt);
-        if (w.contactGrace > 0 && terrain) {
+        w.contactGrace = unloadingAtCrest ? 0 : Math.max(0, (w.contactGrace ?? 0) - dt);
+        if (w.contactGrace > 0 && terrain && w.body.velocity.y >= -1.0) {
           const ty = terrain.heightAt(w.body.position.x);
           const tireBottom = w.body.position.y + vCfg.wheelRadius;
-          w.contact = (ty - tireBottom) < 7.5;
+          w.contact = (ty - tireBottom) < 3.2;
         } else {
           w.contact = false;
         }
@@ -5838,7 +5933,7 @@ class f0 {
 }
 
 // ----------------------------------------------------------------------------
-// Stunt Director & Combo System (Sections 7, 8, 9, 21)
+// Stunt Director & Combo System (Sections 33-37: Expanded Stunts & True Physical Landings)
 // ----------------------------------------------------------------------------
 class StuntDirector {
   bus;
@@ -5850,17 +5945,25 @@ class StuntDirector {
   airApexY = Infinity;
   launchX = 0;
   launchY = 0;
+  launchSpeed = 0;
+  launchCurvature = 0;
   cumulativeAngle = 0;
   prevAngle = 0;
   backflips = 0;
   frontflips = 0;
+  maxNoseDownAngle = 0;
+  minTailDownAngle = 0;
+  airDirectionChanges = 0;
+  lastAirSpinSign = 0;
   wheelieTime = 0;
   wheelieDistance = 0;
+  maxWheeliePitch = 0;
   stoppieTime = 0;
   stoppieDistance = 0;
   comboMultiplier = 1;
   comboScore = 0;
   comboTimer = 0;
+  jumpStuntCount = 0;
   activeStuntName = "";
   lastLandingQuality = "NONE";
 
@@ -5870,22 +5973,36 @@ class StuntDirector {
     this.camera = camera;
   }
 
+  get flipProgress() {
+    return (Math.abs(this.cumulativeAngle) % (Math.PI * 2)) / (Math.PI * 2);
+  }
+
   reset() {
     this.airtime = 0;
     this.groundedTime = 200;
     this.airDistance = 0;
     this.airApexY = Infinity;
+    this.launchX = 0;
+    this.launchY = 0;
+    this.launchSpeed = 0;
+    this.launchCurvature = 0;
     this.cumulativeAngle = 0;
     this.prevAngle = 0;
     this.backflips = 0;
     this.frontflips = 0;
+    this.maxNoseDownAngle = 0;
+    this.minTailDownAngle = 0;
+    this.airDirectionChanges = 0;
+    this.lastAirSpinSign = 0;
     this.wheelieTime = 0;
     this.wheelieDistance = 0;
+    this.maxWheeliePitch = 0;
     this.stoppieTime = 0;
     this.stoppieDistance = 0;
     this.comboMultiplier = 1;
     this.comboScore = 0;
     this.comboTimer = 0;
+    this.jumpStuntCount = 0;
     this.activeStuntName = "";
     this.lastLandingQuality = "NONE";
   }
@@ -5902,20 +6019,38 @@ class StuntDirector {
     }
 
     if (isAirborne) {
-      if (this.groundedTime >= 110 || (this.airtime === 0 && this.cumulativeAngle === 0)) {
+      if (this.groundedTime >= 90 || (this.airtime === 0 && this.cumulativeAngle === 0)) {
         this.launchX = chassis.position.x;
         this.launchY = chassis.position.y;
+        this.launchSpeed = Math.abs(vehicle.forwardSpeed);
+        this.launchCurvature = (terrain && terrain.curvatureAt) ? terrain.curvatureAt(chassis.position.x) : 0;
         this.prevAngle = chassis.angle;
         this.airApexY = chassis.position.y;
         this.cumulativeAngle = 0;
         this.backflips = 0;
         this.frontflips = 0;
+        this.maxNoseDownAngle = 0;
+        this.minTailDownAngle = 0;
+        this.airDirectionChanges = 0;
+        this.lastAirSpinSign = 0;
+        this.jumpStuntCount = 0;
       }
       this.groundedTime = 0;
 
       this.airtime += dt;
       this.airDistance = Math.abs(chassis.position.x - this.launchX) / 40;
       this.airApexY = Math.min(this.airApexY, chassis.position.y);
+
+      const slope = terrain ? terrain.slopeAt(chassis.position.x) : 0;
+      const relPitch = normalizeAngle(chassis.angle - slope);
+      if (relPitch > this.maxNoseDownAngle) this.maxNoseDownAngle = relPitch;
+      if (relPitch < this.minTailDownAngle) this.minTailDownAngle = relPitch;
+
+      const spinSign = Math.abs(chassis.angularVelocity) > 0.018 ? Math.sign(chassis.angularVelocity) : 0;
+      if (spinSign !== 0 && this.lastAirSpinSign !== 0 && spinSign !== this.lastAirSpinSign) {
+        this.airDirectionChanges++;
+      }
+      if (spinSign !== 0) this.lastAirSpinSign = spinSign;
 
       let deltaAngle = chassis.angle - this.prevAngle;
       while (deltaAngle > Math.PI) deltaAngle -= Math.PI * 2;
@@ -5924,16 +6059,18 @@ class StuntDirector {
       this.prevAngle = chassis.angle;
 
       // Negative cumulative angle = counter-clockwise = BACKFLIP
-      if (this.cumulativeAngle <= -(Math.PI * 2 * (this.backflips + 1) - 0.4)) {
+      if (this.cumulativeAngle <= -(Math.PI * 2 * (this.backflips + 1) - 0.38)) {
         this.backflips++;
-        const name = this.backflips === 1 ? "BACKFLIP" : this.backflips === 2 ? "DOUBLE BACKFLIP" : `TRIPLE BACKFLIP`;
+        this.jumpStuntCount++;
+        const name = this.backflips === 1 ? "BACKFLIP" : this.backflips === 2 ? "DOUBLE BACKFLIP" : "TRIPLE BACKFLIP";
         const score = this.backflips * 500;
         this.awardStunt(name, score, 2);
         vehicle.driver.triggerVictory();
-      } else if (this.cumulativeAngle >= Math.PI * 2 * (this.frontflips + 1) - 0.4) {
+      } else if (this.cumulativeAngle >= Math.PI * 2 * (this.frontflips + 1) - 0.38) {
         // Positive cumulative angle = clockwise = FRONTFLIP
         this.frontflips++;
-        const name = this.frontflips === 1 ? "FRONTFLIP" : this.frontflips === 2 ? "DOUBLE FRONTFLIP" : `TRIPLE FRONTFLIP`;
+        this.jumpStuntCount++;
+        const name = this.frontflips === 1 ? "FRONTFLIP" : this.frontflips === 2 ? "DOUBLE FRONTFLIP" : "TRIPLE FRONTFLIP";
         const score = this.frontflips * 500;
         this.awardStunt(name, score, 2);
         vehicle.driver.triggerVictory();
@@ -5949,20 +6086,31 @@ class StuntDirector {
     const front = vehicle.wheels[1];
     const dtSec = dt / 1000;
     const speed = Math.abs(vehicle.forwardSpeed);
+    const slope = terrain ? terrain.slopeAt(vehicle.chassis.position.x) : 0;
+    const relPitch = normalizeAngle(vehicle.chassis.angle - slope);
 
     // Wheelie: Rear wheel in contact, front wheel lifted
-    if (rear.contact && !front.contact && speed > 2.2) {
-      if (this.wheelieTime === 0) this.wheelieStartX = vehicle.chassis.position.x;
+    if (rear.contact && !front.contact && speed > 2.0) {
+      if (this.wheelieTime === 0) {
+        this.wheelieStartX = vehicle.chassis.position.x;
+        this.maxWheeliePitch = 0;
+      }
       this.wheelieTime += dtSec;
       this.wheelieDistance = Math.abs(vehicle.chassis.position.x - (this.wheelieStartX || vehicle.chassis.position.x)) / 40;
+      if (relPitch < this.maxWheeliePitch) this.maxWheeliePitch = relPitch;
 
-      if (this.wheelieTime >= 1.0 && Math.floor((this.wheelieTime - dtSec) / 1.0) < Math.floor(this.wheelieTime / 1.0)) {
-        const pts = Math.round(100 + this.wheelieDistance * 10);
-        this.awardStunt(`WHEELIE ${Math.round(this.wheelieDistance)}m`, pts, 1);
+      if (this.wheelieTime >= 0.85 && Math.floor((this.wheelieTime - dtSec) / 0.85) < Math.floor(this.wheelieTime / 0.85)) {
+        const pts = Math.round(100 + this.wheelieDistance * 12);
+        this.awardStunt(`WHEELIE ${Math.max(1, Math.round(this.wheelieDistance))}m`, pts, 1);
       }
     } else {
+      // Check REAR SAVE if player saved an extreme backward wheelie (> 32 deg) back onto both wheels!
+      if (this.maxWheeliePitch < -0.56 && rear.contact && front.contact && !vehicle.roofContact) {
+        this.awardStunt("REAR SAVE", 250, 2);
+      }
       this.wheelieTime = 0;
       this.wheelieDistance = 0;
+      this.maxWheeliePitch = 0;
     }
 
     // Stoppie / Nose Manual: Front wheel in contact, rear wheel lifted
@@ -5971,8 +6119,8 @@ class StuntDirector {
       this.stoppieTime += dtSec;
       this.stoppieDistance = Math.abs(vehicle.chassis.position.x - (this.stoppieStartX || vehicle.chassis.position.x)) / 40;
 
-      if (this.stoppieTime >= 0.8 && Math.floor((this.stoppieTime - dtSec) / 0.8) < Math.floor(this.stoppieTime / 0.8)) {
-        this.awardStunt(`NOSE BALANCE`, 150, 2);
+      if (this.stoppieTime >= 0.65 && Math.floor((this.stoppieTime - dtSec) / 0.65) < Math.floor(this.stoppieTime / 0.65)) {
+        this.awardStunt("STOPPIE", 160, 2);
       }
     } else {
       this.stoppieTime = 0;
@@ -5980,9 +6128,12 @@ class StuntDirector {
     }
   }
 
-  // Consequential Landing Physics (Section 9: PERFECT, FRONT, REAR, SIDE, HARD LANDING)
+  // --------------------------------------------------------------------------
+  // LANDING EVALUATION & STUNT RECOGNITION (Sections 33, 34, 35, 36, 37)
+  // Does NOT fake landings with velocity overwrites; lets Matter.js suspension react!
+  // --------------------------------------------------------------------------
   onLanding(vehicle, terrain) {
-    if (this.airtime < 220) {
+    if (this.airtime < 160) {
       this.airtime = 0;
       return;
     }
@@ -5993,67 +6144,92 @@ class StuntDirector {
     const angleDiff = Math.abs(relAngle);
     const vy = Math.abs(chassis.velocity.y);
     const heightMeters = Math.max(0, (this.launchY - this.airApexY) / 40);
+    const dropMeters = Math.max(0, (chassis.position.y - this.launchY) / 40);
     const airSec = this.airtime / 1000;
+    const totalFlips = this.backflips + this.frontflips;
 
-    // 1. Airtime & Distance Rewards (Section 21)
-    if (this.airDistance >= 14) {
-      const jumpScore = Math.round(this.airDistance * 15);
-      this.awardStunt(`LONG JUMP ${this.airDistance.toFixed(0)}m`, jumpScore, 2);
-    } else if (heightMeters >= 2.6 || this.airtime >= 650) {
-      const airPts = Math.round(airSec * 100);
-      this.awardStunt(`${airSec.toFixed(1)}s AIRTIME`, Math.max(100, airPts), 1);
+    // 1. Evaluate New & Classic Airborne Stunts (Sections 35 & 36)
+    if (dropMeters >= 7.5) {
+      this.jumpStuntCount++;
+      this.awardStunt(`CLIFF LAUNCH ${dropMeters.toFixed(0)}m`, Math.round(dropMeters * 30), 2);
+    }
+    if (this.airtime >= 1450 && this.airDistance >= 20) {
+      this.jumpStuntCount++;
+      this.awardStunt(`LONG FLIGHT ${this.airDistance.toFixed(0)}m`, Math.round(this.airDistance * 22), 2);
+    } else if (this.airDistance >= 13) {
+      this.jumpStuntCount++;
+      this.awardStunt(`LONG JUMP ${this.airDistance.toFixed(0)}m`, Math.round(this.airDistance * 15), 2);
+    } else if (heightMeters >= 2.4 || this.airtime >= 600) {
+      this.jumpStuntCount++;
+      this.awardStunt(`${airSec.toFixed(1)}s AIRTIME`, Math.max(100, Math.round(airSec * 110)), 1);
     }
 
-    // 2. Evaluate Physical Landing Alignment & Apply Real Mechanical Consequences (Section 9)
+    if (this.airDirectionChanges >= 1 && this.airtime >= 800 && angleDiff < 0.35) {
+      this.jumpStuntCount++;
+      this.awardStunt("AIR ROLL", 280, 2);
+    }
+
+    // 2. Classify Physical Landing State (Section 33: PERFECT, SOFT, FRONT_HEAVY, REAR_HEAVY, SIDE_CRASH, HARD)
     if (angleDiff < 0.24 && !vehicle.roofContact) {
-      // PERFECT LANDING: Both wheels contact smoothly aligned with terrain slope -> speed retention + bonus!
       this.lastLandingQuality = "PERFECT";
+      // Subtle roll-out efficiency reward without overwriting natural vertical suspension bounce (Section 34)
       Matter.Body.setVelocity(chassis, {
-        x: chassis.velocity.x * 1.06,
-        y: chassis.velocity.y * 0.85,
+        x: chassis.velocity.x * 1.03,
+        y: chassis.velocity.y,
       });
-      if (this.airtime >= 500 || this.backflips > 0 || this.frontflips > 0) {
+
+      if (totalFlips >= 2) {
+        this.awardStunt("DOUBLE FLIP", 750, 3);
+      } else if (totalFlips === 1) {
+        this.awardStunt("CLEAN FLIP", 450, 3);
+      }
+
+      if (this.maxNoseDownAngle > 0.62 && totalFlips === 0) {
+        this.awardStunt("NOSE DIVE RECOVERY", 320, 2);
+      } else if (this.minTailDownAngle < -0.62 && totalFlips === 0) {
+        this.awardStunt("REAR SAVE", 320, 2);
+      }
+
+      if (this.launchSpeed >= 13.5 && this.launchCurvature > 0.0018 && this.airtime >= 350) {
+        this.awardStunt("PERFECT CREST", 350, 2);
+      } else if (this.airtime >= 450 || totalFlips > 0) {
         this.awardStunt("PERFECT LANDING", 300, 3);
-        this.camera.pulseZoom(0.035);
+      }
+
+      if (this.jumpStuntCount >= 2 && (totalFlips >= 1 || this.airtime >= 900)) {
+        this.awardStunt(`MOUNTAIN COMBO x${this.comboMultiplier}`, 400, 3);
+      }
+
+      if (this.airtime >= 450 || totalFlips > 0) {
+        this.camera.pulseZoom(0.03);
         vehicle.driver.triggerVictory();
       }
     } else if (angleDiff > 0.82 || vehicle.roofContact) {
-      // SIDE / INVERTED LANDING: High crash & rollover probability!
+      // SIDE / INVERTED LANDING: High rollover risk, let Matter.js bounce & tumble play out!
       this.lastLandingQuality = "SIDE_CRASH";
-      Matter.Body.setVelocity(chassis, {
-        x: chassis.velocity.x * 0.58,
-        y: -Math.min(4.5, vy * 0.32),
-      });
-      Matter.Body.setAngularVelocity(chassis, chassis.angularVelocity + Math.sign(relAngle) * 0.048);
       this.showToast("BAD LANDING — ROLLOVER RISK!", 1);
     } else if (relAngle > 0.26) {
-      // FRONT LANDING (Nose-First): Front suspension compresses, vehicle nose-dives & risks rolling forward!
+      // FRONT HEAVY (Nose-First): Front suspension compresses, natural forward rotation
       this.lastLandingQuality = "FRONT_HEAVY";
-      if (vehicle.wheels[1]) vehicle.wheels[1].compression = 0.92;
-      Matter.Body.setVelocity(chassis, {
-        x: chassis.velocity.x * 0.78,
-        y: chassis.velocity.y * 0.7,
-      });
-      Matter.Body.setAngularVelocity(chassis, chassis.angularVelocity + 0.032);
-      if (this.airtime >= 600) this.showToast("NOSE-HEAVY LANDING!", 1);
+      if (vehicle.wheels[1]) vehicle.wheels[1].compression = Math.max(vehicle.wheels[1].compression, 0.88);
+      if (this.airtime >= 550) this.showToast("FRONT-HEAVY LANDING!", 1);
     } else if (relAngle < -0.26) {
-      // REAR LANDING (Tail-First): Rear suspension compresses, vehicle bucks into a wheelie / flips backward!
+      // REAR HEAVY (Tail-First): Rear suspension compresses, natural wheelie/bounce
       this.lastLandingQuality = "REAR_HEAVY";
-      if (vehicle.wheels[0]) vehicle.wheels[0].compression = 0.92;
-      Matter.Body.setVelocity(chassis, {
-        x: chassis.velocity.x * 0.82,
-        y: chassis.velocity.y * 0.75,
-      });
-      Matter.Body.setAngularVelocity(chassis, chassis.angularVelocity - 0.032);
-      if (this.airtime >= 600) this.showToast("TAIL-HEAVY WHEELIE!", 1);
+      if (vehicle.wheels[0]) vehicle.wheels[0].compression = Math.max(vehicle.wheels[0].compression, 0.88);
+      if (this.airtime >= 550) this.showToast("REAR-HEAVY LANDING!", 1);
     } else if (vy > 9.0) {
-      // HARD LANDING: Suspension bottoms out, speed drops
+      // HARD LANDING: Major suspension compression
       this.lastLandingQuality = "HARD";
-      Matter.Body.setVelocity(chassis, {
-        x: chassis.velocity.x * 0.74,
-        y: chassis.velocity.y * 0.5,
-      });
-      this.showToast("HARD SLAM!", 1);
+      this.showToast("HARD LANDING!", 1);
+    } else {
+      // SOFT LANDING: Minor mismatch, continue normally
+      this.lastLandingQuality = "SOFT";
+      if (this.maxNoseDownAngle > 0.65 && totalFlips === 0) {
+        this.awardStunt("NOSE DIVE RECOVERY", 260, 2);
+      } else if (this.minTailDownAngle < -0.65 && totalFlips === 0) {
+        this.awardStunt("REAR SAVE", 260, 2);
+      }
     }
 
     vehicle.lastLandingQuality = this.lastLandingQuality;
@@ -10257,12 +10433,16 @@ class R0 {
     const pitchDeg = ((chassis.angle * 180) / Math.PI).toFixed(1);
     const angVel = (chassis.angularVelocity || 0).toFixed(3);
     const comX = v.centerOfMassOffset?.x ?? 0;
-    const comY = v.centerOfMassOffset?.y ?? -7;
-    const engForce = (v.lastEngineForce || 0).toFixed(4);
-    const brkForce = (v.lastBrakeForce || 0).toFixed(4);
+    const comY = v.centerOfMassOffset?.y ?? -3.5;
+    const engForce = (v.lastEngineForce || 0).toFixed(2);
+    const brkForce = (v.lastBrakeForce || 0).toFixed(2);
     const wheelContacts = `R:${v.wheels[0]?.contact ? 1 : 0} F:${v.wheels[1]?.contact ? 1 : 0}`;
     const tractionCoeff = (mat.friction ?? 0.9).toFixed(2);
     const landingState = v.lastLandingQuality || "GROUND";
+    const landingPred = v.landingPrediction || "GROUNDED";
+    const wheelRpmVal = v.wheelRpm ?? 0;
+    const rotDeg = Math.round(((game.stunts.cumulativeAngle || 0) * 180) / Math.PI);
+    const flipProgPct = Math.round((game.stunts.flipProgress ?? 0) * 100);
 
     const lines = [
       `DIAGNOSTICS (F3)  FPS: ${game.fps.toFixed(0)}  STEP: 8.33ms  WORLD_SIM: ${wSimMs}ms  SEED: ${game.seed}`,
@@ -10281,23 +10461,23 @@ class R0 {
       `UPCOMING (+15m): ${nextSeg.name} [${nextSeg.type}]  JUMP_POT: ${nextSeg.jumpPotential || "Low"}`,
       `WORLD STATS: ${tStats.totalDistanceKm || 8.2}km | GAIN:+${tStats.totalElevationGain || 0}m | DROP:-${tStats.maxDescentMeters || 0}m | VAR:${tStats.diversityPercent || 94}%`,
       `NORMAL FORCES: F=${nf.toFixed(1)}N  R=${nr.toFixed(1)}N  SLIP: F=${sf.toFixed(2)} R=${sr.toFixed(2)}  CONTACTS:[${wheelContacts}]`,
-      `VEL: ${(Math.abs(v.forwardSpeed) * 7.2).toFixed(1)} km/h (VX:${vel.x.toFixed(1)} VY:${vel.y.toFixed(1)})  PITCH:${pitchDeg}°  ANG_VEL:${angVel}`,
-      `FORCES: ENGINE=${engForce}N  BRAKE=${brkForce}N  RPM=${(v.rpm * 100).toFixed(0)}%  STALL=${Boolean(v.climbingStalled)}`,
-      `SUSPENSION: R=${v.wheels[0].compression.toFixed(2)} F=${v.wheels[1].compression.toFixed(2)}  ROOF:${v.roofContact}  LANDING:[${landingState}]`,
-      `AIRBORNE: ${v.airborne}  AIRTIME: ${(game.stunts.airtime / 1000).toFixed(2)}s  STUNT: ${game.stunts.activeStuntName || "NONE"}`,
+      `SPEED: ${(v.speed * 7.2).toFixed(1)} km/h  FWD:${v.forwardSpeed.toFixed(1)}  VERT:${vel.y.toFixed(1)}  PITCH:${pitchDeg}°  ANG_VEL:${angVel}`,
+      `FORCES: ENGINE=${engForce}N  BRAKE=${brkForce}N  WHEEL_RPM=${wheelRpmVal} (${(v.rpm * 100).toFixed(0)}%)  STALL=${Boolean(v.climbingStalled)}`,
+      `SUSPENSION: REAR=${v.wheels[0].compression.toFixed(2)}  FRONT=${v.wheels[1].compression.toFixed(2)}  ROOF:${v.roofContact}  LANDING:[${landingState}]`,
+      `AIRBORNE: ${v.airborne}  AIRTIME:${(game.stunts.airtime / 1000).toFixed(2)}s  ROT:${rotDeg}° (FLIP:${flipProgPct}%)  PRED:[${landingPred}]  STUNT:${game.stunts.activeStuntName || "NONE"}`,
       `HOTKEYS: [1-4]SEEDS [5]+3H_TIME [6]WEATHER [7]SEASON [8]WORLD_EVENT [T]EXPORT`,
     ];
 
     ctx.save();
     ctx.fillStyle = "rgba(18, 22, 20, 0.88)";
-    const panelW = 595;
+    const panelW = 615;
     const panelH = lines.length * 14.0 + 18;
     ctx.fillRect(w - panelW - 16, h - panelH - 16, panelW, panelH);
     ctx.strokeStyle = "var(--hot)";
     ctx.lineWidth = 1.5;
     ctx.strokeRect(w - panelW - 16, h - panelH - 16, panelW, panelH);
 
-    ctx.font = "9.8px 'Courier New', monospace";
+    ctx.font = "9.6px 'Courier New', monospace";
     ctx.fillStyle = "#efe7d6";
     for (let i = 0; i < lines.length; i++) {
       ctx.fillText(lines[i], w - panelW - 6, h - panelH + 4 + i * 14.0);
@@ -12610,7 +12790,6 @@ class q0 {
 
     this.vehicle.update(inputState, dt, this.terrain);
     Matter.Engine.update(this.engine, dt);
-    this.vehicle.solvePrismaticSuspension(this.terrain);
 
     const activePairs = this.engine.pairs.list.filter((p) => p.isActive);
     this.vehicle.markContacts(this.terrainSet, activePairs, this.terrain, dt);

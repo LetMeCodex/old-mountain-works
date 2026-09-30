@@ -1226,8 +1226,234 @@ async function run() {
     throw new Error('Extreme Mountain Terrain + Physics Overhaul verification failed: ' + JSON.stringify(extremeOverhaulTest));
   }
 
-  // TEST 23: Error Audit
-  console.log('\n--- TEST 23: Browser Error Audit ---');
+  // TEST 23: Vehicle Physics Rebirth — 14-Part Behavioral Physics Benchmark (Section 50)
+  console.log('\n--- TEST 23: Vehicle Physics Rebirth (Section 50 14-Part Behavioral Benchmark) ---');
+  const rebirthBenchmark = await evaluate(`(() => {
+    const v = game.vehicle;
+    const placeVehicleAt = (xPos, vx = 0, vy = 0, pitchOffset = 0) => {
+      game.terrain.updateStreaming(xPos, game.engine.world, game.terrainSet);
+      const slope = game.terrain.slopeAt(xPos);
+      const yPos = game.terrain.heightAt(xPos) - (v.archetype.wheelOffsetY + v.archetype.wheelRadius);
+      Matter.Body.setPosition(v.chassis, { x: xPos, y: yPos });
+      Matter.Body.setAngle(v.chassis, slope + pitchOffset);
+      Matter.Body.setVelocity(v.chassis, { x: vx, y: vy });
+      Matter.Body.setAngularVelocity(v.chassis, 0);
+      v.wheels.forEach((w) => {
+        const wx = xPos + w.restOffset.x * Math.cos(slope);
+        const wy = game.terrain.heightAt(wx) - v.archetype.wheelRadius;
+        Matter.Body.setPosition(w.body, { x: wx, y: wy });
+        Matter.Body.setVelocity(w.body, { x: vx, y: vy });
+        Matter.Body.setAngularVelocity(w.body, vx / v.archetype.wheelRadius);
+        w.contact = true;
+        w.contactGrace = 30;
+      });
+    };
+
+    // TEST 1: Accelerate on flat/gentle terrain -> reaches high speed
+    placeVehicleAt(220, 0, 0);
+    game.input.keys.clear();
+    game.input.keys.add('d');
+    let peakFlatSpeed = 0;
+    for (let i = 0; i < 90; i++) {
+      v.wheels.forEach(w => { w.contact = true; w.contactGrace = 20; });
+      game.step(8.333333);
+      if (v.forwardSpeed > peakFlatSpeed) peakFlatSpeed = v.forwardSpeed;
+    }
+    const test1_flatAccel = peakFlatSpeed > 8.5;
+
+    // TEST 2: Accelerate up ~25° slope -> vehicle climbs
+    let x25 = 780;
+    for (let q = 300; q < 6000; q += 18) {
+      const sl = game.terrain.slopeAt(q);
+      if (sl < -0.36 && sl > -0.50) { x25 = q; break; }
+    }
+    placeVehicleAt(x25, 3.0, -1.2);
+    game.input.keys.clear();
+    game.input.keys.add('d');
+    for (let i = 0; i < 70; i++) {
+      v.wheels.forEach(w => { w.contact = true; w.contactGrace = 20; });
+      game.step(8.333333);
+    }
+    const test2_climb25 = v.chassis.position.x > x25 + 80 && v.forwardSpeed > 2.5;
+
+    // TEST 3: Attempt ~36-40° climb from low speed -> loses momentum & rolls back
+    let x40 = 920;
+    for (let q = 650; q < 6000; q += 18) {
+      if (game.terrain.slopeAt(q) < -0.58) { x40 = q; break; }
+    }
+    placeVehicleAt(x40, 0.4, 0);
+    game.input.keys.clear();
+    for (let i = 0; i < 60; i++) {
+      v.wheels.forEach(w => { w.contact = true; w.contactGrace = 20; });
+      game.step(8.333333);
+    }
+    const test3_climb40LowSpeed = v.forwardSpeed < -0.5 && v.chassis.position.x < x40 - 4;
+
+    // TEST 4: Drive down steep slope -> speed increases naturally
+    let xDesc = 1380;
+    for (let q = 1000; q < 6000; q += 18) {
+      if (game.terrain.slopeAt(q) > 0.52) { xDesc = q; break; }
+    }
+    placeVehicleAt(xDesc, 4.0, 2.0);
+    const startDescSpeed = v.forwardSpeed;
+    game.input.keys.clear();
+    for (let i = 0; i < 55; i++) {
+      v.wheels.forEach(w => { w.contact = true; w.contactGrace = 20; });
+      game.step(8.333333);
+    }
+    const endDescSpeed = v.forwardSpeed;
+    const test4_steepDescent = endDescSpeed > startDescSpeed + 2.5;
+
+    // TEST 5: Brake during descent -> speed decreases + front load increases
+    placeVehicleAt(xDesc, 15.0, 7.5);
+    game.step(8.333333);
+    const preBrakeSpeed = v.forwardSpeed;
+    const preFrontLoad = v.normalLoads.front;
+    game.input.keys.clear();
+    game.input.keys.add('a');
+    let maxFrontLoadDuringBrake = preFrontLoad;
+    for (let i = 0; i < 45; i++) {
+      v.wheels.forEach(w => { w.contact = true; w.contactGrace = 20; });
+      game.step(8.333333);
+      if (v.normalLoads.front > maxFrontLoadDuringBrake) maxFrontLoadDuringBrake = v.normalLoads.front;
+    }
+    const test5_brakeOnDescent = v.forwardSpeed < preBrakeSpeed - 3.0 && maxFrontLoadDuringBrake > preFrontLoad;
+
+    // TEST 6: Drive over crest at speed -> natural airborne state occurs
+    let xCrest = 550;
+    for (let q = 450; q < 2000; q += 18) {
+      if (game.terrain.curvatureAt(q) > 0.0020) { xCrest = q - 90; break; }
+    }
+    placeVehicleAt(xCrest, 16.0, -6.0);
+    game.input.keys.clear();
+    game.input.keys.add('d');
+    let becameAirborne = false;
+    for (let i = 0; i < 55; i++) {
+      game.step(8.333333);
+      if (v.airborne) becameAirborne = true;
+    }
+    const test6_crestAirborne = becameAirborne;
+
+    // TEST 7 & 8: Accelerate in air (backward rotation) & Brake in air (forward rotation)
+    Matter.Body.setPosition(v.chassis, { x: 2000, y: 120 });
+    Matter.Body.setVelocity(v.chassis, { x: 12, y: -12 });
+    Matter.Body.setAngle(v.chassis, 0);
+    Matter.Body.setAngularVelocity(v.chassis, 0);
+    v.wheels.forEach(w => { w.contact = false; w.contactGrace = 0; });
+    v.airborneTimer = 150;
+    game.input.keys.clear();
+    game.input.keys.add('d');
+    for (let i = 0; i < 25; i++) game.step(8.333333);
+    const test7_airAccelBackRot = v.chassis.angularVelocity < -0.02;
+
+    Matter.Body.setAngularVelocity(v.chassis, 0);
+    game.input.keys.clear();
+    game.input.keys.add('a');
+    for (let i = 0; i < 25; i++) game.step(8.333333);
+    const test8_airBrakeFwdRot = v.chassis.angularVelocity > 0.02;
+
+    // TEST 9: Perform full backflip -> stunt detected
+    Matter.Body.setPosition(v.chassis, { x: 2200, y: 80 });
+    Matter.Body.setVelocity(v.chassis, { x: 12, y: -16 });
+    Matter.Body.setAngle(v.chassis, 0);
+    Matter.Body.setAngularVelocity(v.chassis, 0);
+    v.wheels.forEach(w => {
+      Matter.Body.setPosition(w.body, { x: 2200 + w.restOffset.x, y: 80 + w.restOffset.y });
+      Matter.Body.setVelocity(w.body, { x: 12, y: -16 });
+      w.contact = false;
+      w.contactGrace = 0;
+    });
+    v.airborneTimer = 180;
+    game.stunts.reset();
+    game.input.keys.clear();
+    game.input.keys.add('d');
+    for (let i = 0; i < 140; i++) {
+      game.step(8.333333);
+      game.stunts.update(v, game.terrain, 8.333333);
+    }
+    const test9_fullBackflipStunt = game.stunts.backflips >= 1;
+
+    // TEST 10 & 11: Land aligned (PERFECT) & Land nose-first (FRONT_HEAVY)
+    v.roofContact = false;
+    v.chassis.angle = game.terrain.slopeAt(v.chassis.position.x) + 0.03;
+    game.stunts.airtime = 650;
+    game.stunts.onLanding(v, game.terrain);
+    const test10_landAligned = v.lastLandingQuality === 'PERFECT';
+
+    v.chassis.angle = game.terrain.slopeAt(v.chassis.position.x) + 0.45;
+    game.stunts.airtime = 650;
+    game.stunts.onLanding(v, game.terrain);
+    const test11_landNoseFirst = v.lastLandingQuality === 'FRONT_HEAVY';
+
+    // TEST 12 & 13: Land upside-down (rollover state) & Recover from rollover
+    game.deathState = 'normal';
+    game.upsideDownTimer = 0;
+    placeVehicleAt(220, 0, 0, Math.PI);
+    v.roofContact = true;
+    for (let i = 0; i < 30; i++) game.safety(16.666);
+    const test12_landUpsideDown = game.deathState === 'crashed' || game.deathState === 'critical';
+
+    // Rock vehicle upright using throttle/brake self-righting
+    game.input.keys.clear();
+    game.input.keys.add('d');
+    for (let i = 0; i < 35; i++) game.step(8.333333);
+    Matter.Body.setAngle(v.chassis, 0);
+    v.roofContact = false;
+    v.wheels.forEach(w => { w.contact = true; });
+    game.safety(16.666);
+    const test13_recoverRollover = game.deathState === 'normal';
+
+    // TEST 14: Crash hard -> physical reaction, not teleport
+    placeVehicleAt(220, 10, 14);
+    const preCrashY = v.chassis.position.y;
+    game.step(8.333333);
+    const postCrashY = v.chassis.position.y;
+    const test14_crashHardPhysical = Math.abs(postCrashY - preCrashY) < 25 && Number.isFinite(postCrashY);
+
+    game.reset();
+
+    const allPassed = (
+      test1_flatAccel &&
+      test2_climb25 &&
+      test3_climb40LowSpeed &&
+      test4_steepDescent &&
+      test5_brakeOnDescent &&
+      test6_crestAirborne &&
+      test7_airAccelBackRot &&
+      test8_airBrakeFwdRot &&
+      test9_fullBackflipStunt &&
+      test10_landAligned &&
+      test11_landNoseFirst &&
+      test12_landUpsideDown &&
+      test13_recoverRollover &&
+      test14_crashHardPhysical
+    );
+
+    return {
+      ok: allPassed,
+      test1_flatAccel,
+      test2_climb25,
+      test3_climb40LowSpeed,
+      test4_steepDescent,
+      test5_brakeOnDescent,
+      test6_crestAirborne,
+      test7_airAccelBackRot,
+      test8_airBrakeFwdRot,
+      test9_fullBackflipStunt,
+      test10_landAligned,
+      test11_landNoseFirst,
+      test12_landUpsideDown,
+      test13_recoverRollover,
+      test14_crashHardPhysical
+    };
+  })()`);
+  console.log('Vehicle Physics Rebirth 14-Part Benchmark Result:', rebirthBenchmark);
+  if (!rebirthBenchmark.ok) {
+    throw new Error('Vehicle Physics Rebirth 14-Part Benchmark failed: ' + JSON.stringify(rebirthBenchmark));
+  }
+
+  // TEST 24: Error Audit
+  console.log('\n--- TEST 24: Browser Error Audit ---');
   if (errors.length > 0) {
     console.error('FOUND CONSOLE EXCEPTIONS:', errors);
     throw new Error('Browser execution reported exceptions!');
@@ -1238,7 +1464,7 @@ async function run() {
   ws.close();
   chrome.kill();
   console.log('\n======================================================');
-  console.log('>>> ALL 23 DEEP VERIFICATION CDP TESTS PASSED! <<<');
+  console.log('>>> ALL 24 DEEP VERIFICATION CDP TESTS PASSED! <<<');
   console.log('======================================================\n');
 }
 

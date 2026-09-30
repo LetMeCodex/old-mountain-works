@@ -1735,12 +1735,16 @@ class R0 {
     const pitchDeg = ((chassis.angle * 180) / Math.PI).toFixed(1);
     const angVel = (chassis.angularVelocity || 0).toFixed(3);
     const comX = v.centerOfMassOffset?.x ?? 0;
-    const comY = v.centerOfMassOffset?.y ?? -7;
-    const engForce = (v.lastEngineForce || 0).toFixed(4);
-    const brkForce = (v.lastBrakeForce || 0).toFixed(4);
+    const comY = v.centerOfMassOffset?.y ?? -3.5;
+    const engForce = (v.lastEngineForce || 0).toFixed(2);
+    const brkForce = (v.lastBrakeForce || 0).toFixed(2);
     const wheelContacts = `R:${v.wheels[0]?.contact ? 1 : 0} F:${v.wheels[1]?.contact ? 1 : 0}`;
     const tractionCoeff = (mat.friction ?? 0.9).toFixed(2);
     const landingState = v.lastLandingQuality || "GROUND";
+    const landingPred = v.landingPrediction || "GROUNDED";
+    const wheelRpmVal = v.wheelRpm ?? 0;
+    const rotDeg = Math.round(((game.stunts.cumulativeAngle || 0) * 180) / Math.PI);
+    const flipProgPct = Math.round((game.stunts.flipProgress ?? 0) * 100);
 
     const lines = [
       `DIAGNOSTICS (F3)  FPS: ${game.fps.toFixed(0)}  STEP: 8.33ms  WORLD_SIM: ${wSimMs}ms  SEED: ${game.seed}`,
@@ -1759,23 +1763,23 @@ class R0 {
       `UPCOMING (+15m): ${nextSeg.name} [${nextSeg.type}]  JUMP_POT: ${nextSeg.jumpPotential || "Low"}`,
       `WORLD STATS: ${tStats.totalDistanceKm || 8.2}km | GAIN:+${tStats.totalElevationGain || 0}m | DROP:-${tStats.maxDescentMeters || 0}m | VAR:${tStats.diversityPercent || 94}%`,
       `NORMAL FORCES: F=${nf.toFixed(1)}N  R=${nr.toFixed(1)}N  SLIP: F=${sf.toFixed(2)} R=${sr.toFixed(2)}  CONTACTS:[${wheelContacts}]`,
-      `VEL: ${(Math.abs(v.forwardSpeed) * 7.2).toFixed(1)} km/h (VX:${vel.x.toFixed(1)} VY:${vel.y.toFixed(1)})  PITCH:${pitchDeg}°  ANG_VEL:${angVel}`,
-      `FORCES: ENGINE=${engForce}N  BRAKE=${brkForce}N  RPM=${(v.rpm * 100).toFixed(0)}%  STALL=${Boolean(v.climbingStalled)}`,
-      `SUSPENSION: R=${v.wheels[0].compression.toFixed(2)} F=${v.wheels[1].compression.toFixed(2)}  ROOF:${v.roofContact}  LANDING:[${landingState}]`,
-      `AIRBORNE: ${v.airborne}  AIRTIME: ${(game.stunts.airtime / 1000).toFixed(2)}s  STUNT: ${game.stunts.activeStuntName || "NONE"}`,
+      `SPEED: ${(v.speed * 7.2).toFixed(1)} km/h  FWD:${v.forwardSpeed.toFixed(1)}  VERT:${vel.y.toFixed(1)}  PITCH:${pitchDeg}°  ANG_VEL:${angVel}`,
+      `FORCES: ENGINE=${engForce}N  BRAKE=${brkForce}N  WHEEL_RPM=${wheelRpmVal} (${(v.rpm * 100).toFixed(0)}%)  STALL=${Boolean(v.climbingStalled)}`,
+      `SUSPENSION: REAR=${v.wheels[0].compression.toFixed(2)}  FRONT=${v.wheels[1].compression.toFixed(2)}  ROOF:${v.roofContact}  LANDING:[${landingState}]`,
+      `AIRBORNE: ${v.airborne}  AIRTIME:${(game.stunts.airtime / 1000).toFixed(2)}s  ROT:${rotDeg}° (FLIP:${flipProgPct}%)  PRED:[${landingPred}]  STUNT:${game.stunts.activeStuntName || "NONE"}`,
       `HOTKEYS: [1-4]SEEDS [5]+3H_TIME [6]WEATHER [7]SEASON [8]WORLD_EVENT [T]EXPORT`,
     ];
 
     ctx.save();
     ctx.fillStyle = "rgba(18, 22, 20, 0.88)";
-    const panelW = 595;
+    const panelW = 615;
     const panelH = lines.length * 14.0 + 18;
     ctx.fillRect(w - panelW - 16, h - panelH - 16, panelW, panelH);
     ctx.strokeStyle = "var(--hot)";
     ctx.lineWidth = 1.5;
     ctx.strokeRect(w - panelW - 16, h - panelH - 16, panelW, panelH);
 
-    ctx.font = "9.8px 'Courier New', monospace";
+    ctx.font = "9.6px 'Courier New', monospace";
     ctx.fillStyle = "#efe7d6";
     for (let i = 0; i < lines.length; i++) {
       ctx.fillText(lines[i], w - panelW - 6, h - panelH + 4 + i * 14.0);

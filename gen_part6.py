@@ -392,7 +392,6 @@ class q0 {
 
     this.vehicle.update(inputState, dt, this.terrain);
     Matter.Engine.update(this.engine, dt);
-    this.vehicle.solvePrismaticSuspension(this.terrain);
 
     const activePairs = this.engine.pairs.list.filter((p) => p.isActive);
     this.vehicle.markContacts(this.terrainSet, activePairs, this.terrain, dt);
