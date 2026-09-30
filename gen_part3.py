@@ -361,70 +361,70 @@ class MountainEchoManager {
 // MOUNTAIN GENERATION 2.0 — 32-Shape Parametric Library & Transition Grammar
 // ----------------------------------------------------------------------------
 const PARAMETRIC_SHAPES = {
-  // 1. Rollers & Rhythm Warmups
-  ROLLERS:          { cat: "ROLLERS",  name: "Foothill Rollers",      dx: 720,  dy: -28,  exitSlope: -0.06, maxDeg: 14, jumpPotential: "Low",    landingQuality: "Ideal",   surface: "grass" },
-  LONG_ROLLERS:     { cat: "ROLLERS",  name: "Undulating Meadow",     dx: 1080, dy: -45,  exitSlope: -0.08, maxDeg: 16, jumpPotential: "Low",    landingQuality: "Ideal",   surface: "grass" },
-  DOUBLE_HUMP:      { cat: "RHYTHM",   name: "Double Ridge Rollers",  dx: 840,  dy: -40,  exitSlope: -0.04, maxDeg: 20, jumpPotential: "Medium", landingQuality: "Good",    surface: "dirt" },
-  TRIPLE_HUMP:      { cat: "RHYTHM",   name: "Triple Rhythm Back",    dx: 1120, dy: -55,  exitSlope: -0.05, maxDeg: 22, jumpPotential: "Medium", landingQuality: "Good",    surface: "dirt" },
-  CAMELBACK:        { cat: "RHYTHM",   name: "Camelback Twin Crest",  dx: 860,  dy: -50,  exitSlope: 0.0,   maxDeg: 24, jumpPotential: "Medium", landingQuality: "Good",    surface: "grass" },
-  COMPRESSION_RUN:  { cat: "SUSP",     name: "Compression Dip Run",   dx: 820,  dy: -30,  exitSlope: -0.10, maxDeg: 22, jumpPotential: "Low",    landingQuality: "Good",    surface: "dirt" },
-  OFF_CAMBER:       { cat: "TECH",     name: "Off-Camber Ledge",      dx: 780,  dy: -65,  exitSlope: -0.14, maxDeg: 26, jumpPotential: "Low",    landingQuality: "Technical", surface: "rock" },
-  ROCK_FIELD:       { cat: "TECH",     name: "Boulder Scree Field",   dx: 880,  dy: -75,  exitSlope: -0.15, maxDeg: 28, jumpPotential: "Low",    landingQuality: "Rough",   surface: "rock" },
-  MOGUL_FIELD:      { cat: "SUSP",     name: "Suspension Breaker Moguls", dx: 840, dy: -60, exitSlope: -0.12, maxDeg: 26, jumpPotential: "Medium", landingQuality: "Rough",  surface: "gravel" },
+  // 1. Rollers & Rhythm Warmups (Now with real verticality & launch hops!)
+  ROLLERS:          { cat: "ROLLERS",  name: "Foothill Hump Rollers", dx: 680,  dy: -65,  exitSlope: -0.18, maxDeg: 24, jumpPotential: "Medium", landingQuality: "Ideal",     surface: "grass" },
+  LONG_ROLLERS:     { cat: "ROLLERS",  name: "Highland Swell Run",    dx: 960,  dy: -110, exitSlope: -0.22, maxDeg: 26, jumpPotential: "Medium", landingQuality: "Ideal",     surface: "grass" },
+  DOUBLE_HUMP:      { cat: "RHYTHM",   name: "Double Launch Rollers", dx: 820,  dy: -95,  exitSlope: -0.16, maxDeg: 30, jumpPotential: "High",   landingQuality: "Good",      surface: "dirt" },
+  TRIPLE_HUMP:      { cat: "RHYTHM",   name: "Triple Rhythm Spine",   dx: 1060, dy: -120, exitSlope: -0.18, maxDeg: 32, jumpPotential: "High",   landingQuality: "Good",      surface: "dirt" },
+  CAMELBACK:        { cat: "RHYTHM",   name: "Camelback Twin Launch", dx: 840,  dy: -85,  exitSlope: 0.14,  maxDeg: 32, jumpPotential: "High",   landingQuality: "Good",      surface: "grass" },
+  COMPRESSION_RUN:  { cat: "SUSP",     name: "Deep Compression Whoops",dx: 800, dy: -70,  exitSlope: -0.22, maxDeg: 30, jumpPotential: "Medium", landingQuality: "Good",      surface: "mud" },
+  OFF_CAMBER:       { cat: "TECH",     name: "Slick Off-Camber Ledge",dx: 760,  dy: -165, exitSlope: -0.28, maxDeg: 34, jumpPotential: "Medium", landingQuality: "Technical", surface: "wet_rock" },
+  ROCK_FIELD:       { cat: "TECH",     name: "Jagged Boulder Scree",  dx: 860,  dy: -195, exitSlope: -0.30, maxDeg: 36, jumpPotential: "Medium", landingQuality: "Rough",     surface: "rock" },
+  MOGUL_FIELD:      { cat: "SUSP",     name: "Suspension Breaker Moguls", dx: 820, dy: -140, exitSlope: -0.24, maxDeg: 34, jumpPotential: "High", landingQuality: "Rough",  surface: "gravel" },
 
-  // 2. Climbs (Easy -> Moderate -> Hard -> Extreme -> Summit)
-  SHALLOW_CLIMB:    { cat: "CLIMB",    name: "Foothill Bench Climb",  dx: 820,  dy: -140, exitSlope: -0.22, maxDeg: 18, jumpPotential: "Low",    landingQuality: "Ideal",   surface: "grass" },
-  LONG_CLIMB:       { cat: "CLIMB",    name: "Sustained Ridge Ascent",dx: 1350, dy: -340, exitSlope: -0.32, maxDeg: 28, jumpPotential: "Low",    landingQuality: "Good",    surface: "rock" },
-  STEEP_CLIMB:      { cat: "CLIMB",    name: "Steep Escarpment",      dx: 960,  dy: -310, exitSlope: -0.38, maxDeg: 34, jumpPotential: "Medium", landingQuality: "Good",    surface: "rock" },
-  STEPPED_RIDGE:    { cat: "CLIMB",    name: "Stepped Ridge",         dx: 1180, dy: -320, exitSlope: -0.34, maxDeg: 34, jumpPotential: "Medium", landingQuality: "Good",    surface: "rock" },
-  EXTREME_CLIMB:    { cat: "EXTREME",  name: "Extreme Headwall",      dx: 1050, dy: -410, exitSlope: -0.44, maxDeg: 40, jumpPotential: "Medium", landingQuality: "Narrow",  surface: "rock" },
-  SUMMIT_FACE:      { cat: "EXTREME",  name: "High Summit Face",      dx: 1240, dy: -490, exitSlope: -0.46, maxDeg: 44, jumpPotential: "High",   landingQuality: "Narrow",  surface: "snow" },
-  FINAL_ASCENT:     { cat: "EXTREME",  name: "The Final Ascent",      dx: 1320, dy: -520, exitSlope: -0.42, maxDeg: 45, jumpPotential: "High",   landingQuality: "Narrow",  surface: "snow" },
+  // 2. Steep & Multi-Stage Climbs (Require real momentum or vehicle stalls & rolls backward!)
+  SHALLOW_CLIMB:    { cat: "CLIMB",    name: "28° Foothill Climb",    dx: 780,  dy: -285, exitSlope: -0.44, maxDeg: 32, jumpPotential: "Medium", landingQuality: "Ideal",     surface: "dirt" },
+  LONG_CLIMB:       { cat: "CLIMB",    name: "Sustained Ridge Wall",  dx: 1220, dy: -540, exitSlope: -0.54, maxDeg: 38, jumpPotential: "Medium", landingQuality: "Good",      surface: "rock" },
+  STEEP_CLIMB:      { cat: "CLIMB",    name: "40° Steep Escarpment",  dx: 920,  dy: -485, exitSlope: -0.64, maxDeg: 42, jumpPotential: "High",   landingQuality: "Good",      surface: "rock" },
+  STEPPED_RIDGE:    { cat: "CLIMB",    name: "Multi-Stage Stepped Climb", dx: 1160, dy: -560, exitSlope: -0.58, maxDeg: 42, jumpPotential: "High", landingQuality: "Technical", surface: "wet_rock" },
+  EXTREME_CLIMB:    { cat: "EXTREME",  name: "44° Everest Headwall",  dx: 1020, dy: -610, exitSlope: -0.72, maxDeg: 44, jumpPotential: "High",   landingQuality: "Narrow",    surface: "rock" },
+  SUMMIT_FACE:      { cat: "EXTREME",  name: "Vertical Summit Face",  dx: 1180, dy: -690, exitSlope: -0.75, maxDeg: 45, jumpPotential: "Extreme",landingQuality: "Narrow",    surface: "snow" },
+  FINAL_ASCENT:     { cat: "EXTREME",  name: "The Abyssal Wall",      dx: 1260, dy: -740, exitSlope: -0.72, maxDeg: 45, jumpPotential: "Extreme",landingQuality: "Narrow",    surface: "snow" },
 
-  // 3. Crests & Ridges
-  BLIND_CREST:      { cat: "CREST",    name: "Blind Horizon Crest",   dx: 680,  dy: 35,   exitSlope: 0.22,  maxDeg: 26, jumpPotential: "High",   landingQuality: "Good",    surface: "rock" },
-  RAZOR_CREST:      { cat: "CREST",    name: "Razorback Spine",       dx: 740,  dy: 45,   exitSlope: 0.26,  maxDeg: 32, jumpPotential: "High",   landingQuality: "Narrow",  surface: "rock" },
-  BROKEN_RIDGE:     { cat: "TECH",     name: "Broken Spine Ridge",    dx: 960,  dy: -110, exitSlope: -0.18, maxDeg: 30, jumpPotential: "Medium", landingQuality: "Technical", surface: "rock" },
-  NARROW_RIDGE:     { cat: "TECH",     name: "Knife-Edge Pass",       dx: 860,  dy: -85,  exitSlope: -0.12, maxDeg: 28, jumpPotential: "Medium", landingQuality: "Narrow",  surface: "gravel" },
+  // 3. Sharp Mountain Crests (UPHILL -> Tiny Peak -> Immediate Steep DOWNHILL!)
+  BLIND_CREST:      { cat: "CREST",    name: "Blind Knife-Edge Crest",dx: 680,  dy: 175,  exitSlope: 0.54,  maxDeg: 38, jumpPotential: "Extreme",landingQuality: "Downhill",  surface: "rock" },
+  RAZOR_CREST:      { cat: "CREST",    name: "Razorback Launch Spine",dx: 720,  dy: 245,  exitSlope: 0.64,  maxDeg: 42, jumpPotential: "Extreme",landingQuality: "Narrow",    surface: "rock" },
+  BROKEN_RIDGE:     { cat: "TECH",     name: "Exposed Broken Spine",  dx: 920,  dy: -240, exitSlope: -0.38, maxDeg: 38, jumpPotential: "High",   landingQuality: "Technical", surface: "wet_rock" },
+  NARROW_RIDGE:     { cat: "TECH",     name: "Knife-Edge Pass",       dx: 840,  dy: -210, exitSlope: -0.32, maxDeg: 36, jumpPotential: "High",   landingQuality: "Narrow",    surface: "gravel" },
 
-  // 4. Jumps & Airborne Launches
-  KICKER:           { cat: "JUMP",     name: "Upward Kicker Ramp",    dx: 820,  dy: -55,  exitSlope: 0.16,  maxDeg: 28, jumpPotential: "High",   landingQuality: "Good",    surface: "dirt" },
-  LONG_KICKER:      { cat: "JUMP",     name: "High-Speed Long Kicker",dx: 1080, dy: -85,  exitSlope: 0.18,  maxDeg: 32, jumpPotential: "Extreme",landingQuality: "Good",    surface: "rock" },
-  RIDGE_LAUNCH:     { cat: "JUMP",     name: "Natural Ridge Launch",  dx: 940,  dy: -70,  exitSlope: 0.20,  maxDeg: 30, jumpPotential: "High",   landingQuality: "Good",    surface: "rock" },
-  CLIFF_LAUNCH:     { cat: "JUMP",     name: "Trestle Cliff Gap",     dx: 1180, dy: 65,   exitSlope: 0.22,  maxDeg: 34, jumpPotential: "Extreme",landingQuality: "Slope",   surface: "wood" },
-  DOWNHILL_LAUNCH:  { cat: "JUMP",     name: "Downhill Step Launch",  dx: 1020, dy: 145,  exitSlope: 0.26,  maxDeg: 32, jumpPotential: "High",   landingQuality: "Downhill",surface: "dirt" },
+  // 4. Natural Jumps, Double-Jump Combos & Giant Gaps
+  KICKER:           { cat: "JUMP",     name: "Natural Dirt Launch",   dx: 780,  dy: 45,   exitSlope: 0.38,  maxDeg: 38, jumpPotential: "High",   landingQuality: "Downhill",  surface: "dirt" },
+  LONG_KICKER:      { cat: "JUMP",     name: "Giant Canyon Gap",      dx: 1060, dy: 120,  exitSlope: 0.44,  maxDeg: 42, jumpPotential: "Extreme",landingQuality: "Slope",     surface: "rock" },
+  RIDGE_LAUNCH:     { cat: "JUMP",     name: "Double-Jump Ridge Combo",dx: 980, dy: 30,   exitSlope: 0.36,  maxDeg: 38, jumpPotential: "Extreme",landingQuality: "Good",      surface: "dirt" },
+  CLIFF_LAUNCH:     { cat: "JUMP",     name: "Surprise Cliff Drop",   dx: 1120, dy: 260,  exitSlope: 0.52,  maxDeg: 42, jumpPotential: "Extreme",landingQuality: "Downhill",  surface: "wood" },
+  DOWNHILL_LAUNCH:  { cat: "JUMP",     name: "Downhill Speed Vault",  dx: 960,  dy: 310,  exitSlope: 0.56,  maxDeg: 42, jumpPotential: "Extreme",landingQuality: "Downhill",  surface: "dirt" },
 
-  // 5. Descents & Deep Valleys
-  SHALLOW_DESCENT:  { cat: "DESCENT",  name: "Traversing Descent",    dx: 840,  dy: 140,  exitSlope: 0.18,  maxDeg: 20, jumpPotential: "Low",    landingQuality: "Ideal",   surface: "dirt" },
-  STEEP_DESCENT:    { cat: "DESCENT",  name: "Steep Gorge Plunge",    dx: 960,  dy: 290,  exitSlope: 0.34,  maxDeg: 34, jumpPotential: "Medium", landingQuality: "Downhill",surface: "dirt" },
-  LONG_DESCENT:     { cat: "DESCENT",  name: "The Great Descent Run", dx: 1440, dy: 460,  exitSlope: 0.36,  maxDeg: 36, jumpPotential: "High",   landingQuality: "Downhill",surface: "gravel" },
-  V_VALLEY:         { cat: "VALLEY",   name: "V-Ravine Gorge",        dx: 920,  dy: 65,   exitSlope: -0.28, maxDeg: 32, jumpPotential: "High",   landingQuality: "Good",    surface: "rock" },
-  U_VALLEY:         { cat: "VALLEY",   name: "Deep U-Valley Bowl",    dx: 1160, dy: 40,   exitSlope: -0.26, maxDeg: 28, jumpPotential: "High",   landingQuality: "Ideal",   surface: "dirt" },
-  GLACIAL_BOWL:     { cat: "VALLEY",   name: "Glacial Ice Basin",     dx: 1380, dy: 30,   exitSlope: -0.24, maxDeg: 26, jumpPotential: "Extreme",landingQuality: "Ideal",   surface: "ice" },
-  RAVINE:           { cat: "VALLEY",   name: "Erosion Ravine",        dx: 880,  dy: 50,   exitSlope: -0.25, maxDeg: 30, jumpPotential: "Medium", landingQuality: "Good",    surface: "dirt" },
-  MINE_PIT:         { cat: "VALLEY",   name: "Open-Cast Mine Pit",    dx: 1220, dy: 25,   exitSlope: -0.30, maxDeg: 34, jumpPotential: "Medium", landingQuality: "Good",    surface: "gravel" },
+  // 5. Real Steep Descents & Deep Trenches (Force Braking & Speed Control!)
+  SHALLOW_DESCENT:  { cat: "DESCENT",  name: "30° Fast Descent",      dx: 820,  dy: 290,  exitSlope: 0.44,  maxDeg: 32, jumpPotential: "Medium", landingQuality: "Downhill",  surface: "dirt" },
+  STEEP_DESCENT:    { cat: "DESCENT",  name: "42° Gorge Plunge",      dx: 920,  dy: 495,  exitSlope: 0.64,  maxDeg: 42, jumpPotential: "High",   landingQuality: "Downhill",  surface: "gravel" },
+  LONG_DESCENT:     { cat: "DESCENT",  name: "50° Terminal Drop Run", dx: 1340, dy: 720,  exitSlope: 0.68,  maxDeg: 44, jumpPotential: "Extreme",landingQuality: "Downhill",  surface: "gravel" },
+  V_VALLEY:         { cat: "VALLEY",   name: "Deep V-Trench Launch",  dx: 880,  dy: -75,  exitSlope: -0.52, maxDeg: 40, jumpPotential: "High",   landingQuality: "Good",      surface: "rock" },
+  U_VALLEY:         { cat: "VALLEY",   name: "Deep Compression Bowl", dx: 1080, dy: -65,  exitSlope: -0.46, maxDeg: 38, jumpPotential: "High",   landingQuality: "Ideal",     surface: "dirt" },
+  GLACIAL_BOWL:     { cat: "VALLEY",   name: "Glacial Ice Trench",    dx: 1280, dy: -55,  exitSlope: -0.44, maxDeg: 38, jumpPotential: "Extreme",landingQuality: "Ideal",     surface: "ice" },
+  RAVINE:           { cat: "VALLEY",   name: "Abyssal Ravine Gorge",  dx: 860,  dy: -60,  exitSlope: -0.48, maxDeg: 40, jumpPotential: "High",   landingQuality: "Good",      surface: "mud" },
+  MINE_PIT:         { cat: "VALLEY",   name: "Sunken Quarry Trench",  dx: 1140, dy: -50,  exitSlope: -0.50, maxDeg: 40, jumpPotential: "High",   landingQuality: "Good",      surface: "gravel" },
 
-  // 6. Recovery Zones & Plateaus
-  PLATEAU:          { cat: "RECOVERY", name: "Survey Bench Plateau",  dx: 660,  dy: -12,  exitSlope: 0.0,   maxDeg: 8,  jumpPotential: "None",   landingQuality: "Ideal",   surface: "grass" },
-  RECOVERY_VALLEY:  { cat: "RECOVERY", name: "Sheltered Basin Rest",  dx: 740,  dy: 18,   exitSlope: -0.05, maxDeg: 10, jumpPotential: "None",   landingQuality: "Ideal",   surface: "dirt" },
+  // 6. Short Tactical Recovery Benches (Moments to breathe & rebuild momentum!)
+  PLATEAU:          { cat: "RECOVERY", name: "Momentum Bench Shelf",  dx: 580,  dy: -35,  exitSlope: -0.10, maxDeg: 14, jumpPotential: "Low",    landingQuality: "Ideal",     surface: "grass" },
+  RECOVERY_VALLEY:  { cat: "RECOVERY", name: "Saddle Recovery Basin", dx: 640,  dy: 25,   exitSlope: -0.14, maxDeg: 16, jumpPotential: "Low",    landingQuality: "Ideal",     surface: "dirt" },
 };
 
-// Markov Category Transition Rules (Section 41 & 42: Procedural Anti-Repetition)
+// Markov Category Transition Rules (Section 26 & 27: Rhythm of Climb -> Crest -> Descent -> Trench -> Jump)
 const CATEGORY_TRANSITIONS = {
-  ROLLERS:  ["CLIMB", "RHYTHM", "JUMP", "SUSP"],
-  RHYTHM:   ["CLIMB", "JUMP", "VALLEY", "TECH"],
-  SUSP:     ["CLIMB", "RECOVERY", "JUMP", "CREST"],
-  TECH:     ["CLIMB", "CREST", "DESCENT", "RECOVERY"],
-  CLIMB:    ["CREST", "JUMP", "RECOVERY", "TECH"],
-  EXTREME:  ["CREST", "RECOVERY", "JUMP"],
-  CREST:    ["DESCENT", "VALLEY", "JUMP", "RECOVERY"],
-  JUMP:     ["RECOVERY", "VALLEY", "ROLLERS", "DESCENT"],
-  DESCENT:  ["VALLEY", "RECOVERY", "CLIMB", "JUMP"],
-  VALLEY:   ["CLIMB", "RECOVERY", "RHYTHM", "JUMP"],
-  RECOVERY: ["CLIMB", "RHYTHM", "TECH", "EXTREME", "DESCENT"],
+  ROLLERS:  ["CLIMB", "EXTREME", "JUMP", "CREST"],
+  RHYTHM:   ["CLIMB", "EXTREME", "JUMP", "VALLEY", "CREST"],
+  SUSP:     ["CLIMB", "EXTREME", "JUMP", "CREST"],
+  TECH:     ["EXTREME", "CREST", "DESCENT", "JUMP"],
+  CLIMB:    ["CREST", "EXTREME", "JUMP", "DESCENT"],
+  EXTREME:  ["CREST", "DESCENT", "JUMP", "RECOVERY"],
+  CREST:    ["DESCENT", "VALLEY", "JUMP"],
+  JUMP:     ["VALLEY", "DESCENT", "CLIMB", "RECOVERY"],
+  DESCENT:  ["VALLEY", "JUMP", "CLIMB", "EXTREME"],
+  VALLEY:   ["CLIMB", "EXTREME", "JUMP", "CREST"],
+  RECOVERY: ["CLIMB", "EXTREME", "JUMP", "DESCENT"],
 };
 
-// 8 Signature Expedition Setpieces anchored at key distances across the 8.2km mountain (Section 31)
+// 10 Signature Expedition Setpieces anchored at key distances across the 8.2km mountain
 const SIGNATURE_SETPIECES = [
   { triggerDistM: 520,  type: "KICKER",          name: "THE OLD QUARRY LAUNCH",    signature: "SETPIECE // OLD QUARRY" },
   { triggerDistM: 1250, type: "RAZOR_CREST",     name: "THE RED RIDGE SPINE",      signature: "SETPIECE // BROKEN RIDGE" },
@@ -449,7 +449,7 @@ class P0 {
   seed;
   step = x.world.sampleStep;
   chunkSamples = x.world.chunkSamples || 20;
-  activeRadius = x.world.activePhysicsRadius || 3200;
+  activeRadius = x.world.activePhysicsRadius || 2160;
   activeChunkCount = 0;
   lastStreamCenterX = -999999;
   stats = null;
@@ -459,32 +459,29 @@ class P0 {
     this.generateGrammarTerrain();
   }
 
-  // Difficulty curve across the full 8.2km expedition (Section 28)
+  // Difficulty curve across the full 8.2km expedition (Starts high enough for real mountain challenge!)
   computeDifficulty(distMeters) {
-    let base = 0.15;
+    let base = 0.42;
     if (distMeters < 800) {
-      base = 0.15 + (distMeters / 800) * 0.15; // 0.15 -> 0.30
+      base = 0.42 + (distMeters / 800) * 0.16; // 0.42 -> 0.58
     } else if (distMeters < 1600) {
-      base = 0.30 + ((distMeters - 800) / 800) * 0.15; // 0.30 -> 0.45
+      base = 0.58 + ((distMeters - 800) / 800) * 0.12; // 0.58 -> 0.70
     } else if (distMeters < 2600) {
-      base = 0.45 + ((distMeters - 1600) / 1000) * 0.15; // 0.45 -> 0.60
+      base = 0.70 + ((distMeters - 1600) / 1000) * 0.10; // 0.70 -> 0.80
     } else if (distMeters < 3800) {
-      base = 0.60 + ((distMeters - 2600) / 1200) * 0.12; // 0.60 -> 0.72
+      base = 0.80 + ((distMeters - 2600) / 1200) * 0.08; // 0.80 -> 0.88
     } else if (distMeters < 5200) {
-      base = 0.72 + ((distMeters - 3800) / 1400) * 0.12; // 0.72 -> 0.84
-    } else if (distMeters < 6800) {
-      base = 0.84 + ((distMeters - 5200) / 1600) * 0.10; // 0.84 -> 0.94
+      base = 0.88 + ((distMeters - 3800) / 1400) * 0.06; // 0.88 -> 0.94
     } else {
-      base = 0.94 + b((distMeters - 6800) / 1400, 0, 1) * 0.06; // 0.94 -> 1.00
+      base = 0.94 + b((distMeters - 5200) / 2800, 0, 1) * 0.06; // 0.94 -> 1.00
     }
-    return b(base, 0.15, 1.0);
+    return b(base, 0.40, 1.0);
   }
 
   classifyDifficultyCategory(diff) {
-    if (diff < 0.30) return "EASY";
-    if (diff < 0.50) return "MODERATE";
-    if (diff < 0.70) return "CHALLENGING";
-    if (diff < 0.90) return "HARD";
+    if (diff < 0.48) return "MODERATE";
+    if (diff < 0.68) return "CHALLENGING";
+    if (diff < 0.86) return "HARD";
     return "EXTREME";
   }
 
@@ -501,7 +498,7 @@ class P0 {
     }
 
     // 2. Determine allowed next categories from Markov Transition Matrix
-    const allowedCats = CATEGORY_TRANSITIONS[prevCat] || ["CLIMB", "RHYTHM", "RECOVERY"];
+    const allowedCats = CATEGORY_TRANSITIONS[prevCat] || ["CLIMB", "CREST", "DESCENT", "JUMP"];
 
     // 3. Filter candidate shapes by Act / Sector appropriateness and anti-repetition
     const candidates = [];
@@ -514,21 +511,21 @@ class P0 {
       // Never repeat a shape present in the last 3 segments
       if (recentTypes.slice(-3).includes(key)) continue;
 
-      // Act-specific gating so Foothills stay approachable and Summit Face is intense
-      if (distMeters < 750 && (def.cat === "EXTREME" || def.maxDeg > 28 || key === "CLIFF_LAUNCH")) continue;
+      // Weight high-action climbs, crests, descents, trenches, and jumps across all sectors!
+      if (def.cat === "CLIMB" || def.cat === "EXTREME" || def.cat === "CREST" || def.cat === "DESCENT" || def.cat === "JUMP" || def.cat === "VALLEY") {
+        candidates.push(key, key);
+      }
       if (distMeters >= 1600 && distMeters <= 2400) {
-        // Act III: The Great Descent favors descents, valleys, and recovery climbs
         if (def.cat === "DESCENT" || def.cat === "VALLEY" || key === "STEPPED_RIDGE") {
           candidates.push(key, key);
         }
       }
       if (distMeters >= 3500 && distMeters <= 5000) {
-        // Act V: Glacier Run favors glacial bowls, long kickers, and smooth fast runs
-        if (key === "GLACIAL_BOWL" || key === "LONG_KICKER" || key === "LONG_ROLLERS") {
+        if (key === "GLACIAL_BOWL" || key === "LONG_KICKER" || key === "DOWNHILL_LAUNCH") {
           candidates.push(key, key);
         }
       }
-      if (distMeters >= 6600 && (def.cat === "EXTREME" || key === "STEEP_CLIMB" || key === "RAZOR_CREST")) {
+      if (distMeters >= 5000 && (def.cat === "EXTREME" || key === "STEEP_CLIMB" || key === "RAZOR_CREST")) {
         candidates.push(key, key);
       }
 
@@ -536,7 +533,7 @@ class P0 {
     }
 
     if (candidates.length === 0) {
-      return { key: "PLATEAU", overrideName: null, signature: null };
+      return { key: "STEEP_CLIMB", overrideName: null, signature: null };
     }
 
     const idx = Math.floor(Math.abs(rng(distMeters * 0.17 + recentTypes.length * 13.7)) * candidates.length) % candidates.length;
@@ -560,8 +557,8 @@ class P0 {
     const nDetail = K0(seed + 89);
     const nChoice = K0(seed + 151);
 
-    // 1. Initial flat starting apron (-2500 to startX + 350)
-    for (let q = -2500; q < startX + 350; q += this.step) {
+    // 1. Initial starting apron (-2500 to startX + 260)
+    for (let q = -2500; q < startX + 260; q += this.step) {
       this.samples.push({
         x: q,
         y: groundBase,
@@ -572,22 +569,25 @@ class P0 {
       });
     }
 
-    // 2. Preserve proven opening 6 segments (0m -> ~85m) so early driving/prop tests remain 100% consistent,
-    //    then transition seamlessly into the 8.2km Markov Macro-Meso-Micro Expedition Grammar!
+    // 2. EXTREME MOUNTAIN OPENING SEQUENCE (Sections A -> L right in the first 0m -> 220m!):
+    //    Immediately delivers: 28° Climb -> Sharp Crest -> Steep 38° Descent (Brake Test!) -> Deep V-Trench ->
+    //    Natural Launch Ramp (Big Airtime!) -> Multi-Stage 42° Wall (Momentum Climb!) -> Double-Jump Ridge -> Giant Gap!
     const openingSequence = [
-      { key: "ROLLERS",       name: "Gentle Rollers",      dx: 600, dy: -20,  exitSlope: 0.05,  surface: "grass" },
-      { key: "SHALLOW_CLIMB", name: "Steady Climb",        dx: 700, dy: -140, exitSlope: -0.32, surface: "grass" },
-      { key: "KICKER",        name: "First Kicker Jump",   dx: 750, dy: -40,  exitSlope: 0.15,  surface: "dirt"  },
-      { key: "U_VALLEY",      name: "Deep Valley Bowl",    dx: 650, dy: 60,   exitSlope: -0.25, surface: "dirt"  },
-      { key: "CAMELBACK",     name: "Camelback Double",    dx: 700, dy: -50,  exitSlope: 0.0,   surface: "grass" },
-      { key: "PLATEAU",       name: "Base Camp Plateau",   dx: 550, dy: -10,  exitSlope: 0.0,   surface: "grass" },
+      { key: "KICKER",          name: "Section A: Launch Approach",       dx: 580,  dy: -75,  exitSlope: -0.28, surface: "grass" },
+      { key: "STEEP_CLIMB",     name: "Section B: 35° Escarpment Climb",  dx: 840,  dy: -420, exitSlope: -0.58, surface: "rock"  },
+      { key: "RAZOR_CREST",     name: "Section E: Knife-Edge Crest Drop", dx: 720,  dy: 250,  exitSlope: 0.62,  surface: "rock"  },
+      { key: "STEEP_DESCENT",   name: "Section F: 40° Danger Plunge",     dx: 860,  dy: 440,  exitSlope: 0.58,  surface: "dirt"  },
+      { key: "V_VALLEY",        name: "Section G: Deep V-Trench Vault",   dx: 860,  dy: -95,  exitSlope: -0.52, surface: "mud"   },
+      { key: "STEPPED_RIDGE",   name: "Section H: Multi-Stage Headwall",  dx: 1080, dy: -540, exitSlope: -0.64, surface: "rock"  },
+      { key: "RIDGE_LAUNCH",    name: "Section I: Double-Jump Ridge",     dx: 960,  dy: 40,   exitSlope: 0.38,  surface: "dirt"  },
+      { key: "LONG_KICKER",     name: "Section J: Giant Ravine Gap",      dx: 1040, dy: 110,  exitSlope: 0.42,  surface: "rock"  },
     ];
 
     let curX = this.samples[this.samples.length - 1].x;
     let curY = groundBase;
     let curSlope = 0.0;
     let seqIdx = 0;
-    let prevCat = "RECOVERY";
+    let prevCat = "JUMP";
     const recentTypes = [];
 
     while (curX < totalLength) {
@@ -598,7 +598,7 @@ class P0 {
       let shapeKey, segName, segDx, segDy, targetSlope, segSurface, segSignature = null;
       let shapeDef;
 
-      // Final 250m (7,950m -> 8,200m): Summit Observatory Panoramic Plateau (Section 50 & 51)
+      // Final 220m (7,980m -> 8,200m): Summit Observatory Panoramic Plateau
       if (distMeters >= 7980) {
         shapeKey = "PLATEAU";
         shapeDef = PARAMETRIC_SHAPES.PLATEAU;
@@ -613,39 +613,37 @@ class P0 {
         shapeKey = op.key;
         shapeDef = PARAMETRIC_SHAPES[shapeKey];
         segName = op.name;
-        segDx = Math.round((op.dx * (0.92 + Math.abs(nSwell(curX / 900)) * 0.20)) / this.step) * this.step;
-        segDy = op.dy * (1.0 + difficulty * 0.30);
+        segDx = Math.round((op.dx * (0.94 + Math.abs(nSwell(curX / 900)) * 0.14)) / this.step) * this.step;
+        segDy = op.dy * (1.0 + difficulty * 0.22);
         targetSlope = op.exitSlope;
         segSurface = op.surface;
       } else {
         const picked = this.pickNextShapeKey(distMeters, prevCat, recentTypes, nChoice);
         shapeKey = picked.key;
-        shapeDef = PARAMETRIC_SHAPES[shapeKey] || PARAMETRIC_SHAPES.ROLLERS;
+        shapeDef = PARAMETRIC_SHAPES[shapeKey] || PARAMETRIC_SHAPES.STEEP_CLIMB;
         segName = picked.overrideName || shapeDef.name;
         segSignature = picked.signature;
 
-        // Seeded parametric variation (Section 27)
-        const lenScale = 0.88 + Math.abs(nSwell(curX * 0.0011 + seqIdx)) * 0.32;
-        const ampScale = (0.85 + Math.abs(nMacro(curX * 0.0007 + seqIdx)) * 0.30) * (0.75 + difficulty * 0.55);
+        // Seeded parametric variation
+        const lenScale = 0.86 + Math.abs(nSwell(curX * 0.0011 + seqIdx)) * 0.28;
+        const ampScale = (0.95 + Math.abs(nMacro(curX * 0.0007 + seqIdx)) * 0.35) * (0.90 + difficulty * 0.45);
 
         segDx = Math.round((shapeDef.dx * lenScale) / this.step) * this.step;
         segDy = shapeDef.dy * ampScale;
 
         // Macro Act Envelope Bias:
-        // Act III (1,600m - 2,400m) is THE GREAT DESCENT; bias net vertical change downward
         if (distMeters >= 1600 && distMeters < 2300 && shapeDef.cat !== "CLIMB") {
-          segDy += 95;
-        } else if (distMeters >= 5000 && distMeters < 7950 && shapeDef.cat === "CLIMB") {
-          // High Mountain & Summit Approach: amplify vertical climb gain
-          segDy -= 65;
+          segDy += 140;
+        } else if (distMeters >= 5000 && distMeters < 7950 && (shapeDef.cat === "CLIMB" || shapeDef.cat === "EXTREME")) {
+          segDy -= 110;
         }
 
-        targetSlope = b(shapeDef.exitSlope * (0.85 + difficulty * 0.35), -0.46, 0.42);
+        targetSlope = b(shapeDef.exitSlope * (0.95 + difficulty * 0.30), -0.78, 0.72);
         segSurface = shapeDef.surface || biome.defaultMaterial;
         if (biome.id === "glacier" && (shapeDef.cat === "VALLEY" || shapeDef.cat === "ROLLERS")) {
           segSurface = "ice";
         } else if (biome.id === "summit") {
-          segSurface = Math.abs(targetSlope) > 0.38 ? "rock" : "snow";
+          segSurface = Math.abs(targetSlope) > 0.45 ? "rock" : "snow";
         } else if (biome.id === "industrial" && shapeDef.cat === "JUMP") {
           segSurface = "metal";
         }
@@ -668,9 +666,9 @@ class P0 {
       let segMinY = y0;
       let segMaxY = y0;
 
-      // Sample along Cubic Hermite Spline with Meso + Micro + Off-Camber Perturbations
+      // Sample along Cubic Hermite Spline with Extreme Mountain Meso + Micro Articulations
       const L = x1 - x0;
-      const maxAllowedDeg = b((shapeDef.maxDeg || 38) + difficulty * 6, 16, 45.2);
+      const maxAllowedDeg = b((shapeDef.maxDeg || 42) + difficulty * 4, 22, 45.1);
       const maxSlopeTan = Math.tan((maxAllowedDeg * Math.PI) / 180);
 
       for (let q = x0 + this.step; q <= x1; q += this.step) {
@@ -685,74 +683,82 @@ class P0 {
 
         let y = h00 * y0 + h10 * L * m0 + h01 * y1 + h11 * L * m1;
 
-        // Window envelope sin(pi * u)^2 so meso/micro perturbations vanish at segment boundaries (preserving exact C1 continuity!)
         const env = Math.sin(u * Math.PI);
         const env2 = env * env;
 
-        // Meso & Micro shape articulations (Sections 08, 18, 19, 35, 36)
+        // Extreme Mountain Meso & Micro Shape Articulations (Sections 5, 6, 7, 15, 17, 18, 19, 28)
         if (shapeKey === "ROLLERS" || shapeKey === "LONG_ROLLERS") {
-          y += Math.sin(u * Math.PI * 4) * (15.0 + difficulty * 9.0) * env;
+          y -= Math.sin(u * Math.PI * 3) * (38.0 + difficulty * 22.0) * env;
         } else if (shapeKey === "DOUBLE_HUMP" || shapeKey === "CAMELBACK") {
-          y -= Math.sin(u * Math.PI * 3) * (24.0 + difficulty * 12.0) * env;
+          // Two steep launch humps in succession
+          y -= Math.sin(u * Math.PI * 3) * (58.0 + difficulty * 28.0) * env;
         } else if (shapeKey === "TRIPLE_HUMP") {
-          y -= Math.sin(u * Math.PI * 5) * (20.0 + difficulty * 10.0) * env;
-        } else if (shapeKey === "KICKER" || shapeKey === "LONG_KICKER" || shapeKey === "RIDGE_LAUNCH") {
-          // Smooth upward launch ramp followed by landing basin
-          if (u < 0.48) {
-            y -= Math.sin((u / 0.48) * Math.PI * 0.5) * (28.0 + difficulty * 18.0) * env;
+          y -= Math.sin(u * Math.PI * 5) * (46.0 + difficulty * 22.0) * env;
+        } else if (shapeKey === "KICKER") {
+          // Steep natural upward kicker ramp (u < 0.42) followed by deep landing drop!
+          if (u < 0.42) {
+            y -= Math.pow(Math.sin((u / 0.42) * Math.PI), 1.2) * (68.0 + difficulty * 32.0);
           } else {
-            y += Math.sin(((u - 0.48) / 0.52) * Math.PI) * (18.0 + difficulty * 12.0) * env;
+            y += Math.sin(((u - 0.42) / 0.58) * Math.PI) * (54.0 + difficulty * 28.0);
           }
-        } else if (shapeKey === "CLIFF_LAUNCH" || shapeKey === "DOWNHILL_LAUNCH") {
-          // High takeoff lip dropping into a wide downhill landing slope
-          if (u < 0.35) {
-            y -= Math.sin((u / 0.35) * Math.PI) * (34.0 + difficulty * 16.0);
+        } else if (shapeKey === "LONG_KICKER") {
+          // Giant Gap: speed-building dip -> high launch ramp -> deep chasm -> landing table
+          if (u < 0.34) {
+            y -= Math.sin((u / 0.34) * Math.PI) * (82.0 + difficulty * 38.0);
           } else {
-            y += Math.sin(((u - 0.35) / 0.65) * Math.PI) * (42.0 + difficulty * 22.0);
+            y += Math.pow(Math.sin(((u - 0.34) / 0.66) * Math.PI), 1.1) * (135.0 + difficulty * 55.0);
+          }
+        } else if (shapeKey === "RIDGE_LAUNCH") {
+          // Double-Jump Terrain (Sec 18: Downhill -> Valley -> Launch 1 -> Land -> Launch 2)
+          y -= Math.sin(u * Math.PI * 4) * (64.0 + difficulty * 26.0) * env;
+        } else if (shapeKey === "CLIFF_LAUNCH" || shapeKey === "DOWNHILL_LAUNCH") {
+          // Surprise Terrain (Sec 28): looks like a small crest, then drops into a massive chasm!
+          if (u < 0.30) {
+            y -= Math.sin((u / 0.30) * Math.PI) * (62.0 + difficulty * 26.0);
+          } else {
+            y += Math.sin(((u - 0.30) / 0.70) * Math.PI) * (145.0 + difficulty * 55.0);
           }
         } else if (shapeKey === "V_VALLEY" || shapeKey === "RAVINE") {
-          // Deep V-depression with compression floor and exit climb
-          y += Math.pow(env, 1.4) * (75.0 + difficulty * 45.0);
+          // Deep V-Trench (Sec 17): plunges 160px down then shoots up a steep exit launch wall!
+          y += Math.pow(env, 1.3) * (145.0 + difficulty * 65.0);
         } else if (shapeKey === "U_VALLEY" || shapeKey === "GLACIAL_BOWL") {
-          // Wide smooth high-speed bowl
-          y += env2 * (90.0 + difficulty * 55.0);
+          // Deep High-Speed Bowl
+          y += env2 * (160.0 + difficulty * 75.0);
         } else if (shapeKey === "MINE_PIT") {
-          // Steep entry, flat pit floor, technical exit
           const pit = Math.min(1, env * 1.6);
-          y += pit * (82.0 + difficulty * 38.0);
+          y += pit * (135.0 + difficulty * 55.0);
         } else if (shapeKey === "STEPPED_RIDGE") {
-          // Stepped mountain shelves (climb -> brief shelf -> climb)
-          y += Math.sin(u * Math.PI * 6) * 14.0 * env2;
+          // Multi-Stage Climb (Sec 15): 30° slope -> small crest -> short dip -> 42° wall -> shelf -> final 45° pitch
+          y += (Math.sin(u * Math.PI * 4) * 42.0 - Math.cos(u * Math.PI * 2) * 24.0) * env;
         } else if (shapeKey === "RAZOR_CREST" || shapeKey === "BLIND_CREST") {
-          // Pronounced crest apex at u = 0.45
-          y -= Math.exp(-Math.pow((u - 0.45) / 0.18, 2)) * (44.0 + difficulty * 22.0) * env;
+          // Sharp Mountain Crest (Sec 6): steep UPHILL -> sharp peak at u=0.38 -> steep DOWNHILL!
+          const peak = Math.exp(-Math.pow((u - 0.38) / 0.14, 2));
+          y -= peak * (96.0 + difficulty * 42.0) * env;
         } else if (shapeKey === "ROCK_FIELD" || shapeKey === "MOGUL_FIELD") {
-          // High-frequency suspension challenge bumps
-          y += (Math.sin(q / 24.0) * 7.5 + nDetail(q / 42.0) * 9.5) * env2;
+          // Wheelbase-challenging rock ledges & moguls
+          y += (Math.sin(q / 22.0) * 11.5 + nDetail(q / 38.0) * 14.0) * env2;
         } else if (shapeKey === "OFF_CAMBER" || shapeKey === "BROKEN_RIDGE") {
-          // Asymmetric wheelbase-scale ripples (~112px wavelength) pitching front vs rear wheel
-          y += (Math.sin(q / 18.5) * 6.5 + Math.cos(q / 37.0) * 9.0) * env2;
+          y += (Math.sin(q / 19.0) * 10.5 + Math.cos(q / 35.0) * 13.5) * env2;
         } else if (shapeKey === "COMPRESSION_RUN") {
-          y += Math.sin(u * Math.PI * 6) * (18.0 + difficulty * 8.0) * env2;
+          y += Math.sin(u * Math.PI * 6) * (32.0 + difficulty * 14.0) * env2;
         } else {
-          // Subtle organic mountain erosion on climbs/descents
-          y += nDetail(q / 85.0) * (6.5 + difficulty * 4.5) * env2;
+          // Natural uneven rock shelves & erosion on climbs/descents
+          y += (nDetail(q / 65.0) * 12.0 + Math.sin(u * Math.PI * 3) * 18.0) * env2;
         }
 
-        // Physics Safety & Curvature Clamp (Sections 25, 37, 38):
-        // Control both 1st derivative (slope) and 2nd derivative (dSlope/dX curvature) so no knife-edges occur
+        // Physics Safety & Curvature Clamp:
         const prev = this.samples[this.samples.length - 1];
         const dx = q - prev.x;
         let dy = y - prev.y;
 
-        // 1. Curvature rate limiter (limits change in slope per 18px step to prevent single-frame kinks)
-        const maxDeltaSlope = 0.085; // ~4.8 degrees max angle change per 18px sample
+        // 1. Allow sharper crests and launch lips (maxDeltaSlope = 0.145 -> ~8.3 deg per 18px sample)
+        const maxDeltaSlope = 0.145;
         const desiredSlope = dy / dx;
         const clampedCurvSlope = b(desiredSlope, prev.slope - maxDeltaSlope, prev.slope + maxDeltaSlope);
         dy = clampedCurvSlope * dx;
 
-        // 2. Maximum slope clamp (<= maxSlopeTan, never exceeding 45.5 deg)
-        const maxDy = dx * Math.min(maxSlopeTan, Math.tan(0.795));
+        // 2. Maximum slope clamp (<= 45.1 deg -> dy <= 18.06px per 18px step)
+        const maxDy = dx * Math.min(maxSlopeTan, Math.tan(0.787));
         if (Math.abs(dy) > maxDy) {
           dy = Math.sign(dy) * maxDy;
         }
@@ -766,9 +772,9 @@ class P0 {
         if (y > segMaxY) segMaxY = y;
 
         let mat = segSurface;
-        if (Math.abs(actualSlope) > 0.56 && biome.id !== "summit" && mat !== "metal") {
+        if (Math.abs(actualSlope) > 0.62 && biome.id !== "summit" && mat !== "metal" && mat !== "wet_rock") {
           mat = "rock";
-        } else if (biome.id === "summit" && Math.abs(actualSlope) < 0.18) {
+        } else if (biome.id === "summit" && Math.abs(actualSlope) < 0.20) {
           mat = "ice";
         }
 

@@ -157,6 +157,18 @@ const x = {
     startX: 220,
     chunkSamples: 20, // 360px (9m) per physics collision chunk
     activePhysicsRadius: 2160, // vehicle X +- 2,160px active collision window
+    terrainRules: {
+      MAX_SLOPE: 45.0,
+      MIN_SLOPE: -45.0,
+      CREST_SHARPNESS: 0.88,
+      VALLEY_DEPTH: 185,
+      JUMP_DISTANCE: 420,
+      RAMP_HEIGHT: 78,
+      ROAD_WIDTH: 18,
+      ROUGHNESS: 0.28,
+      SURFACE_FRICTION: 1.0,
+      ELEVATION_CHANGE: 780,
+    },
   },
 };
 
@@ -323,52 +335,70 @@ const BIOMES = [
 const MATERIALS = {
   grass: {
     name: "grass",
-    friction: 1.0,
-    rollingResistance: 0.001,
-    roughness: 0.08,
+    friction: 0.96,
+    rollingResistance: 0.0015,
+    roughness: 0.10,
     dustKind: "grass",
     dustColors: ["#c9bda2", "#a8b888", "#8a9566"],
     soundType: "soft",
   },
   dirt: {
     name: "dirt",
-    friction: 0.94,
-    rollingResistance: 0.002,
-    roughness: 0.12,
+    friction: 0.90,
+    rollingResistance: 0.0025,
+    roughness: 0.15,
     dustKind: "dust",
     dustColors: ["#b6a98d", "#c9bda2", "#8c7659"],
     soundType: "soft",
   },
+  mud: {
+    name: "mud",
+    friction: 0.58,
+    rollingResistance: 0.0065,
+    roughness: 0.24,
+    dustKind: "dust",
+    dustColors: ["#5c4332", "#473325", "#785a46"],
+    soundType: "soft",
+  },
   rock: {
     name: "rock",
-    friction: 1.12,
+    friction: 1.16,
     rollingResistance: 0.001,
-    roughness: 0.32,
+    roughness: 0.34,
     dustKind: "stone",
     dustColors: ["#dcd2be", "#a09c94", "#6e777a"],
     soundType: "hard",
   },
+  wet_rock: {
+    name: "wet_rock",
+    friction: 0.62,
+    rollingResistance: 0.0012,
+    roughness: 0.26,
+    dustKind: "stone",
+    dustColors: ["#7c8996", "#565e61", "#9ab5c7"],
+    soundType: "hard",
+  },
   gravel: {
     name: "gravel",
-    friction: 0.86,
-    rollingResistance: 0.004,
-    roughness: 0.22,
+    friction: 0.80,
+    rollingResistance: 0.0045,
+    roughness: 0.26,
     dustKind: "grit",
     dustColors: ["#b8b2a5", "#8c877d", "#484945"],
     soundType: "hard",
   },
   snow: {
     name: "snow",
-    friction: 0.72,
-    rollingResistance: 0.003,
-    roughness: 0.10,
+    friction: 0.68,
+    rollingResistance: 0.0038,
+    roughness: 0.14,
     dustKind: "snow",
     dustColors: ["#ffffff", "#eef4f8", "#d8e1e8"],
     soundType: "soft",
   },
   ice: {
     name: "ice",
-    friction: 0.52,
+    friction: 0.44,
     rollingResistance: 0.0005,
     roughness: 0.04,
     dustKind: "snow",
@@ -2461,70 +2491,70 @@ class MountainEchoManager {
 // MOUNTAIN GENERATION 2.0 — 32-Shape Parametric Library & Transition Grammar
 // ----------------------------------------------------------------------------
 const PARAMETRIC_SHAPES = {
-  // 1. Rollers & Rhythm Warmups
-  ROLLERS:          { cat: "ROLLERS",  name: "Foothill Rollers",      dx: 720,  dy: -28,  exitSlope: -0.06, maxDeg: 14, jumpPotential: "Low",    landingQuality: "Ideal",   surface: "grass" },
-  LONG_ROLLERS:     { cat: "ROLLERS",  name: "Undulating Meadow",     dx: 1080, dy: -45,  exitSlope: -0.08, maxDeg: 16, jumpPotential: "Low",    landingQuality: "Ideal",   surface: "grass" },
-  DOUBLE_HUMP:      { cat: "RHYTHM",   name: "Double Ridge Rollers",  dx: 840,  dy: -40,  exitSlope: -0.04, maxDeg: 20, jumpPotential: "Medium", landingQuality: "Good",    surface: "dirt" },
-  TRIPLE_HUMP:      { cat: "RHYTHM",   name: "Triple Rhythm Back",    dx: 1120, dy: -55,  exitSlope: -0.05, maxDeg: 22, jumpPotential: "Medium", landingQuality: "Good",    surface: "dirt" },
-  CAMELBACK:        { cat: "RHYTHM",   name: "Camelback Twin Crest",  dx: 860,  dy: -50,  exitSlope: 0.0,   maxDeg: 24, jumpPotential: "Medium", landingQuality: "Good",    surface: "grass" },
-  COMPRESSION_RUN:  { cat: "SUSP",     name: "Compression Dip Run",   dx: 820,  dy: -30,  exitSlope: -0.10, maxDeg: 22, jumpPotential: "Low",    landingQuality: "Good",    surface: "dirt" },
-  OFF_CAMBER:       { cat: "TECH",     name: "Off-Camber Ledge",      dx: 780,  dy: -65,  exitSlope: -0.14, maxDeg: 26, jumpPotential: "Low",    landingQuality: "Technical", surface: "rock" },
-  ROCK_FIELD:       { cat: "TECH",     name: "Boulder Scree Field",   dx: 880,  dy: -75,  exitSlope: -0.15, maxDeg: 28, jumpPotential: "Low",    landingQuality: "Rough",   surface: "rock" },
-  MOGUL_FIELD:      { cat: "SUSP",     name: "Suspension Breaker Moguls", dx: 840, dy: -60, exitSlope: -0.12, maxDeg: 26, jumpPotential: "Medium", landingQuality: "Rough",  surface: "gravel" },
+  // 1. Rollers & Rhythm Warmups (Now with real verticality & launch hops!)
+  ROLLERS:          { cat: "ROLLERS",  name: "Foothill Hump Rollers", dx: 680,  dy: -65,  exitSlope: -0.18, maxDeg: 24, jumpPotential: "Medium", landingQuality: "Ideal",     surface: "grass" },
+  LONG_ROLLERS:     { cat: "ROLLERS",  name: "Highland Swell Run",    dx: 960,  dy: -110, exitSlope: -0.22, maxDeg: 26, jumpPotential: "Medium", landingQuality: "Ideal",     surface: "grass" },
+  DOUBLE_HUMP:      { cat: "RHYTHM",   name: "Double Launch Rollers", dx: 820,  dy: -95,  exitSlope: -0.16, maxDeg: 30, jumpPotential: "High",   landingQuality: "Good",      surface: "dirt" },
+  TRIPLE_HUMP:      { cat: "RHYTHM",   name: "Triple Rhythm Spine",   dx: 1060, dy: -120, exitSlope: -0.18, maxDeg: 32, jumpPotential: "High",   landingQuality: "Good",      surface: "dirt" },
+  CAMELBACK:        { cat: "RHYTHM",   name: "Camelback Twin Launch", dx: 840,  dy: -85,  exitSlope: 0.14,  maxDeg: 32, jumpPotential: "High",   landingQuality: "Good",      surface: "grass" },
+  COMPRESSION_RUN:  { cat: "SUSP",     name: "Deep Compression Whoops",dx: 800, dy: -70,  exitSlope: -0.22, maxDeg: 30, jumpPotential: "Medium", landingQuality: "Good",      surface: "mud" },
+  OFF_CAMBER:       { cat: "TECH",     name: "Slick Off-Camber Ledge",dx: 760,  dy: -165, exitSlope: -0.28, maxDeg: 34, jumpPotential: "Medium", landingQuality: "Technical", surface: "wet_rock" },
+  ROCK_FIELD:       { cat: "TECH",     name: "Jagged Boulder Scree",  dx: 860,  dy: -195, exitSlope: -0.30, maxDeg: 36, jumpPotential: "Medium", landingQuality: "Rough",     surface: "rock" },
+  MOGUL_FIELD:      { cat: "SUSP",     name: "Suspension Breaker Moguls", dx: 820, dy: -140, exitSlope: -0.24, maxDeg: 34, jumpPotential: "High", landingQuality: "Rough",  surface: "gravel" },
 
-  // 2. Climbs (Easy -> Moderate -> Hard -> Extreme -> Summit)
-  SHALLOW_CLIMB:    { cat: "CLIMB",    name: "Foothill Bench Climb",  dx: 820,  dy: -140, exitSlope: -0.22, maxDeg: 18, jumpPotential: "Low",    landingQuality: "Ideal",   surface: "grass" },
-  LONG_CLIMB:       { cat: "CLIMB",    name: "Sustained Ridge Ascent",dx: 1350, dy: -340, exitSlope: -0.32, maxDeg: 28, jumpPotential: "Low",    landingQuality: "Good",    surface: "rock" },
-  STEEP_CLIMB:      { cat: "CLIMB",    name: "Steep Escarpment",      dx: 960,  dy: -310, exitSlope: -0.38, maxDeg: 34, jumpPotential: "Medium", landingQuality: "Good",    surface: "rock" },
-  STEPPED_RIDGE:    { cat: "CLIMB",    name: "Stepped Ridge",         dx: 1180, dy: -320, exitSlope: -0.34, maxDeg: 34, jumpPotential: "Medium", landingQuality: "Good",    surface: "rock" },
-  EXTREME_CLIMB:    { cat: "EXTREME",  name: "Extreme Headwall",      dx: 1050, dy: -410, exitSlope: -0.44, maxDeg: 40, jumpPotential: "Medium", landingQuality: "Narrow",  surface: "rock" },
-  SUMMIT_FACE:      { cat: "EXTREME",  name: "High Summit Face",      dx: 1240, dy: -490, exitSlope: -0.46, maxDeg: 44, jumpPotential: "High",   landingQuality: "Narrow",  surface: "snow" },
-  FINAL_ASCENT:     { cat: "EXTREME",  name: "The Final Ascent",      dx: 1320, dy: -520, exitSlope: -0.42, maxDeg: 45, jumpPotential: "High",   landingQuality: "Narrow",  surface: "snow" },
+  // 2. Steep & Multi-Stage Climbs (Require real momentum or vehicle stalls & rolls backward!)
+  SHALLOW_CLIMB:    { cat: "CLIMB",    name: "28° Foothill Climb",    dx: 780,  dy: -285, exitSlope: -0.44, maxDeg: 32, jumpPotential: "Medium", landingQuality: "Ideal",     surface: "dirt" },
+  LONG_CLIMB:       { cat: "CLIMB",    name: "Sustained Ridge Wall",  dx: 1220, dy: -540, exitSlope: -0.54, maxDeg: 38, jumpPotential: "Medium", landingQuality: "Good",      surface: "rock" },
+  STEEP_CLIMB:      { cat: "CLIMB",    name: "40° Steep Escarpment",  dx: 920,  dy: -485, exitSlope: -0.64, maxDeg: 42, jumpPotential: "High",   landingQuality: "Good",      surface: "rock" },
+  STEPPED_RIDGE:    { cat: "CLIMB",    name: "Multi-Stage Stepped Climb", dx: 1160, dy: -560, exitSlope: -0.58, maxDeg: 42, jumpPotential: "High", landingQuality: "Technical", surface: "wet_rock" },
+  EXTREME_CLIMB:    { cat: "EXTREME",  name: "44° Everest Headwall",  dx: 1020, dy: -610, exitSlope: -0.72, maxDeg: 44, jumpPotential: "High",   landingQuality: "Narrow",    surface: "rock" },
+  SUMMIT_FACE:      { cat: "EXTREME",  name: "Vertical Summit Face",  dx: 1180, dy: -690, exitSlope: -0.75, maxDeg: 45, jumpPotential: "Extreme",landingQuality: "Narrow",    surface: "snow" },
+  FINAL_ASCENT:     { cat: "EXTREME",  name: "The Abyssal Wall",      dx: 1260, dy: -740, exitSlope: -0.72, maxDeg: 45, jumpPotential: "Extreme",landingQuality: "Narrow",    surface: "snow" },
 
-  // 3. Crests & Ridges
-  BLIND_CREST:      { cat: "CREST",    name: "Blind Horizon Crest",   dx: 680,  dy: 35,   exitSlope: 0.22,  maxDeg: 26, jumpPotential: "High",   landingQuality: "Good",    surface: "rock" },
-  RAZOR_CREST:      { cat: "CREST",    name: "Razorback Spine",       dx: 740,  dy: 45,   exitSlope: 0.26,  maxDeg: 32, jumpPotential: "High",   landingQuality: "Narrow",  surface: "rock" },
-  BROKEN_RIDGE:     { cat: "TECH",     name: "Broken Spine Ridge",    dx: 960,  dy: -110, exitSlope: -0.18, maxDeg: 30, jumpPotential: "Medium", landingQuality: "Technical", surface: "rock" },
-  NARROW_RIDGE:     { cat: "TECH",     name: "Knife-Edge Pass",       dx: 860,  dy: -85,  exitSlope: -0.12, maxDeg: 28, jumpPotential: "Medium", landingQuality: "Narrow",  surface: "gravel" },
+  // 3. Sharp Mountain Crests (UPHILL -> Tiny Peak -> Immediate Steep DOWNHILL!)
+  BLIND_CREST:      { cat: "CREST",    name: "Blind Knife-Edge Crest",dx: 680,  dy: 175,  exitSlope: 0.54,  maxDeg: 38, jumpPotential: "Extreme",landingQuality: "Downhill",  surface: "rock" },
+  RAZOR_CREST:      { cat: "CREST",    name: "Razorback Launch Spine",dx: 720,  dy: 245,  exitSlope: 0.64,  maxDeg: 42, jumpPotential: "Extreme",landingQuality: "Narrow",    surface: "rock" },
+  BROKEN_RIDGE:     { cat: "TECH",     name: "Exposed Broken Spine",  dx: 920,  dy: -240, exitSlope: -0.38, maxDeg: 38, jumpPotential: "High",   landingQuality: "Technical", surface: "wet_rock" },
+  NARROW_RIDGE:     { cat: "TECH",     name: "Knife-Edge Pass",       dx: 840,  dy: -210, exitSlope: -0.32, maxDeg: 36, jumpPotential: "High",   landingQuality: "Narrow",    surface: "gravel" },
 
-  // 4. Jumps & Airborne Launches
-  KICKER:           { cat: "JUMP",     name: "Upward Kicker Ramp",    dx: 820,  dy: -55,  exitSlope: 0.16,  maxDeg: 28, jumpPotential: "High",   landingQuality: "Good",    surface: "dirt" },
-  LONG_KICKER:      { cat: "JUMP",     name: "High-Speed Long Kicker",dx: 1080, dy: -85,  exitSlope: 0.18,  maxDeg: 32, jumpPotential: "Extreme",landingQuality: "Good",    surface: "rock" },
-  RIDGE_LAUNCH:     { cat: "JUMP",     name: "Natural Ridge Launch",  dx: 940,  dy: -70,  exitSlope: 0.20,  maxDeg: 30, jumpPotential: "High",   landingQuality: "Good",    surface: "rock" },
-  CLIFF_LAUNCH:     { cat: "JUMP",     name: "Trestle Cliff Gap",     dx: 1180, dy: 65,   exitSlope: 0.22,  maxDeg: 34, jumpPotential: "Extreme",landingQuality: "Slope",   surface: "wood" },
-  DOWNHILL_LAUNCH:  { cat: "JUMP",     name: "Downhill Step Launch",  dx: 1020, dy: 145,  exitSlope: 0.26,  maxDeg: 32, jumpPotential: "High",   landingQuality: "Downhill",surface: "dirt" },
+  // 4. Natural Jumps, Double-Jump Combos & Giant Gaps
+  KICKER:           { cat: "JUMP",     name: "Natural Dirt Launch",   dx: 780,  dy: 45,   exitSlope: 0.38,  maxDeg: 38, jumpPotential: "High",   landingQuality: "Downhill",  surface: "dirt" },
+  LONG_KICKER:      { cat: "JUMP",     name: "Giant Canyon Gap",      dx: 1060, dy: 120,  exitSlope: 0.44,  maxDeg: 42, jumpPotential: "Extreme",landingQuality: "Slope",     surface: "rock" },
+  RIDGE_LAUNCH:     { cat: "JUMP",     name: "Double-Jump Ridge Combo",dx: 980, dy: 30,   exitSlope: 0.36,  maxDeg: 38, jumpPotential: "Extreme",landingQuality: "Good",      surface: "dirt" },
+  CLIFF_LAUNCH:     { cat: "JUMP",     name: "Surprise Cliff Drop",   dx: 1120, dy: 260,  exitSlope: 0.52,  maxDeg: 42, jumpPotential: "Extreme",landingQuality: "Downhill",  surface: "wood" },
+  DOWNHILL_LAUNCH:  { cat: "JUMP",     name: "Downhill Speed Vault",  dx: 960,  dy: 310,  exitSlope: 0.56,  maxDeg: 42, jumpPotential: "Extreme",landingQuality: "Downhill",  surface: "dirt" },
 
-  // 5. Descents & Deep Valleys
-  SHALLOW_DESCENT:  { cat: "DESCENT",  name: "Traversing Descent",    dx: 840,  dy: 140,  exitSlope: 0.18,  maxDeg: 20, jumpPotential: "Low",    landingQuality: "Ideal",   surface: "dirt" },
-  STEEP_DESCENT:    { cat: "DESCENT",  name: "Steep Gorge Plunge",    dx: 960,  dy: 290,  exitSlope: 0.34,  maxDeg: 34, jumpPotential: "Medium", landingQuality: "Downhill",surface: "dirt" },
-  LONG_DESCENT:     { cat: "DESCENT",  name: "The Great Descent Run", dx: 1440, dy: 460,  exitSlope: 0.36,  maxDeg: 36, jumpPotential: "High",   landingQuality: "Downhill",surface: "gravel" },
-  V_VALLEY:         { cat: "VALLEY",   name: "V-Ravine Gorge",        dx: 920,  dy: 65,   exitSlope: -0.28, maxDeg: 32, jumpPotential: "High",   landingQuality: "Good",    surface: "rock" },
-  U_VALLEY:         { cat: "VALLEY",   name: "Deep U-Valley Bowl",    dx: 1160, dy: 40,   exitSlope: -0.26, maxDeg: 28, jumpPotential: "High",   landingQuality: "Ideal",   surface: "dirt" },
-  GLACIAL_BOWL:     { cat: "VALLEY",   name: "Glacial Ice Basin",     dx: 1380, dy: 30,   exitSlope: -0.24, maxDeg: 26, jumpPotential: "Extreme",landingQuality: "Ideal",   surface: "ice" },
-  RAVINE:           { cat: "VALLEY",   name: "Erosion Ravine",        dx: 880,  dy: 50,   exitSlope: -0.25, maxDeg: 30, jumpPotential: "Medium", landingQuality: "Good",    surface: "dirt" },
-  MINE_PIT:         { cat: "VALLEY",   name: "Open-Cast Mine Pit",    dx: 1220, dy: 25,   exitSlope: -0.30, maxDeg: 34, jumpPotential: "Medium", landingQuality: "Good",    surface: "gravel" },
+  // 5. Real Steep Descents & Deep Trenches (Force Braking & Speed Control!)
+  SHALLOW_DESCENT:  { cat: "DESCENT",  name: "30° Fast Descent",      dx: 820,  dy: 290,  exitSlope: 0.44,  maxDeg: 32, jumpPotential: "Medium", landingQuality: "Downhill",  surface: "dirt" },
+  STEEP_DESCENT:    { cat: "DESCENT",  name: "42° Gorge Plunge",      dx: 920,  dy: 495,  exitSlope: 0.64,  maxDeg: 42, jumpPotential: "High",   landingQuality: "Downhill",  surface: "gravel" },
+  LONG_DESCENT:     { cat: "DESCENT",  name: "50° Terminal Drop Run", dx: 1340, dy: 720,  exitSlope: 0.68,  maxDeg: 44, jumpPotential: "Extreme",landingQuality: "Downhill",  surface: "gravel" },
+  V_VALLEY:         { cat: "VALLEY",   name: "Deep V-Trench Launch",  dx: 880,  dy: -75,  exitSlope: -0.52, maxDeg: 40, jumpPotential: "High",   landingQuality: "Good",      surface: "rock" },
+  U_VALLEY:         { cat: "VALLEY",   name: "Deep Compression Bowl", dx: 1080, dy: -65,  exitSlope: -0.46, maxDeg: 38, jumpPotential: "High",   landingQuality: "Ideal",     surface: "dirt" },
+  GLACIAL_BOWL:     { cat: "VALLEY",   name: "Glacial Ice Trench",    dx: 1280, dy: -55,  exitSlope: -0.44, maxDeg: 38, jumpPotential: "Extreme",landingQuality: "Ideal",     surface: "ice" },
+  RAVINE:           { cat: "VALLEY",   name: "Abyssal Ravine Gorge",  dx: 860,  dy: -60,  exitSlope: -0.48, maxDeg: 40, jumpPotential: "High",   landingQuality: "Good",      surface: "mud" },
+  MINE_PIT:         { cat: "VALLEY",   name: "Sunken Quarry Trench",  dx: 1140, dy: -50,  exitSlope: -0.50, maxDeg: 40, jumpPotential: "High",   landingQuality: "Good",      surface: "gravel" },
 
-  // 6. Recovery Zones & Plateaus
-  PLATEAU:          { cat: "RECOVERY", name: "Survey Bench Plateau",  dx: 660,  dy: -12,  exitSlope: 0.0,   maxDeg: 8,  jumpPotential: "None",   landingQuality: "Ideal",   surface: "grass" },
-  RECOVERY_VALLEY:  { cat: "RECOVERY", name: "Sheltered Basin Rest",  dx: 740,  dy: 18,   exitSlope: -0.05, maxDeg: 10, jumpPotential: "None",   landingQuality: "Ideal",   surface: "dirt" },
+  // 6. Short Tactical Recovery Benches (Moments to breathe & rebuild momentum!)
+  PLATEAU:          { cat: "RECOVERY", name: "Momentum Bench Shelf",  dx: 580,  dy: -35,  exitSlope: -0.10, maxDeg: 14, jumpPotential: "Low",    landingQuality: "Ideal",     surface: "grass" },
+  RECOVERY_VALLEY:  { cat: "RECOVERY", name: "Saddle Recovery Basin", dx: 640,  dy: 25,   exitSlope: -0.14, maxDeg: 16, jumpPotential: "Low",    landingQuality: "Ideal",     surface: "dirt" },
 };
 
-// Markov Category Transition Rules (Section 41 & 42: Procedural Anti-Repetition)
+// Markov Category Transition Rules (Section 26 & 27: Rhythm of Climb -> Crest -> Descent -> Trench -> Jump)
 const CATEGORY_TRANSITIONS = {
-  ROLLERS:  ["CLIMB", "RHYTHM", "JUMP", "SUSP"],
-  RHYTHM:   ["CLIMB", "JUMP", "VALLEY", "TECH"],
-  SUSP:     ["CLIMB", "RECOVERY", "JUMP", "CREST"],
-  TECH:     ["CLIMB", "CREST", "DESCENT", "RECOVERY"],
-  CLIMB:    ["CREST", "JUMP", "RECOVERY", "TECH"],
-  EXTREME:  ["CREST", "RECOVERY", "JUMP"],
-  CREST:    ["DESCENT", "VALLEY", "JUMP", "RECOVERY"],
-  JUMP:     ["RECOVERY", "VALLEY", "ROLLERS", "DESCENT"],
-  DESCENT:  ["VALLEY", "RECOVERY", "CLIMB", "JUMP"],
-  VALLEY:   ["CLIMB", "RECOVERY", "RHYTHM", "JUMP"],
-  RECOVERY: ["CLIMB", "RHYTHM", "TECH", "EXTREME", "DESCENT"],
+  ROLLERS:  ["CLIMB", "EXTREME", "JUMP", "CREST"],
+  RHYTHM:   ["CLIMB", "EXTREME", "JUMP", "VALLEY", "CREST"],
+  SUSP:     ["CLIMB", "EXTREME", "JUMP", "CREST"],
+  TECH:     ["EXTREME", "CREST", "DESCENT", "JUMP"],
+  CLIMB:    ["CREST", "EXTREME", "JUMP", "DESCENT"],
+  EXTREME:  ["CREST", "DESCENT", "JUMP", "RECOVERY"],
+  CREST:    ["DESCENT", "VALLEY", "JUMP"],
+  JUMP:     ["VALLEY", "DESCENT", "CLIMB", "RECOVERY"],
+  DESCENT:  ["VALLEY", "JUMP", "CLIMB", "EXTREME"],
+  VALLEY:   ["CLIMB", "EXTREME", "JUMP", "CREST"],
+  RECOVERY: ["CLIMB", "EXTREME", "JUMP", "DESCENT"],
 };
 
-// 8 Signature Expedition Setpieces anchored at key distances across the 8.2km mountain (Section 31)
+// 10 Signature Expedition Setpieces anchored at key distances across the 8.2km mountain
 const SIGNATURE_SETPIECES = [
   { triggerDistM: 520,  type: "KICKER",          name: "THE OLD QUARRY LAUNCH",    signature: "SETPIECE // OLD QUARRY" },
   { triggerDistM: 1250, type: "RAZOR_CREST",     name: "THE RED RIDGE SPINE",      signature: "SETPIECE // BROKEN RIDGE" },
@@ -2549,7 +2579,7 @@ class P0 {
   seed;
   step = x.world.sampleStep;
   chunkSamples = x.world.chunkSamples || 20;
-  activeRadius = x.world.activePhysicsRadius || 3200;
+  activeRadius = x.world.activePhysicsRadius || 2160;
   activeChunkCount = 0;
   lastStreamCenterX = -999999;
   stats = null;
@@ -2559,32 +2589,29 @@ class P0 {
     this.generateGrammarTerrain();
   }
 
-  // Difficulty curve across the full 8.2km expedition (Section 28)
+  // Difficulty curve across the full 8.2km expedition (Starts high enough for real mountain challenge!)
   computeDifficulty(distMeters) {
-    let base = 0.15;
+    let base = 0.42;
     if (distMeters < 800) {
-      base = 0.15 + (distMeters / 800) * 0.15; // 0.15 -> 0.30
+      base = 0.42 + (distMeters / 800) * 0.16; // 0.42 -> 0.58
     } else if (distMeters < 1600) {
-      base = 0.30 + ((distMeters - 800) / 800) * 0.15; // 0.30 -> 0.45
+      base = 0.58 + ((distMeters - 800) / 800) * 0.12; // 0.58 -> 0.70
     } else if (distMeters < 2600) {
-      base = 0.45 + ((distMeters - 1600) / 1000) * 0.15; // 0.45 -> 0.60
+      base = 0.70 + ((distMeters - 1600) / 1000) * 0.10; // 0.70 -> 0.80
     } else if (distMeters < 3800) {
-      base = 0.60 + ((distMeters - 2600) / 1200) * 0.12; // 0.60 -> 0.72
+      base = 0.80 + ((distMeters - 2600) / 1200) * 0.08; // 0.80 -> 0.88
     } else if (distMeters < 5200) {
-      base = 0.72 + ((distMeters - 3800) / 1400) * 0.12; // 0.72 -> 0.84
-    } else if (distMeters < 6800) {
-      base = 0.84 + ((distMeters - 5200) / 1600) * 0.10; // 0.84 -> 0.94
+      base = 0.88 + ((distMeters - 3800) / 1400) * 0.06; // 0.88 -> 0.94
     } else {
-      base = 0.94 + b((distMeters - 6800) / 1400, 0, 1) * 0.06; // 0.94 -> 1.00
+      base = 0.94 + b((distMeters - 5200) / 2800, 0, 1) * 0.06; // 0.94 -> 1.00
     }
-    return b(base, 0.15, 1.0);
+    return b(base, 0.40, 1.0);
   }
 
   classifyDifficultyCategory(diff) {
-    if (diff < 0.30) return "EASY";
-    if (diff < 0.50) return "MODERATE";
-    if (diff < 0.70) return "CHALLENGING";
-    if (diff < 0.90) return "HARD";
+    if (diff < 0.48) return "MODERATE";
+    if (diff < 0.68) return "CHALLENGING";
+    if (diff < 0.86) return "HARD";
     return "EXTREME";
   }
 
@@ -2601,7 +2628,7 @@ class P0 {
     }
 
     // 2. Determine allowed next categories from Markov Transition Matrix
-    const allowedCats = CATEGORY_TRANSITIONS[prevCat] || ["CLIMB", "RHYTHM", "RECOVERY"];
+    const allowedCats = CATEGORY_TRANSITIONS[prevCat] || ["CLIMB", "CREST", "DESCENT", "JUMP"];
 
     // 3. Filter candidate shapes by Act / Sector appropriateness and anti-repetition
     const candidates = [];
@@ -2614,21 +2641,21 @@ class P0 {
       // Never repeat a shape present in the last 3 segments
       if (recentTypes.slice(-3).includes(key)) continue;
 
-      // Act-specific gating so Foothills stay approachable and Summit Face is intense
-      if (distMeters < 750 && (def.cat === "EXTREME" || def.maxDeg > 28 || key === "CLIFF_LAUNCH")) continue;
+      // Weight high-action climbs, crests, descents, trenches, and jumps across all sectors!
+      if (def.cat === "CLIMB" || def.cat === "EXTREME" || def.cat === "CREST" || def.cat === "DESCENT" || def.cat === "JUMP" || def.cat === "VALLEY") {
+        candidates.push(key, key);
+      }
       if (distMeters >= 1600 && distMeters <= 2400) {
-        // Act III: The Great Descent favors descents, valleys, and recovery climbs
         if (def.cat === "DESCENT" || def.cat === "VALLEY" || key === "STEPPED_RIDGE") {
           candidates.push(key, key);
         }
       }
       if (distMeters >= 3500 && distMeters <= 5000) {
-        // Act V: Glacier Run favors glacial bowls, long kickers, and smooth fast runs
-        if (key === "GLACIAL_BOWL" || key === "LONG_KICKER" || key === "LONG_ROLLERS") {
+        if (key === "GLACIAL_BOWL" || key === "LONG_KICKER" || key === "DOWNHILL_LAUNCH") {
           candidates.push(key, key);
         }
       }
-      if (distMeters >= 6600 && (def.cat === "EXTREME" || key === "STEEP_CLIMB" || key === "RAZOR_CREST")) {
+      if (distMeters >= 5000 && (def.cat === "EXTREME" || key === "STEEP_CLIMB" || key === "RAZOR_CREST")) {
         candidates.push(key, key);
       }
 
@@ -2636,7 +2663,7 @@ class P0 {
     }
 
     if (candidates.length === 0) {
-      return { key: "PLATEAU", overrideName: null, signature: null };
+      return { key: "STEEP_CLIMB", overrideName: null, signature: null };
     }
 
     const idx = Math.floor(Math.abs(rng(distMeters * 0.17 + recentTypes.length * 13.7)) * candidates.length) % candidates.length;
@@ -2660,8 +2687,8 @@ class P0 {
     const nDetail = K0(seed + 89);
     const nChoice = K0(seed + 151);
 
-    // 1. Initial flat starting apron (-2500 to startX + 350)
-    for (let q = -2500; q < startX + 350; q += this.step) {
+    // 1. Initial starting apron (-2500 to startX + 260)
+    for (let q = -2500; q < startX + 260; q += this.step) {
       this.samples.push({
         x: q,
         y: groundBase,
@@ -2672,22 +2699,25 @@ class P0 {
       });
     }
 
-    // 2. Preserve proven opening 6 segments (0m -> ~85m) so early driving/prop tests remain 100% consistent,
-    //    then transition seamlessly into the 8.2km Markov Macro-Meso-Micro Expedition Grammar!
+    // 2. EXTREME MOUNTAIN OPENING SEQUENCE (Sections A -> L right in the first 0m -> 220m!):
+    //    Immediately delivers: 28° Climb -> Sharp Crest -> Steep 38° Descent (Brake Test!) -> Deep V-Trench ->
+    //    Natural Launch Ramp (Big Airtime!) -> Multi-Stage 42° Wall (Momentum Climb!) -> Double-Jump Ridge -> Giant Gap!
     const openingSequence = [
-      { key: "ROLLERS",       name: "Gentle Rollers",      dx: 600, dy: -20,  exitSlope: 0.05,  surface: "grass" },
-      { key: "SHALLOW_CLIMB", name: "Steady Climb",        dx: 700, dy: -140, exitSlope: -0.32, surface: "grass" },
-      { key: "KICKER",        name: "First Kicker Jump",   dx: 750, dy: -40,  exitSlope: 0.15,  surface: "dirt"  },
-      { key: "U_VALLEY",      name: "Deep Valley Bowl",    dx: 650, dy: 60,   exitSlope: -0.25, surface: "dirt"  },
-      { key: "CAMELBACK",     name: "Camelback Double",    dx: 700, dy: -50,  exitSlope: 0.0,   surface: "grass" },
-      { key: "PLATEAU",       name: "Base Camp Plateau",   dx: 550, dy: -10,  exitSlope: 0.0,   surface: "grass" },
+      { key: "KICKER",          name: "Section A: Launch Approach",       dx: 580,  dy: -75,  exitSlope: -0.28, surface: "grass" },
+      { key: "STEEP_CLIMB",     name: "Section B: 35° Escarpment Climb",  dx: 840,  dy: -420, exitSlope: -0.58, surface: "rock"  },
+      { key: "RAZOR_CREST",     name: "Section E: Knife-Edge Crest Drop", dx: 720,  dy: 250,  exitSlope: 0.62,  surface: "rock"  },
+      { key: "STEEP_DESCENT",   name: "Section F: 40° Danger Plunge",     dx: 860,  dy: 440,  exitSlope: 0.58,  surface: "dirt"  },
+      { key: "V_VALLEY",        name: "Section G: Deep V-Trench Vault",   dx: 860,  dy: -95,  exitSlope: -0.52, surface: "mud"   },
+      { key: "STEPPED_RIDGE",   name: "Section H: Multi-Stage Headwall",  dx: 1080, dy: -540, exitSlope: -0.64, surface: "rock"  },
+      { key: "RIDGE_LAUNCH",    name: "Section I: Double-Jump Ridge",     dx: 960,  dy: 40,   exitSlope: 0.38,  surface: "dirt"  },
+      { key: "LONG_KICKER",     name: "Section J: Giant Ravine Gap",      dx: 1040, dy: 110,  exitSlope: 0.42,  surface: "rock"  },
     ];
 
     let curX = this.samples[this.samples.length - 1].x;
     let curY = groundBase;
     let curSlope = 0.0;
     let seqIdx = 0;
-    let prevCat = "RECOVERY";
+    let prevCat = "JUMP";
     const recentTypes = [];
 
     while (curX < totalLength) {
@@ -2698,7 +2728,7 @@ class P0 {
       let shapeKey, segName, segDx, segDy, targetSlope, segSurface, segSignature = null;
       let shapeDef;
 
-      // Final 250m (7,950m -> 8,200m): Summit Observatory Panoramic Plateau (Section 50 & 51)
+      // Final 220m (7,980m -> 8,200m): Summit Observatory Panoramic Plateau
       if (distMeters >= 7980) {
         shapeKey = "PLATEAU";
         shapeDef = PARAMETRIC_SHAPES.PLATEAU;
@@ -2713,39 +2743,37 @@ class P0 {
         shapeKey = op.key;
         shapeDef = PARAMETRIC_SHAPES[shapeKey];
         segName = op.name;
-        segDx = Math.round((op.dx * (0.92 + Math.abs(nSwell(curX / 900)) * 0.20)) / this.step) * this.step;
-        segDy = op.dy * (1.0 + difficulty * 0.30);
+        segDx = Math.round((op.dx * (0.94 + Math.abs(nSwell(curX / 900)) * 0.14)) / this.step) * this.step;
+        segDy = op.dy * (1.0 + difficulty * 0.22);
         targetSlope = op.exitSlope;
         segSurface = op.surface;
       } else {
         const picked = this.pickNextShapeKey(distMeters, prevCat, recentTypes, nChoice);
         shapeKey = picked.key;
-        shapeDef = PARAMETRIC_SHAPES[shapeKey] || PARAMETRIC_SHAPES.ROLLERS;
+        shapeDef = PARAMETRIC_SHAPES[shapeKey] || PARAMETRIC_SHAPES.STEEP_CLIMB;
         segName = picked.overrideName || shapeDef.name;
         segSignature = picked.signature;
 
-        // Seeded parametric variation (Section 27)
-        const lenScale = 0.88 + Math.abs(nSwell(curX * 0.0011 + seqIdx)) * 0.32;
-        const ampScale = (0.85 + Math.abs(nMacro(curX * 0.0007 + seqIdx)) * 0.30) * (0.75 + difficulty * 0.55);
+        // Seeded parametric variation
+        const lenScale = 0.86 + Math.abs(nSwell(curX * 0.0011 + seqIdx)) * 0.28;
+        const ampScale = (0.95 + Math.abs(nMacro(curX * 0.0007 + seqIdx)) * 0.35) * (0.90 + difficulty * 0.45);
 
         segDx = Math.round((shapeDef.dx * lenScale) / this.step) * this.step;
         segDy = shapeDef.dy * ampScale;
 
         // Macro Act Envelope Bias:
-        // Act III (1,600m - 2,400m) is THE GREAT DESCENT; bias net vertical change downward
         if (distMeters >= 1600 && distMeters < 2300 && shapeDef.cat !== "CLIMB") {
-          segDy += 95;
-        } else if (distMeters >= 5000 && distMeters < 7950 && shapeDef.cat === "CLIMB") {
-          // High Mountain & Summit Approach: amplify vertical climb gain
-          segDy -= 65;
+          segDy += 140;
+        } else if (distMeters >= 5000 && distMeters < 7950 && (shapeDef.cat === "CLIMB" || shapeDef.cat === "EXTREME")) {
+          segDy -= 110;
         }
 
-        targetSlope = b(shapeDef.exitSlope * (0.85 + difficulty * 0.35), -0.46, 0.42);
+        targetSlope = b(shapeDef.exitSlope * (0.95 + difficulty * 0.30), -0.78, 0.72);
         segSurface = shapeDef.surface || biome.defaultMaterial;
         if (biome.id === "glacier" && (shapeDef.cat === "VALLEY" || shapeDef.cat === "ROLLERS")) {
           segSurface = "ice";
         } else if (biome.id === "summit") {
-          segSurface = Math.abs(targetSlope) > 0.38 ? "rock" : "snow";
+          segSurface = Math.abs(targetSlope) > 0.45 ? "rock" : "snow";
         } else if (biome.id === "industrial" && shapeDef.cat === "JUMP") {
           segSurface = "metal";
         }
@@ -2768,9 +2796,9 @@ class P0 {
       let segMinY = y0;
       let segMaxY = y0;
 
-      // Sample along Cubic Hermite Spline with Meso + Micro + Off-Camber Perturbations
+      // Sample along Cubic Hermite Spline with Extreme Mountain Meso + Micro Articulations
       const L = x1 - x0;
-      const maxAllowedDeg = b((shapeDef.maxDeg || 38) + difficulty * 6, 16, 45.2);
+      const maxAllowedDeg = b((shapeDef.maxDeg || 42) + difficulty * 4, 22, 45.1);
       const maxSlopeTan = Math.tan((maxAllowedDeg * Math.PI) / 180);
 
       for (let q = x0 + this.step; q <= x1; q += this.step) {
@@ -2785,74 +2813,82 @@ class P0 {
 
         let y = h00 * y0 + h10 * L * m0 + h01 * y1 + h11 * L * m1;
 
-        // Window envelope sin(pi * u)^2 so meso/micro perturbations vanish at segment boundaries (preserving exact C1 continuity!)
         const env = Math.sin(u * Math.PI);
         const env2 = env * env;
 
-        // Meso & Micro shape articulations (Sections 08, 18, 19, 35, 36)
+        // Extreme Mountain Meso & Micro Shape Articulations (Sections 5, 6, 7, 15, 17, 18, 19, 28)
         if (shapeKey === "ROLLERS" || shapeKey === "LONG_ROLLERS") {
-          y += Math.sin(u * Math.PI * 4) * (15.0 + difficulty * 9.0) * env;
+          y -= Math.sin(u * Math.PI * 3) * (38.0 + difficulty * 22.0) * env;
         } else if (shapeKey === "DOUBLE_HUMP" || shapeKey === "CAMELBACK") {
-          y -= Math.sin(u * Math.PI * 3) * (24.0 + difficulty * 12.0) * env;
+          // Two steep launch humps in succession
+          y -= Math.sin(u * Math.PI * 3) * (58.0 + difficulty * 28.0) * env;
         } else if (shapeKey === "TRIPLE_HUMP") {
-          y -= Math.sin(u * Math.PI * 5) * (20.0 + difficulty * 10.0) * env;
-        } else if (shapeKey === "KICKER" || shapeKey === "LONG_KICKER" || shapeKey === "RIDGE_LAUNCH") {
-          // Smooth upward launch ramp followed by landing basin
-          if (u < 0.48) {
-            y -= Math.sin((u / 0.48) * Math.PI * 0.5) * (28.0 + difficulty * 18.0) * env;
+          y -= Math.sin(u * Math.PI * 5) * (46.0 + difficulty * 22.0) * env;
+        } else if (shapeKey === "KICKER") {
+          // Steep natural upward kicker ramp (u < 0.42) followed by deep landing drop!
+          if (u < 0.42) {
+            y -= Math.pow(Math.sin((u / 0.42) * Math.PI), 1.2) * (68.0 + difficulty * 32.0);
           } else {
-            y += Math.sin(((u - 0.48) / 0.52) * Math.PI) * (18.0 + difficulty * 12.0) * env;
+            y += Math.sin(((u - 0.42) / 0.58) * Math.PI) * (54.0 + difficulty * 28.0);
           }
-        } else if (shapeKey === "CLIFF_LAUNCH" || shapeKey === "DOWNHILL_LAUNCH") {
-          // High takeoff lip dropping into a wide downhill landing slope
-          if (u < 0.35) {
-            y -= Math.sin((u / 0.35) * Math.PI) * (34.0 + difficulty * 16.0);
+        } else if (shapeKey === "LONG_KICKER") {
+          // Giant Gap: speed-building dip -> high launch ramp -> deep chasm -> landing table
+          if (u < 0.34) {
+            y -= Math.sin((u / 0.34) * Math.PI) * (82.0 + difficulty * 38.0);
           } else {
-            y += Math.sin(((u - 0.35) / 0.65) * Math.PI) * (42.0 + difficulty * 22.0);
+            y += Math.pow(Math.sin(((u - 0.34) / 0.66) * Math.PI), 1.1) * (135.0 + difficulty * 55.0);
+          }
+        } else if (shapeKey === "RIDGE_LAUNCH") {
+          // Double-Jump Terrain (Sec 18: Downhill -> Valley -> Launch 1 -> Land -> Launch 2)
+          y -= Math.sin(u * Math.PI * 4) * (64.0 + difficulty * 26.0) * env;
+        } else if (shapeKey === "CLIFF_LAUNCH" || shapeKey === "DOWNHILL_LAUNCH") {
+          // Surprise Terrain (Sec 28): looks like a small crest, then drops into a massive chasm!
+          if (u < 0.30) {
+            y -= Math.sin((u / 0.30) * Math.PI) * (62.0 + difficulty * 26.0);
+          } else {
+            y += Math.sin(((u - 0.30) / 0.70) * Math.PI) * (145.0 + difficulty * 55.0);
           }
         } else if (shapeKey === "V_VALLEY" || shapeKey === "RAVINE") {
-          // Deep V-depression with compression floor and exit climb
-          y += Math.pow(env, 1.4) * (75.0 + difficulty * 45.0);
+          // Deep V-Trench (Sec 17): plunges 160px down then shoots up a steep exit launch wall!
+          y += Math.pow(env, 1.3) * (145.0 + difficulty * 65.0);
         } else if (shapeKey === "U_VALLEY" || shapeKey === "GLACIAL_BOWL") {
-          // Wide smooth high-speed bowl
-          y += env2 * (90.0 + difficulty * 55.0);
+          // Deep High-Speed Bowl
+          y += env2 * (160.0 + difficulty * 75.0);
         } else if (shapeKey === "MINE_PIT") {
-          // Steep entry, flat pit floor, technical exit
           const pit = Math.min(1, env * 1.6);
-          y += pit * (82.0 + difficulty * 38.0);
+          y += pit * (135.0 + difficulty * 55.0);
         } else if (shapeKey === "STEPPED_RIDGE") {
-          // Stepped mountain shelves (climb -> brief shelf -> climb)
-          y += Math.sin(u * Math.PI * 6) * 14.0 * env2;
+          // Multi-Stage Climb (Sec 15): 30° slope -> small crest -> short dip -> 42° wall -> shelf -> final 45° pitch
+          y += (Math.sin(u * Math.PI * 4) * 42.0 - Math.cos(u * Math.PI * 2) * 24.0) * env;
         } else if (shapeKey === "RAZOR_CREST" || shapeKey === "BLIND_CREST") {
-          // Pronounced crest apex at u = 0.45
-          y -= Math.exp(-Math.pow((u - 0.45) / 0.18, 2)) * (44.0 + difficulty * 22.0) * env;
+          // Sharp Mountain Crest (Sec 6): steep UPHILL -> sharp peak at u=0.38 -> steep DOWNHILL!
+          const peak = Math.exp(-Math.pow((u - 0.38) / 0.14, 2));
+          y -= peak * (96.0 + difficulty * 42.0) * env;
         } else if (shapeKey === "ROCK_FIELD" || shapeKey === "MOGUL_FIELD") {
-          // High-frequency suspension challenge bumps
-          y += (Math.sin(q / 24.0) * 7.5 + nDetail(q / 42.0) * 9.5) * env2;
+          // Wheelbase-challenging rock ledges & moguls
+          y += (Math.sin(q / 22.0) * 11.5 + nDetail(q / 38.0) * 14.0) * env2;
         } else if (shapeKey === "OFF_CAMBER" || shapeKey === "BROKEN_RIDGE") {
-          // Asymmetric wheelbase-scale ripples (~112px wavelength) pitching front vs rear wheel
-          y += (Math.sin(q / 18.5) * 6.5 + Math.cos(q / 37.0) * 9.0) * env2;
+          y += (Math.sin(q / 19.0) * 10.5 + Math.cos(q / 35.0) * 13.5) * env2;
         } else if (shapeKey === "COMPRESSION_RUN") {
-          y += Math.sin(u * Math.PI * 6) * (18.0 + difficulty * 8.0) * env2;
+          y += Math.sin(u * Math.PI * 6) * (32.0 + difficulty * 14.0) * env2;
         } else {
-          // Subtle organic mountain erosion on climbs/descents
-          y += nDetail(q / 85.0) * (6.5 + difficulty * 4.5) * env2;
+          // Natural uneven rock shelves & erosion on climbs/descents
+          y += (nDetail(q / 65.0) * 12.0 + Math.sin(u * Math.PI * 3) * 18.0) * env2;
         }
 
-        // Physics Safety & Curvature Clamp (Sections 25, 37, 38):
-        // Control both 1st derivative (slope) and 2nd derivative (dSlope/dX curvature) so no knife-edges occur
+        // Physics Safety & Curvature Clamp:
         const prev = this.samples[this.samples.length - 1];
         const dx = q - prev.x;
         let dy = y - prev.y;
 
-        // 1. Curvature rate limiter (limits change in slope per 18px step to prevent single-frame kinks)
-        const maxDeltaSlope = 0.085; // ~4.8 degrees max angle change per 18px sample
+        // 1. Allow sharper crests and launch lips (maxDeltaSlope = 0.145 -> ~8.3 deg per 18px sample)
+        const maxDeltaSlope = 0.145;
         const desiredSlope = dy / dx;
         const clampedCurvSlope = b(desiredSlope, prev.slope - maxDeltaSlope, prev.slope + maxDeltaSlope);
         dy = clampedCurvSlope * dx;
 
-        // 2. Maximum slope clamp (<= maxSlopeTan, never exceeding 45.5 deg)
-        const maxDy = dx * Math.min(maxSlopeTan, Math.tan(0.795));
+        // 2. Maximum slope clamp (<= 45.1 deg -> dy <= 18.06px per 18px step)
+        const maxDy = dx * Math.min(maxSlopeTan, Math.tan(0.787));
         if (Math.abs(dy) > maxDy) {
           dy = Math.sign(dy) * maxDy;
         }
@@ -2866,9 +2902,9 @@ class P0 {
         if (y > segMaxY) segMaxY = y;
 
         let mat = segSurface;
-        if (Math.abs(actualSlope) > 0.56 && biome.id !== "summit" && mat !== "metal") {
+        if (Math.abs(actualSlope) > 0.62 && biome.id !== "summit" && mat !== "metal" && mat !== "wet_rock") {
           mat = "rock";
-        } else if (biome.id === "summit" && Math.abs(actualSlope) < 0.18) {
+        } else if (biome.id === "summit" && Math.abs(actualSlope) < 0.20) {
           mat = "ice";
         }
 
@@ -3554,6 +3590,9 @@ class f0 {
 
   normalLoads = { front: 0, rear: 0 };
   roofContact = false;
+  lastEngineForce = 0;
+  lastBrakeForce = 0;
+  climbingStalled = false;
 
   get rpm() {
     const maxSpin = Math.max(...this.wheels.map((w) => Math.abs(w.body.angularVelocity)));
@@ -3690,7 +3729,7 @@ class f0 {
       this.groundClearance = this.airborne ? 200 : 0;
     }
 
-    // Dynamic Normal Load Distribution (Spec #03):
+    // Dynamic Normal Load Distribution & Center of Mass (Sections 11, 12):
     const theta = normalizeAngle(this.chassis.angle);
     const ax = b((this.forwardSpeed - (this.lastForwardSpeed ?? this.forwardSpeed)) / dtSec, -45, 45);
     const m = this.chassis.mass;
@@ -3701,17 +3740,40 @@ class f0 {
     const a_dist = L / 2;
     const h = vCfg.centerOfMassOffsetY ?? 6.0;
 
-    const nFront = Math.max(0.15, (W * (b_dist * Math.cos(theta) - h * Math.sin(theta)) - m * h * ax * 0.25) / L);
-    const nRear = Math.max(0.15, (W * (a_dist * Math.cos(theta) + h * Math.sin(theta)) + m * h * ax * 0.25) / L);
+    const nFront = Math.max(0.10, (W * (b_dist * Math.cos(theta) - h * Math.sin(theta)) - m * h * ax * 0.32) / L);
+    const nRear = Math.max(0.10, (W * (a_dist * Math.cos(theta) + h * Math.sin(theta)) + m * h * ax * 0.32) / L);
     this.normalLoads = { front: nFront, rear: nRear };
 
-    // Local terrain slope under chassis
+    // Local terrain slope & curvature under chassis
     const groundSlope = terrain ? terrain.slopeAt(this.chassis.position.x) : 0;
+    const groundCurv = (terrain && terrain.curvatureAt) ? terrain.curvatureAt(this.chassis.position.x) : 0;
+
+    this.lastEngineForce = 0;
+    this.lastBrakeForce = 0;
+
+    // Momentum-Based Climbing Curve (Sections 3, 14, 23):
+    // Steep uphill climbs (groundSlope < -0.44 rad / > 25 deg) require entering with momentum!
+    // Low momentum causes engine lugging and wheel slip; insufficient momentum stalls & rolls backward!
+    const uphillSteepness = Math.max(0, -groundSlope); // positive when climbing uphill
+    const fwdSpd = this.forwardSpeed;
+    let momentumClimbFactor = 1.0;
+    if (uphillSteepness > 0.44) {
+      // Above 25 deg uphill: reward high entry speed (> 6.5), penalize dead-stop crawling (< 3.5)
+      const speedCarry = b((fwdSpd - 1.2) / 6.5, 0.0, 1.35);
+      const steepPenalty = b((uphillSteepness - 0.44) / 0.36, 0, 1);
+      momentumClimbFactor = b(0.32 + speedCarry * 0.88 - steepPenalty * 0.38, 0.22, 1.32);
+    }
+
+    // Active Disc Braking Mechanic (Section 4):
+    // Pressing Brake (A) while moving forward (> 0.8) applies high-authority braking force & front weight transfer!
+    const isBrakingForward = input.brake > 0.05 && input.throttle < 0.1 && fwdSpd > 0.8;
+    // Pressing Brake (A) while rolling backward on a steep climb arrests the rollback!
+    const isHoldingHillBrake = input.brake > 0.05 && input.throttle < 0.1 && fwdSpd < -0.2 && uphillSteepness > 0.32;
 
     for (let i = 0; i < this.wheels.length; i++) {
       const w = this.wheels[i];
       const isRear = i === 0;
-      const torqueShare = isRear ? 0.54 : 0.46;
+      const torqueShare = isRear ? 0.56 : 0.44;
       const spin = w.body.angularVelocity;
       const speedRatio = b(1 - Math.abs(spin) / vCfg.maxWheelSpeed, 0, 1);
 
@@ -3725,35 +3787,50 @@ class f0 {
       if (throttleBrake !== 0) {
         const isDriving = Math.sign(throttleBrake) === Math.sign(spin) || Math.abs(spin) < 0.03;
         const torque = isDriving
-          ? vCfg.engineTorque * (0.25 + 0.75 * speedRatio) * throttleBrake
+          ? vCfg.engineTorque * (0.25 + 0.75 * speedRatio) * throttleBrake * momentumClimbFactor
           : vCfg.brakeTorque * throttleBrake;
 
-        // Spin wheel smoothly within maxWheelSpeed
         const targetSpinDelta = torque * torqueShare * 0.32 * (dt / 8.333);
         const nextSpin = b(spin + targetSpinDelta, -vCfg.maxWheelSpeed, vCfg.maxWheelSpeed);
         d.default.Body.setAngularVelocity(w.body, nextSpin);
 
-        // True Surface-Tangent Rolling Traction (only when wheel is on ground & car is upright!)
-        if (w.contact && Math.cos(theta) > 0.25) {
+        // True Surface-Tangent Rolling Traction & Disc Braking (only when wheel is on ground & car is upright!)
+        if (w.contact && Math.cos(theta) > 0.20) {
           const mat = MATERIALS[w.material] ?? MATERIALS.dirt;
           const wheelSlope = terrain ? terrain.slopeAt(w.body.position.x) : theta;
           const tangentDir = {
             x: Math.cos(wheelSlope),
             y: Math.sin(wheelSlope),
           };
-          const normalDir = {
-            x: -Math.sin(wheelSlope),
-            y: Math.cos(wheelSlope),
-          };
 
-          const topSpeedLimiter = b(1 - Math.abs(this.forwardSpeed) / 16.5, 0.08, 1.0);
-          const tractiveMag = torque * torqueShare * mat.friction * 0.18 * topSpeedLimiter;
+          if (isBrakingForward) {
+            // Dedicated Mechanical Disc Brake Force opposing forward motion along the slope
+            const loadShare = isRear ? (nRear / (nFront + nRear)) : (nFront / (nFront + nRear)) * 1.35;
+            const brakeMag = input.brake * vCfg.brakeTorque * loadShare * mat.friction * 0.34;
+            this.lastBrakeForce += brakeMag * 1000;
+            Matter.Body.applyForce(this.chassis, this.chassis.position, {
+              x: -tangentDir.x * brakeMag,
+              y: -tangentDir.y * brakeMag,
+            });
+          } else if (isHoldingHillBrake && fwdSpd > -3.2) {
+            // Holding brake on a failed climb arrests backward rollback before reversing
+            const holdMag = input.brake * vCfg.brakeTorque * torqueShare * mat.friction * 0.26;
+            this.lastBrakeForce += holdMag * 1000;
+            Matter.Body.applyForce(this.chassis, this.chassis.position, {
+              x: tangentDir.x * holdMag,
+              y: tangentDir.y * holdMag,
+            });
+          } else {
+            const topSpeedLimiter = b(1 - Math.abs(this.forwardSpeed) / 17.5, 0.08, 1.0);
+            const tractiveMag = torque * torqueShare * mat.friction * 0.185 * topSpeedLimiter;
+            this.lastEngineForce += Math.abs(tractiveMag) * 1000;
 
-          // Apply propulsion along the terrain tangent + subtle tire-ground normal grip
-          Matter.Body.applyForce(this.chassis, this.chassis.position, {
-            x: tangentDir.x * tractiveMag,
-            y: tangentDir.y * tractiveMag + normalDir.y * Math.abs(tractiveMag) * 0.12,
-          });
+            // Pure surface-tangent propulsion (NO downward suction on convex crests so car launches naturally into the air!)
+            Matter.Body.applyForce(this.chassis, this.chassis.position, {
+              x: tangentDir.x * tractiveMag,
+              y: tangentDir.y * tractiveMag,
+            });
+          }
         }
       } else {
         d.default.Body.setAngularVelocity(w.body, spin * 0.985);
@@ -3767,51 +3844,83 @@ class f0 {
       w.slip = Math.abs(spin * vCfg.wheelRadius - this.forwardSpeed);
     }
 
+    // Extra gravitational slope drag on steep climbs (> 28 deg) so insufficient momentum stalls & rolls backward (Sections 3 & 14)
+    if (!this.airborne && uphillSteepness > 0.48 && Math.cos(theta) > 0.25) {
+      const tangentX = Math.cos(groundSlope);
+      const tangentY = Math.sin(groundSlope);
+      const extraSlopeGravity = (uphillSteepness - 0.44) * 0.0042 * this.chassis.mass * (1.15 - momentumClimbFactor * 0.45);
+      if (extraSlopeGravity > 0) {
+        Matter.Body.applyForce(this.chassis, this.chassis.position, {
+          x: -tangentX * extraSlopeGravity,
+          y: -tangentY * extraSlopeGravity,
+        });
+      }
+      this.climbingStalled = fwdSpd < 0.4 && uphillSteepness > 0.52;
+    } else {
+      this.climbingStalled = false;
+    }
+
+    // Natural Ballistic Crest Launch Impulse (Sections 6 & 7):
+    // When cresting a convex peak (groundCurv > 0.0020) at speed, release ground stickiness so vehicle becomes genuinely airborne!
+    if (!this.airborne && groundCurv > 0.0020 && Math.abs(fwdSpd) > 5.2) {
+      const launchPop = b((groundCurv - 0.0018) * 180, 0.1, 1.0) * b((Math.abs(fwdSpd) - 4.5) / 8.0, 0.15, 1.2);
+      Matter.Body.applyForce(this.chassis, this.chassis.position, {
+        x: 0,
+        y: -0.0038 * this.chassis.mass * launchPop,
+      });
+      if (groundCurv > 0.0032 && Math.abs(fwdSpd) > 7.2) {
+        this.wheels.forEach((w) => {
+          w.contact = false;
+          w.contactGrace = 0;
+        });
+      }
+    }
+
     // -------------------------------------------------------------------------
-    // GROUND STABILITY & GENUINE HILL CLIMB RACING PITCH CONTROL
+    // PHYSICAL CENTER-OF-MASS PITCH, WHEELIE & ROLLOVER DYNAMICS (Sections 10 & 11)
     // -------------------------------------------------------------------------
     const relPitch = normalizeAngle(theta - groundSlope);
+    const comHeightFactor = (vCfg.centerOfMassOffsetY ?? 6.0) / 6.0;
 
     if (!this.airborne) {
-      // ON GROUND: Keep vehicle planted and stable!
-      // Subtle weight-transfer pitch feel (wheelie lift on gas, nose dive on brake),
-      // strictly bounded to +-16 degrees relative to the slope so it NEVER flips on the ground!
-      if (throttleBrake > 0 && relPitch > -0.26 && Math.cos(theta) > 0.5) {
-        this.chassis.torque += -0.0008 * this.chassis.mass * b(1 - Math.abs(relPitch) / 0.26, 0, 1);
-      } else if (throttleBrake < 0 && relPitch < 0.26 && Math.cos(theta) > 0.5) {
-        this.chassis.torque += 0.0008 * this.chassis.mass * b(1 - Math.abs(relPitch) / 0.26, 0, 1);
+      // ON GROUND: Physical weight transfer & rollover risk!
+      // 1. Throttle Wheelie Torque: Stronger on steep climbs where rear load is heavy; can flip backward if you don't feather throttle or brake!
+      if (input.throttle > 0.1 && Math.cos(theta) > 0.1) {
+        const slopeWheelieBoost = 1.0 + uphillSteepness * 2.1;
+        this.chassis.torque += -0.00165 * this.chassis.mass * comHeightFactor * slopeWheelieBoost * input.throttle;
+      }
+      // 2. Braking Nose-Dive / Stoppie Torque: Strong forward pitch when braking on descents or before crests!
+      if (input.brake > 0.1 && Math.cos(theta) > 0.1) {
+        const downhillSteepness = Math.max(0, groundSlope);
+        const brakeDiveBoost = 1.0 + downhillSteepness * 1.9;
+        this.chassis.torque += 0.00185 * this.chassis.mass * comHeightFactor * brakeDiveBoost * input.brake;
       }
 
-      // Strong anti-flip suspension restoring torque when both or either wheel is grounded
+      // 3. Suspension pitch restoring spring ONLY within normal suspension travel (+-28 deg / 0.49 rad).
+      //    Beyond +-34 deg (0.60 rad), Center of Mass passes the tire pivot and gravity pulls the vehicle into a real physical rollover!
       if (Math.cos(theta) > 0.15) {
-        const pitchError = normalizeAngle(theta - groundSlope);
-        if (Math.abs(pitchError) > 0.22) {
-          const excess = pitchError - Math.sign(pitchError) * 0.22;
-          this.chassis.torque += -excess * 0.028 * this.chassis.mass;
+        if (Math.abs(relPitch) < 0.52) {
+          this.chassis.torque += -relPitch * 0.011 * this.chassis.mass;
+          this.chassis.torque += -this.chassis.angularVelocity * 0.024 * this.chassis.mass;
+        } else {
+          // Past the CoM balance point: gravity tips the vehicle over unless the player counter-steers with brake/throttle!
+          const tipDir = Math.sign(relPitch);
+          this.chassis.torque += tipDir * 0.0018 * this.chassis.mass * comHeightFactor;
         }
-        // Damp ground pitch oscillations strongly
-        this.chassis.torque += -this.chassis.angularVelocity * 0.045 * this.chassis.mass;
       }
     } else {
-      // IN MID-AIR:
-      // Distinguish between small trail hops (groundClearance <= 38px) vs real high jumps!
-      const isHighJump = this.groundClearance > 38 && this.airborneTimer >= 140;
-      if (isHighJump && throttleBrake !== 0) {
-        // Deliberate High-Air Stunt Control:
-        // D (Throttle > 0) -> Counter-clockwise (dir = -1 -> BACKFLIP)
-        // A (Brake > 0)    -> Clockwise         (dir = +1 -> FRONTFLIP)
+      // IN MID-AIR (Section 8: Skill-Based Air Control on all jumps!):
+      const canRotateInAir = this.groundClearance > 10 || this.airborneTimer >= 55;
+      if (canRotateInAir && throttleBrake !== 0) {
+        // D (Throttle > 0) -> Counter-clockwise (dir = -1 -> pitch nose UP / BACKFLIP)
+        // A (Brake > 0)    -> Clockwise         (dir = +1 -> pitch nose DOWN / FRONTFLIP / LEVEL FOR DOWNHILL)
         const dir = -Math.sign(throttleBrake);
         const angVel = this.chassis.angularVelocity;
-        // Target flip speed for 1.0s 360-degree stunt rotation in high air
-        const maxFlipRate = 0.115;
+        const maxFlipRate = 0.122;
         const spinLimit = b(1 - Math.abs(angVel) / maxFlipRate, 0, 1);
-        const opposing = Math.sign(dir) !== Math.sign(angVel) ? 1.25 : spinLimit;
-        const airTorque = dir * Math.abs(throttleBrake) * vCfg.airControl * opposing * this.chassis.mass * 34.0;
+        const opposing = Math.sign(dir) !== Math.sign(angVel) ? 1.35 : spinLimit;
+        const airTorque = dir * Math.abs(throttleBrake) * vCfg.airControl * opposing * this.chassis.mass * 36.0;
         this.chassis.torque += airTorque;
-      } else if (!isHighJump && Math.cos(theta) > 0.2) {
-        // Low trail hop: gently auto-level chassis to terrain slope for smooth 4-wheel landings!
-        const hopError = normalizeAngle(theta - groundSlope);
-        this.chassis.torque += -hopError * 0.018 * this.chassis.mass - this.chassis.angularVelocity * 0.035 * this.chassis.mass;
       }
     }
 
@@ -3826,10 +3935,10 @@ class f0 {
       });
     }
 
-    // Angular velocity damping & hard safety clamp
-    const damping = this.airborne ? vCfg.angularDamping * 0.65 : vCfg.angularDamping * 3.2;
-    const factor = 1 - Math.min(damping * (dt / 16.666), 0.45);
-    const maxAllowedAngVel = (this.airborne && this.groundClearance > 38) ? 0.125 : 0.045;
+    // Angular velocity damping & realistic rollover cap
+    const damping = this.airborne ? vCfg.angularDamping * 0.55 : vCfg.angularDamping * 1.8;
+    const factor = 1 - Math.min(damping * (dt / 16.666), 0.38);
+    const maxAllowedAngVel = this.airborne ? 0.130 : 0.085;
     const clampedAngVel = b(this.chassis.angularVelocity * factor, -maxAllowedAngVel, maxAllowedAngVel);
     d.default.Body.setAngularVelocity(this.chassis, clampedAngVel);
 
@@ -3862,7 +3971,7 @@ class f0 {
           if (terrainSet.has(other)) {
             pairHit[i] = true;
             w.contact = true;
-            w.contactGrace = 85;
+            w.contactGrace = 45;
             w.material = other.materialKind ?? "grass";
           }
         }
@@ -3886,19 +3995,21 @@ class f0 {
       }
     }
 
-    // Spline proximity & grace hysteresis so 18px polygon seams never cause false airborne state
+    // Spline proximity & grace hysteresis (reduced on convex crests so vehicle launches cleanly into the air!)
     const vCfg = this.archetype;
     const upright = Math.cos(this.chassis.angle) > 0.15;
+    const curv = (terrain && terrain.curvatureAt) ? terrain.curvatureAt(this.chassis.position.x) : 0;
+    const onSharpCrest = curv > 0.0022 && Math.abs(this.forwardSpeed) > 5.0;
 
     for (let i = 0; i < this.wheels.length; i++) {
       const w = this.wheels[i];
       if (pairHit[i]) continue;
 
       let nearSpline = false;
-      if (terrain && upright && w.body.velocity.y >= -3.2) {
+      if (terrain && upright && !onSharpCrest && w.body.velocity.y >= -1.8) {
         const ty = terrain.heightAt(w.body.position.x);
         const tireBottom = w.body.position.y + vCfg.wheelRadius;
-        if (Math.abs(ty - tireBottom) <= 6.5) {
+        if (Math.abs(ty - tireBottom) <= 4.0) {
           nearSpline = true;
           w.material = terrain.materialAt(w.body.position.x)?.name ?? "grass";
         }
@@ -3906,13 +4017,13 @@ class f0 {
 
       if (nearSpline) {
         w.contact = true;
-        w.contactGrace = 65;
+        w.contactGrace = 35;
       } else {
-        w.contactGrace = Math.max(0, (w.contactGrace ?? 0) - dt);
+        w.contactGrace = onSharpCrest ? 0 : Math.max(0, (w.contactGrace ?? 0) - dt);
         if (w.contactGrace > 0 && terrain) {
           const ty = terrain.heightAt(w.body.position.x);
           const tireBottom = w.body.position.y + vCfg.wheelRadius;
-          w.contact = (ty - tireBottom) < 12.0;
+          w.contact = (ty - tireBottom) < 7.5;
         } else {
           w.contact = false;
         }
@@ -3922,7 +4033,7 @@ class f0 {
 }
 
 // ----------------------------------------------------------------------------
-// Stunt Director & Combo System
+// Stunt Director & Combo System (Sections 7, 8, 9, 21)
 // ----------------------------------------------------------------------------
 class StuntDirector {
   bus;
@@ -3946,6 +4057,7 @@ class StuntDirector {
   comboScore = 0;
   comboTimer = 0;
   activeStuntName = "";
+  lastLandingQuality = "NONE";
 
   constructor(bus, audio, camera) {
     this.bus = bus;
@@ -3970,6 +4082,7 @@ class StuntDirector {
     this.comboScore = 0;
     this.comboTimer = 0;
     this.activeStuntName = "";
+    this.lastLandingQuality = "NONE";
   }
 
   update(vehicle, terrain, dt) {
@@ -3984,7 +4097,7 @@ class StuntDirector {
     }
 
     if (isAirborne) {
-      if (this.groundedTime >= 150 || (this.airtime === 0 && this.cumulativeAngle === 0)) {
+      if (this.groundedTime >= 110 || (this.airtime === 0 && this.cumulativeAngle === 0)) {
         this.launchX = chassis.position.x;
         this.launchY = chassis.position.y;
         this.prevAngle = chassis.angle;
@@ -4009,14 +4122,14 @@ class StuntDirector {
       if (this.cumulativeAngle <= -(Math.PI * 2 * (this.backflips + 1) - 0.4)) {
         this.backflips++;
         const name = this.backflips === 1 ? "BACKFLIP" : this.backflips === 2 ? "DOUBLE BACKFLIP" : `TRIPLE BACKFLIP`;
-        const score = this.backflips * 260;
+        const score = this.backflips * 500;
         this.awardStunt(name, score, 2);
         vehicle.driver.triggerVictory();
       } else if (this.cumulativeAngle >= Math.PI * 2 * (this.frontflips + 1) - 0.4) {
         // Positive cumulative angle = clockwise = FRONTFLIP
         this.frontflips++;
         const name = this.frontflips === 1 ? "FRONTFLIP" : this.frontflips === 2 ? "DOUBLE FRONTFLIP" : `TRIPLE FRONTFLIP`;
-        const score = this.frontflips * 300;
+        const score = this.frontflips * 500;
         this.awardStunt(name, score, 2);
         vehicle.driver.triggerVictory();
       }
@@ -4033,13 +4146,13 @@ class StuntDirector {
     const speed = Math.abs(vehicle.forwardSpeed);
 
     // Wheelie: Rear wheel in contact, front wheel lifted
-    if (rear.contact && !front.contact && speed > 2.5) {
+    if (rear.contact && !front.contact && speed > 2.2) {
       if (this.wheelieTime === 0) this.wheelieStartX = vehicle.chassis.position.x;
       this.wheelieTime += dtSec;
       this.wheelieDistance = Math.abs(vehicle.chassis.position.x - (this.wheelieStartX || vehicle.chassis.position.x)) / 40;
 
-      if (this.wheelieTime >= 1.2 && Math.floor((this.wheelieTime - dtSec) / 1.2) < Math.floor(this.wheelieTime / 1.2)) {
-        const pts = Math.round(80 + this.wheelieDistance * 8);
+      if (this.wheelieTime >= 1.0 && Math.floor((this.wheelieTime - dtSec) / 1.0) < Math.floor(this.wheelieTime / 1.0)) {
+        const pts = Math.round(100 + this.wheelieDistance * 10);
         this.awardStunt(`WHEELIE ${Math.round(this.wheelieDistance)}m`, pts, 1);
       }
     } else {
@@ -4048,13 +4161,13 @@ class StuntDirector {
     }
 
     // Stoppie / Nose Manual: Front wheel in contact, rear wheel lifted
-    if (front.contact && !rear.contact && speed > 2.0) {
+    if (front.contact && !rear.contact && speed > 1.8) {
       if (this.stoppieTime === 0) this.stoppieStartX = vehicle.chassis.position.x;
       this.stoppieTime += dtSec;
       this.stoppieDistance = Math.abs(vehicle.chassis.position.x - (this.stoppieStartX || vehicle.chassis.position.x)) / 40;
 
-      if (this.stoppieTime >= 0.9 && Math.floor((this.stoppieTime - dtSec) / 0.9) < Math.floor(this.stoppieTime / 0.9)) {
-        this.awardStunt(`NOSE BALANCE`, 120, 2);
+      if (this.stoppieTime >= 0.8 && Math.floor((this.stoppieTime - dtSec) / 0.8) < Math.floor(this.stoppieTime / 0.8)) {
+        this.awardStunt(`NOSE BALANCE`, 150, 2);
       }
     } else {
       this.stoppieTime = 0;
@@ -4062,40 +4175,83 @@ class StuntDirector {
     }
   }
 
+  // Consequential Landing Physics (Section 9: PERFECT, FRONT, REAR, SIDE, HARD LANDING)
   onLanding(vehicle, terrain) {
-    if (this.airtime < 420) {
+    if (this.airtime < 220) {
       this.airtime = 0;
       return;
     }
 
-    const slope = terrain.slopeAt(vehicle.chassis.position.x);
-    const angleDiff = Math.abs(normalizeAngle(vehicle.chassis.angle - slope));
-    const vy = Math.abs(vehicle.chassis.velocity.y);
+    const chassis = vehicle.chassis;
+    const slope = terrain.slopeAt(chassis.position.x);
+    const relAngle = normalizeAngle(chassis.angle - slope);
+    const angleDiff = Math.abs(relAngle);
+    const vy = Math.abs(chassis.velocity.y);
     const heightMeters = Math.max(0, (this.launchY - this.airApexY) / 40);
+    const airSec = this.airtime / 1000;
 
-    // Big Air & Long Jump
+    // 1. Airtime & Distance Rewards (Section 21)
     if (this.airDistance >= 14) {
-      const jumpScore = Math.round(this.airDistance * 12);
+      const jumpScore = Math.round(this.airDistance * 15);
       this.awardStunt(`LONG JUMP ${this.airDistance.toFixed(0)}m`, jumpScore, 2);
-    } else if (heightMeters >= 3.2 || this.airtime >= 950) {
-      this.awardStunt(`BIG AIR`, 180, 1);
+    } else if (heightMeters >= 2.6 || this.airtime >= 650) {
+      const airPts = Math.round(airSec * 100);
+      this.awardStunt(`${airSec.toFixed(1)}s AIRTIME`, Math.max(100, airPts), 1);
     }
 
-    // Clean / Perfect Landing check (chassis aligned with terrain slope)
+    // 2. Evaluate Physical Landing Alignment & Apply Real Mechanical Consequences (Section 9)
     if (angleDiff < 0.24 && !vehicle.roofContact) {
-      if (this.airtime >= 680 || this.backflips > 0 || this.frontflips > 0) {
-        const bonus = (this.backflips + this.frontflips) > 0 ? 220 : 110;
-        this.awardStunt("PERFECT LANDING", bonus, 3);
+      // PERFECT LANDING: Both wheels contact smoothly aligned with terrain slope -> speed retention + bonus!
+      this.lastLandingQuality = "PERFECT";
+      Matter.Body.setVelocity(chassis, {
+        x: chassis.velocity.x * 1.06,
+        y: chassis.velocity.y * 0.85,
+      });
+      if (this.airtime >= 500 || this.backflips > 0 || this.frontflips > 0) {
+        this.awardStunt("PERFECT LANDING", 300, 3);
         this.camera.pulseZoom(0.035);
         vehicle.driver.triggerVictory();
       }
-    } else if (angleDiff > 0.75 || vy > 9.5) {
-      // Hard Slam Landing
-      if (this.comboMultiplier > 1) {
-        this.showToast("HARD SLAM!", 1);
-      }
+    } else if (angleDiff > 0.82 || vehicle.roofContact) {
+      // SIDE / INVERTED LANDING: High crash & rollover probability!
+      this.lastLandingQuality = "SIDE_CRASH";
+      Matter.Body.setVelocity(chassis, {
+        x: chassis.velocity.x * 0.58,
+        y: -Math.min(4.5, vy * 0.32),
+      });
+      Matter.Body.setAngularVelocity(chassis, chassis.angularVelocity + Math.sign(relAngle) * 0.048);
+      this.showToast("BAD LANDING — ROLLOVER RISK!", 1);
+    } else if (relAngle > 0.26) {
+      // FRONT LANDING (Nose-First): Front suspension compresses, vehicle nose-dives & risks rolling forward!
+      this.lastLandingQuality = "FRONT_HEAVY";
+      if (vehicle.wheels[1]) vehicle.wheels[1].compression = 0.92;
+      Matter.Body.setVelocity(chassis, {
+        x: chassis.velocity.x * 0.78,
+        y: chassis.velocity.y * 0.7,
+      });
+      Matter.Body.setAngularVelocity(chassis, chassis.angularVelocity + 0.032);
+      if (this.airtime >= 600) this.showToast("NOSE-HEAVY LANDING!", 1);
+    } else if (relAngle < -0.26) {
+      // REAR LANDING (Tail-First): Rear suspension compresses, vehicle bucks into a wheelie / flips backward!
+      this.lastLandingQuality = "REAR_HEAVY";
+      if (vehicle.wheels[0]) vehicle.wheels[0].compression = 0.92;
+      Matter.Body.setVelocity(chassis, {
+        x: chassis.velocity.x * 0.82,
+        y: chassis.velocity.y * 0.75,
+      });
+      Matter.Body.setAngularVelocity(chassis, chassis.angularVelocity - 0.032);
+      if (this.airtime >= 600) this.showToast("TAIL-HEAVY WHEELIE!", 1);
+    } else if (vy > 9.0) {
+      // HARD LANDING: Suspension bottoms out, speed drops
+      this.lastLandingQuality = "HARD";
+      Matter.Body.setVelocity(chassis, {
+        x: chassis.velocity.x * 0.74,
+        y: chassis.velocity.y * 0.5,
+      });
+      this.showToast("HARD SLAM!", 1);
     }
 
+    vehicle.lastLandingQuality = this.lastLandingQuality;
     this.airtime = 0;
   }
 
@@ -7041,13 +7197,32 @@ class R0 {
     ctx.beginPath();
     for (let q = start; q <= end; q += step) {
       const mat = terrain.materialAt(q);
-      if (mat.name === "rock" || mat.name === "gravel") {
+      if (mat.name === "rock" || mat.name === "gravel" || mat.name === "wet_rock") {
         const y = terrain.heightAt(q);
         ctx.moveTo(q + 4, y - 2);
-        ctx.arc(q + 2, y - 2, 2.0, 0, Math.PI * 2);
+        ctx.arc(q + 2, y - 2, 2.2, 0, Math.PI * 2);
       }
     }
     ctx.fill();
+
+    // Mud & Wet-Rock slick sheen + steep cliff strata hashes for terrain readability
+    ctx.strokeStyle = "rgba(215, 195, 165, 0.36)";
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    for (let q = start; q <= end; q += step) {
+      const mat = terrain.materialAt(q);
+      const sl = Math.abs(terrain.slopeAt(q));
+      const y = terrain.heightAt(q);
+      if (mat.name === "mud" || mat.name === "wet_rock" || mat.name === "ice") {
+        ctx.moveTo(q - 8, y + 3);
+        ctx.lineTo(q + 10, y + 3);
+      }
+      if (sl > 0.46) {
+        ctx.moveTo(q, y + 6);
+        ctx.lineTo(q - 6, y + 22);
+      }
+    }
+    ctx.stroke();
     ctx.restore();
   }
 
@@ -8274,6 +8449,16 @@ class R0 {
     const wEvents = ws?.activeEvents?.length ? ws.activeEvents.join(", ") : "IDLE_ECOSYSTEM";
     const wSimMs = (ws?.simStepMs ?? 0.2).toFixed(2);
 
+    const pitchDeg = ((chassis.angle * 180) / Math.PI).toFixed(1);
+    const angVel = (chassis.angularVelocity || 0).toFixed(3);
+    const comX = v.centerOfMassOffset?.x ?? 0;
+    const comY = v.centerOfMassOffset?.y ?? -7;
+    const engForce = (v.lastEngineForce || 0).toFixed(4);
+    const brkForce = (v.lastBrakeForce || 0).toFixed(4);
+    const wheelContacts = `R:${v.wheels[0]?.contact ? 1 : 0} F:${v.wheels[1]?.contact ? 1 : 0}`;
+    const tractionCoeff = (mat.friction ?? 0.9).toFixed(2);
+    const landingState = v.lastLandingQuality || "GROUND";
+
     const lines = [
       `DIAGNOSTICS (F3)  FPS: ${game.fps.toFixed(0)}  STEP: 8.33ms  WORLD_SIM: ${wSimMs}ms  SEED: ${game.seed}`,
       `WORLD STATE: TIME=${wTimeStr}  SEASON=${wSeason}  TEMP=${wTemp}  HUM=${wHum}`,
@@ -8284,32 +8469,33 @@ class R0 {
       `CAM OPTICS: ZOOM=${camZoom}x  FOV=${camFov}°  ROLL=${camRollDeg}°  LOOKAHEAD=${camLook}px`,
       `CAM SPRING: VEL=(${spVelX}, ${spVelY})  ERR=(${spErrX}, ${spErrY})  IMPACT=${impInt}`,
       `CAM FOCUS: TARGET=(${Math.round(cam?.targetPoint?.x || 0)}, ${Math.round(cam?.targetPoint?.y || 0)})  TERRAIN=(${Math.round(cam?.terrainFocusPoint?.x || 0)}, ${Math.round(cam?.terrainFocusPoint?.y || 0)})`,
-      `VEHICLE: ${v.archetype.name.toUpperCase()}  WORLD BODIES: ${Matter.Composite.allBodies(game.engine.world).length}`,
+      `VEHICLE: ${v.archetype.name.toUpperCase()}  CoM=(${comX},${comY}px)  BODIES: ${Matter.Composite.allBodies(game.engine.world).length}`,
       `STREAMING: CHUNK #${chunkId}/${this.terrain.chunks?.length || 0} (ACTIVE CHUNKS: ${this.terrain.activeChunkCount || 0}, BODIES: ${this.terrain.bodies?.length || 0})`,
       `BIOME: ${biome.act || "ACT I"} // ${biome.name.toUpperCase()}  SEG: ${seg.name} [${seg.type}]`,
-      `SLOPE: ${(slope * 180 / Math.PI).toFixed(1)}° (MAX ${seg.maxSlope ?? 20}°)  CURV: ${curv.toFixed(4)}  MAT: ${mat.name.toUpperCase()}`,
+      `SLOPE: ${(slope * 180 / Math.PI).toFixed(1)}° (MAX ${seg.maxSlope ?? 20}°)  CURV: ${curv.toFixed(4)}  MAT: ${mat.name.toUpperCase()} (TRACTION:${tractionCoeff})`,
       `UPCOMING (+15m): ${nextSeg.name} [${nextSeg.type}]  JUMP_POT: ${nextSeg.jumpPotential || "Low"}`,
       `WORLD STATS: ${tStats.totalDistanceKm || 8.2}km | GAIN:+${tStats.totalElevationGain || 0}m | DROP:-${tStats.maxDescentMeters || 0}m | VAR:${tStats.diversityPercent || 94}%`,
-      `NORMAL FORCES: F=${nf.toFixed(1)}N  R=${nr.toFixed(1)}N  SLIP: F=${sf.toFixed(2)} R=${sr.toFixed(2)}`,
-      `SPEED: ${(Math.abs(v.forwardSpeed) * 7.2).toFixed(1)} km/h  VERT: ${vel.y.toFixed(1)}  RPM: ${(v.rpm * 100).toFixed(0)}%`,
-      `SUSPENSION: R=${v.wheels[0].compression.toFixed(2)} F=${v.wheels[1].compression.toFixed(2)}  ROOF: ${v.roofContact}`,
+      `NORMAL FORCES: F=${nf.toFixed(1)}N  R=${nr.toFixed(1)}N  SLIP: F=${sf.toFixed(2)} R=${sr.toFixed(2)}  CONTACTS:[${wheelContacts}]`,
+      `VEL: ${(Math.abs(v.forwardSpeed) * 7.2).toFixed(1)} km/h (VX:${vel.x.toFixed(1)} VY:${vel.y.toFixed(1)})  PITCH:${pitchDeg}°  ANG_VEL:${angVel}`,
+      `FORCES: ENGINE=${engForce}N  BRAKE=${brkForce}N  RPM=${(v.rpm * 100).toFixed(0)}%  STALL=${Boolean(v.climbingStalled)}`,
+      `SUSPENSION: R=${v.wheels[0].compression.toFixed(2)} F=${v.wheels[1].compression.toFixed(2)}  ROOF:${v.roofContact}  LANDING:[${landingState}]`,
       `AIRBORNE: ${v.airborne}  AIRTIME: ${(game.stunts.airtime / 1000).toFixed(2)}s  STUNT: ${game.stunts.activeStuntName || "NONE"}`,
       `HOTKEYS: [1-4]SEEDS [5]+3H_TIME [6]WEATHER [7]SEASON [8]WORLD_EVENT [T]EXPORT`,
     ];
 
     ctx.save();
     ctx.fillStyle = "rgba(18, 22, 20, 0.88)";
-    const panelW = 575;
-    const panelH = lines.length * 14.2 + 18;
+    const panelW = 595;
+    const panelH = lines.length * 14.0 + 18;
     ctx.fillRect(w - panelW - 16, h - panelH - 16, panelW, panelH);
     ctx.strokeStyle = "var(--hot)";
     ctx.lineWidth = 1.5;
     ctx.strokeRect(w - panelW - 16, h - panelH - 16, panelW, panelH);
 
-    ctx.font = "10.0px 'Courier New', monospace";
+    ctx.font = "9.8px 'Courier New', monospace";
     ctx.fillStyle = "#efe7d6";
     for (let i = 0; i < lines.length; i++) {
-      ctx.fillText(lines[i], w - panelW - 6, h - panelH + 4 + i * 14.2);
+      ctx.fillText(lines[i], w - panelW - 6, h - panelH + 4 + i * 14.0);
     }
     ctx.restore();
   }

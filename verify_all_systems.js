@@ -1052,8 +1052,182 @@ async function run() {
     throw new Error('Living World Simulation 2.0 verification failed: ' + JSON.stringify(worldSimTest));
   }
 
-  // TEST 22: Error Audit
-  console.log('\n--- TEST 22: Browser Error Audit ---');
+  // TEST 22: Extreme Mountain Terrain + Physics Overhaul (Sections 1-34)
+  console.log('\n--- TEST 22: Extreme Mountain Terrain + Physics Overhaul (Sections 1-34) ---');
+  const extremeOverhaulTest = await evaluate(`(() => {
+    const rules = x?.world?.terrainRules || {};
+    const hasRules = (
+      rules.MAX_SLOPE === 45 &&
+      rules.MIN_SLOPE === -45 &&
+      rules.CREST_SHARPNESS >= 0.8 &&
+      rules.VALLEY_DEPTH >= 150 &&
+      rules.JUMP_DISTANCE >= 350
+    );
+    const hasSurfaceMaterials = Boolean(
+      MATERIALS.rock && MATERIALS.dirt && MATERIALS.gravel &&
+      MATERIALS.mud && MATERIALS.wet_rock && MATERIALS.snow && MATERIALS.ice
+    );
+
+    // Find a steep uphill sample in the opening sequence (around x=700..1150, Section C: Steep Climb)
+    let steepClimbX = 920;
+    for (let q = 650; q < 2500; q += 20) {
+      if (game.terrain.slopeAt(q) < -0.54) {
+        steepClimbX = q;
+        break;
+      }
+    }
+    const climbSlopeDeg = Number((Math.abs(game.terrain.slopeAt(steepClimbX)) * 180 / Math.PI).toFixed(1));
+
+    // 1. Low-momentum stall & rollback test on steep climb
+    game.reset();
+    const v = game.vehicle;
+    const climbY = game.terrain.heightAt(steepClimbX) - 44;
+    const climbSlope = game.terrain.slopeAt(steepClimbX);
+    Matter.Body.setPosition(v.chassis, { x: steepClimbX, y: climbY });
+    Matter.Body.setAngle(v.chassis, climbSlope);
+    Matter.Body.setVelocity(v.chassis, { x: 0, y: 0 });
+    Matter.Body.setPosition(v.wheels[0].body, { x: steepClimbX - 40, y: game.terrain.heightAt(steepClimbX - 40) - 22 });
+    Matter.Body.setPosition(v.wheels[1].body, { x: steepClimbX + 42, y: game.terrain.heightAt(steepClimbX + 42) - 22 });
+    Matter.Body.setVelocity(v.wheels[0].body, { x: 0, y: 0 });
+    Matter.Body.setVelocity(v.wheels[1].body, { x: 0, y: 0 });
+    v.wheels.forEach(w => { w.contact = true; w.contactGrace = 100; });
+    game.terrain.updateStreaming(steepClimbX, game.engine.world, game.terrainSet);
+
+    game.input.keys.clear();
+    for (let i = 0; i < 55; i++) {
+      game.step(8.333333);
+    }
+    const rollbackSpeed = Number(v.forwardSpeed.toFixed(2));
+    const rolledBackward = v.chassis.position.x < steepClimbX - 3 && v.forwardSpeed < -0.4;
+
+    // Now test holding hill-brake ('a') while rolling backward
+    game.input.keys.add('a');
+    for (let i = 0; i < 35; i++) {
+      v.wheels.forEach(w => { w.contact = true; w.contactGrace = 100; });
+      game.step(8.333333);
+    }
+    const hillBrakeForce = Number((v.lastBrakeForce || 0).toFixed(4));
+    game.input.keys.clear();
+
+    // 2. High-momentum entry vs Low-momentum entry on the same steep climb
+    Matter.Body.setPosition(v.chassis, { x: steepClimbX - 40, y: game.terrain.heightAt(steepClimbX - 40) - 44 });
+    Matter.Body.setAngle(v.chassis, game.terrain.slopeAt(steepClimbX - 40));
+    Matter.Body.setVelocity(v.chassis, { x: 0.5, y: 0 });
+    Matter.Body.setPosition(v.wheels[0].body, { x: steepClimbX - 80, y: game.terrain.heightAt(steepClimbX - 80) - 22 });
+    Matter.Body.setPosition(v.wheels[1].body, { x: steepClimbX + 2, y: game.terrain.heightAt(steepClimbX + 2) - 22 });
+    Matter.Body.setVelocity(v.wheels[0].body, { x: 0.5, y: 0 });
+    Matter.Body.setVelocity(v.wheels[1].body, { x: 0.5, y: 0 });
+    v.wheels.forEach(w => { w.contact = true; w.contactGrace = 100; });
+    game.input.keys.add('d');
+    for (let i = 0; i < 60; i++) {
+      game.step(8.333333);
+    }
+    const lowMomentumReachX = v.chassis.position.x;
+
+    Matter.Body.setPosition(v.chassis, { x: steepClimbX - 40, y: game.terrain.heightAt(steepClimbX - 40) - 44 });
+    Matter.Body.setAngle(v.chassis, game.terrain.slopeAt(steepClimbX - 40));
+    Matter.Body.setVelocity(v.chassis, { x: 18, y: -9 });
+    Matter.Body.setPosition(v.wheels[0].body, { x: steepClimbX - 80, y: game.terrain.heightAt(steepClimbX - 80) - 22 });
+    Matter.Body.setPosition(v.wheels[1].body, { x: steepClimbX + 2, y: game.terrain.heightAt(steepClimbX + 2) - 22 });
+    Matter.Body.setVelocity(v.wheels[0].body, { x: 18, y: -9 });
+    Matter.Body.setVelocity(v.wheels[1].body, { x: 18, y: -9 });
+    v.wheels.forEach(w => { w.contact = true; w.contactGrace = 100; });
+    for (let i = 0; i < 60; i++) {
+      game.step(8.333333);
+    }
+    const highMomentumReachX = v.chassis.position.x;
+    const momentumAdvantagePx = Number((highMomentumReachX - lowMomentumReachX).toFixed(1));
+    game.input.keys.clear();
+
+    // 3. Active Mechanical Braking ('a') on a steep descent
+    let steepDescentX = 1380;
+    for (let q = 1100; q < 3000; q += 20) {
+      if (game.terrain.slopeAt(q) > 0.54) {
+        steepDescentX = q;
+        break;
+      }
+    }
+    const descentSlope = game.terrain.slopeAt(steepDescentX);
+    Matter.Body.setPosition(v.chassis, { x: steepDescentX, y: game.terrain.heightAt(steepDescentX) - 44 });
+    Matter.Body.setAngle(v.chassis, descentSlope);
+    Matter.Body.setVelocity(v.chassis, { x: 15, y: 8 });
+    Matter.Body.setPosition(v.wheels[0].body, { x: steepDescentX - 40, y: game.terrain.heightAt(steepDescentX - 40) - 22 });
+    Matter.Body.setPosition(v.wheels[1].body, { x: steepDescentX + 42, y: game.terrain.heightAt(steepDescentX + 42) - 22 });
+    Matter.Body.setVelocity(v.wheels[0].body, { x: 15, y: 8 });
+    Matter.Body.setVelocity(v.wheels[1].body, { x: 15, y: 8 });
+    v.wheels.forEach(w => { w.contact = true; w.contactGrace = 100; });
+    game.terrain.updateStreaming(steepDescentX, game.engine.world, game.terrainSet);
+    game.step(8.333333);
+
+    const speedBeforeBrake = v.forwardSpeed;
+    game.input.keys.clear();
+    game.input.keys.add('a');
+    let peakBrakeForce = 0;
+    for (let i = 0; i < 45; i++) {
+      v.wheels.forEach(w => { w.contact = true; w.contactGrace = 100; });
+      game.step(8.333333);
+      if ((v.lastBrakeForce || 0) > peakBrakeForce) peakBrakeForce = v.lastBrakeForce;
+    }
+    const speedAfterBrake = v.forwardSpeed;
+    const brakeDecelerated = speedAfterBrake < speedBeforeBrake - 2.0 && peakBrakeForce > 0.005;
+    game.input.keys.clear();
+
+    // 4. Landing quality state machine verification
+    v.chassis.angle = game.terrain.slopeAt(v.chassis.position.x) + 0.48; // nose-heavy
+    v.chassis.velocity.y = 7.5;
+    game.stunts.airtime = 650;
+    game.stunts.onLanding(v, game.terrain);
+    const noseHeavyLanding = v.lastLandingQuality === 'FRONT_HEAVY';
+
+    v.chassis.angle = game.terrain.slopeAt(v.chassis.position.x) - 0.48; // rear-heavy
+    v.chassis.velocity.y = 7.5;
+    game.stunts.airtime = 650;
+    game.stunts.onLanding(v, game.terrain);
+    const rearHeavyLanding = v.lastLandingQuality === 'REAR_HEAVY';
+
+    v.chassis.angle = game.terrain.slopeAt(v.chassis.position.x) + 0.04; // aligned
+    v.chassis.velocity.y = 3.5;
+    game.stunts.airtime = 650;
+    game.stunts.onLanding(v, game.terrain);
+    const perfectLanding = v.lastLandingQuality === 'PERFECT';
+
+    game.reset();
+
+    return {
+      ok: (
+        hasRules &&
+        hasSurfaceMaterials &&
+        climbSlopeDeg >= 30 &&
+        rolledBackward &&
+        momentumAdvantagePx > 120 &&
+        brakeDecelerated &&
+        noseHeavyLanding &&
+        rearHeavyLanding &&
+        perfectLanding
+      ),
+      hasRules,
+      hasSurfaceMaterials,
+      climbSlopeDeg,
+      rollbackSpeed,
+      rolledBackward,
+      hillBrakeForce,
+      momentumAdvantagePx,
+      speedBeforeBrake: Number(speedBeforeBrake.toFixed(2)),
+      speedAfterBrake: Number(speedAfterBrake.toFixed(2)),
+      peakBrakeForce: Number(peakBrakeForce.toFixed(4)),
+      brakeDecelerated,
+      noseHeavyLanding,
+      rearHeavyLanding,
+      perfectLanding
+    };
+  })()`);
+  console.log('Extreme Mountain Terrain + Physics Overhaul Result:', extremeOverhaulTest);
+  if (!extremeOverhaulTest.ok) {
+    throw new Error('Extreme Mountain Terrain + Physics Overhaul verification failed: ' + JSON.stringify(extremeOverhaulTest));
+  }
+
+  // TEST 23: Error Audit
+  console.log('\n--- TEST 23: Browser Error Audit ---');
   if (errors.length > 0) {
     console.error('FOUND CONSOLE EXCEPTIONS:', errors);
     throw new Error('Browser execution reported exceptions!');
@@ -1064,7 +1238,7 @@ async function run() {
   ws.close();
   chrome.kill();
   console.log('\n======================================================');
-  console.log('>>> ALL 22 DEEP VERIFICATION CDP TESTS PASSED! <<<');
+  console.log('>>> ALL 23 DEEP VERIFICATION CDP TESTS PASSED! <<<');
   console.log('======================================================\n');
 }
 
