@@ -23,6 +23,15 @@ verify_file1.js
 verify_browser.js
 capture_*.js
 
+# Temporary intro processing assets
+intro_frames/
+intro_processed_frames/
+intro_inspect/
+intro_audio.aac
+gemini_generated_video_*.mp4
+/intro_*.png
+test_intro_cdp.js
+
 # OS files
 .DS_Store
 Thumbs.db

@@ -63,4 +63,11 @@ try:
 except Exception as e:
     print(f"Notice: Failed to write to {downloads_path}: {e}")
 
+try:
+    import shutil
+    shutil.copyfile('the_old_mountain_works_intro_opt.mp4', r'C:\Users\anish jha\Downloads\the_old_mountain_works_intro_opt.mp4')
+    print("Successfully copied intro video to Downloads.")
+except Exception as e:
+    print(f"Notice: Failed to copy video to Downloads: {e}")
+
 print(f"Successfully assembled old-mountain-works.html and old-mountain-works(1).html: {len(full_html)} bytes.")

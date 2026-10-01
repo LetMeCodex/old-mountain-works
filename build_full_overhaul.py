@@ -1069,11 +1069,103 @@ html_head = """<!DOCTYPE html>
     .hud-env-item:first-child { display: none; }
     .hud-env-divider:first-of-type { display: none; }
   }
-  @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after {
-      animation-duration: 0.01ms !important;
-      transition-duration: 0.01ms !important;
-    }
+  /* ==========================================================================
+     CINEMATIC INTRO — THE OLD MOUNTAIN WORKS
+     ========================================================================== */
+  #intro-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background-color: #ede9df;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 1;
+    transition: opacity 0.55s cubic-bezier(0.23, 1, 0.32, 1);
+    pointer-events: auto;
+    overflow: hidden;
+  }
+  #intro-overlay.intro-hidden {
+    opacity: 0;
+    pointer-events: none;
+  }
+  .intro-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #ede9df;
+  }
+  #intro-video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+    background: transparent;
+  }
+  #intro-unmute-prompt {
+    position: absolute;
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(27, 31, 29, 0.88);
+    color: #efe7d6;
+    padding: 7px 18px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    border: 1px solid rgba(239, 231, 214, 0.25);
+    border-radius: 2px;
+    pointer-events: auto;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.3s ease, transform 0.2s ease;
+    z-index: 10001;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  }
+  #intro-unmute-prompt:hover {
+    background: #d4622a;
+    border-color: #d4622a;
+    transform: translateX(-50%) translateY(-1px);
+  }
+  #intro-unmute-prompt.visible {
+    opacity: 1;
+  }
+  #intro-controls {
+    position: absolute;
+    bottom: 24px;
+    right: 24px;
+    z-index: 10001;
+    display: flex;
+    gap: 10px;
+  }
+  .intro-skip-btn {
+    background: rgba(27, 31, 29, 0.86);
+    color: #efe7d6;
+    border: 1px solid rgba(239, 231, 214, 0.28);
+    padding: 9px 20px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.18);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .intro-skip-btn:hover {
+    background: #d4622a;
+    border-color: #d4622a;
+    color: #ffffff;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(212,98,42,0.35);
   }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -1647,6 +1739,26 @@ html_head = """<!DOCTYPE html>
   </div>
 </div>
 
+<!-- Handcrafted Animated Cinematic Intro -->
+<div id="intro-overlay">
+  <div class="intro-container">
+    <video id="intro-video" playsinline preload="auto">
+      <source src="the_old_mountain_works_intro_opt.mp4" type="video/mp4" />
+      <source src="the_old_mountain_works_intro.mp4" type="video/mp4" />
+    </video>
+    <div id="intro-unmute-prompt" title="Click anywhere to unmute audio">
+      <span>&#128266; SOUND AVAILABLE &middot; CLICK TO UNMUTE</span>
+    </div>
+    <div id="intro-controls">
+      <button id="intro-skip-btn" class="intro-skip-btn" title="Skip cinematic intro">
+        <span>Skip Intro</span>
+        <span>&rarr;</span>
+        <span style="opacity:0.6; font-size:10px;">[ESC / SPACE]</span>
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- Title & Expedition Launch Overlay -->
 <div class="overlay" id="title">
   <div class="card">
@@ -1680,6 +1792,7 @@ html_head = """<!DOCTYPE html>
       <div><dt>Career Best</dt><dd id="title-best-dist">0 m</dd></div>
     </dl>
     <button class="btn" id="start-btn"><span>Begin Expedition</span><span>&rarr;</span></button>
+    <button class="btn2" id="replay-intro-btn" style="margin-top: 8px;"><span>Watch Studio Intro</span><span>&#9654;</span></button>
   </div>
 </div>
 
@@ -1707,6 +1820,7 @@ html_head = """<!DOCTYPE html>
     <button class="btn" id="resume-btn"><span>Resume Climb</span><span>&rarr;</span></button>
     <button class="btn2" id="restart-btn"><span>Restart At Basecamp</span><span>R</span></button>
     <button class="btn2" id="seed-btn"><span>Generate New Mountain</span><span>N</span></button>
+    <button class="btn2" id="pause-intro-btn"><span>Replay Intro Animation</span><span>&#9654;</span></button>
   </div>
 </div>
 

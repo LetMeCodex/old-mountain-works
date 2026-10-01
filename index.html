@@ -1059,11 +1059,103 @@
     .hud-env-item:first-child { display: none; }
     .hud-env-divider:first-of-type { display: none; }
   }
-  @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after {
-      animation-duration: 0.01ms !important;
-      transition-duration: 0.01ms !important;
-    }
+  /* ==========================================================================
+     CINEMATIC INTRO — THE OLD MOUNTAIN WORKS
+     ========================================================================== */
+  #intro-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background-color: #ede9df;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 1;
+    transition: opacity 0.55s cubic-bezier(0.23, 1, 0.32, 1);
+    pointer-events: auto;
+    overflow: hidden;
+  }
+  #intro-overlay.intro-hidden {
+    opacity: 0;
+    pointer-events: none;
+  }
+  .intro-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #ede9df;
+  }
+  #intro-video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+    background: transparent;
+  }
+  #intro-unmute-prompt {
+    position: absolute;
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(27, 31, 29, 0.88);
+    color: #efe7d6;
+    padding: 7px 18px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    border: 1px solid rgba(239, 231, 214, 0.25);
+    border-radius: 2px;
+    pointer-events: auto;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.3s ease, transform 0.2s ease;
+    z-index: 10001;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  }
+  #intro-unmute-prompt:hover {
+    background: #d4622a;
+    border-color: #d4622a;
+    transform: translateX(-50%) translateY(-1px);
+  }
+  #intro-unmute-prompt.visible {
+    opacity: 1;
+  }
+  #intro-controls {
+    position: absolute;
+    bottom: 24px;
+    right: 24px;
+    z-index: 10001;
+    display: flex;
+    gap: 10px;
+  }
+  .intro-skip-btn {
+    background: rgba(27, 31, 29, 0.86);
+    color: #efe7d6;
+    border: 1px solid rgba(239, 231, 214, 0.28);
+    padding: 9px 20px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.18);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .intro-skip-btn:hover {
+    background: #d4622a;
+    border-color: #d4622a;
+    color: #ffffff;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(212,98,42,0.35);
   }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -1637,6 +1729,26 @@
   </div>
 </div>
 
+<!-- Handcrafted Animated Cinematic Intro -->
+<div id="intro-overlay">
+  <div class="intro-container">
+    <video id="intro-video" playsinline preload="auto">
+      <source src="the_old_mountain_works_intro_opt.mp4" type="video/mp4" />
+      <source src="the_old_mountain_works_intro.mp4" type="video/mp4" />
+    </video>
+    <div id="intro-unmute-prompt" title="Click anywhere to unmute audio">
+      <span>&#128266; SOUND AVAILABLE &middot; CLICK TO UNMUTE</span>
+    </div>
+    <div id="intro-controls">
+      <button id="intro-skip-btn" class="intro-skip-btn" title="Skip cinematic intro">
+        <span>Skip Intro</span>
+        <span>&rarr;</span>
+        <span style="opacity:0.6; font-size:10px;">[ESC / SPACE]</span>
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- Title & Expedition Launch Overlay -->
 <div class="overlay" id="title">
   <div class="card">
@@ -1670,6 +1782,7 @@
       <div><dt>Career Best</dt><dd id="title-best-dist">0 m</dd></div>
     </dl>
     <button class="btn" id="start-btn"><span>Begin Expedition</span><span>&rarr;</span></button>
+    <button class="btn2" id="replay-intro-btn" style="margin-top: 8px;"><span>Watch Studio Intro</span><span>&#9654;</span></button>
   </div>
 </div>
 
@@ -1697,6 +1810,7 @@
     <button class="btn" id="resume-btn"><span>Resume Climb</span><span>&rarr;</span></button>
     <button class="btn2" id="restart-btn"><span>Restart At Basecamp</span><span>R</span></button>
     <button class="btn2" id="seed-btn"><span>Generate New Mountain</span><span>N</span></button>
+    <button class="btn2" id="pause-intro-btn"><span>Replay Intro Animation</span><span>&#9654;</span></button>
   </div>
 </div>
 
@@ -13380,8 +13494,118 @@ const bindTouchPedal = (id, property) => {
 bindTouchPedal("pedal-l", "touchLeft");
 bindTouchPedal("pedal-r", "touchRight");
 
+// ----------------------------------------------------------------------------
+// Cinematic Intro Controller
+// ----------------------------------------------------------------------------
+const introOverlay = $el("intro-overlay");
+const introVideo = $el("intro-video");
+const introUnmute = $el("intro-unmute-prompt");
+const introSkip = $el("intro-skip-btn");
+let introActive = true;
+let introTimeout = null;
+
+function dismissIntro() {
+  if (!introActive) return;
+  introActive = false;
+  if (introTimeout) clearTimeout(introTimeout);
+  if (introVideo) {
+    try { introVideo.pause(); } catch(e) {}
+  }
+  if (introOverlay) {
+    introOverlay.classList.add("intro-hidden");
+    setTimeout(() => {
+      introOverlay.style.display = "none";
+    }, 600);
+  }
+}
+
+function playIntroAnimation() {
+  if (!introOverlay || !introVideo) return;
+  introActive = true;
+  introOverlay.style.display = "flex";
+  introOverlay.classList.remove("intro-hidden");
+  try {
+    introVideo.currentTime = 0;
+  } catch(e) {}
+
+  if (introTimeout) clearTimeout(introTimeout);
+  introTimeout = setTimeout(() => {
+    if (introActive) dismissIntro();
+  }, 11000);
+
+  introVideo.muted = false;
+  const playPromise = introVideo.play();
+  if (playPromise !== undefined) {
+    playPromise.then(() => {
+      if (introUnmute) introUnmute.classList.remove("visible");
+    }).catch((err) => {
+      console.log("Autoplay policy restricted unmuted playback; starting muted:", err);
+      introVideo.muted = true;
+      introVideo.play().then(() => {
+        if (introUnmute) introUnmute.classList.add("visible");
+      }).catch((e2) => {
+        console.warn("Muted autoplay also prevented; awaiting user tap:", e2);
+        if (introUnmute) {
+          introUnmute.innerHTML = "<span>&#9654; TAP SCREEN TO START INTRO</span>";
+          introUnmute.classList.add("visible");
+        }
+      });
+    });
+  }
+}
+
+introOverlay?.addEventListener("click", (e) => {
+  if (e.target === introSkip || introSkip?.contains(e.target)) {
+    dismissIntro();
+    return;
+  }
+  if (introVideo) {
+    if (introVideo.paused) {
+      introVideo.play().catch(()=>{});
+    }
+    if (introVideo.muted) {
+      introVideo.muted = false;
+      if (introUnmute) introUnmute.classList.remove("visible");
+    }
+  }
+});
+
+introSkip?.addEventListener("click", (e) => {
+  e.stopPropagation();
+  dismissIntro();
+});
+
+introVideo?.addEventListener("ended", () => {
+  dismissIntro();
+});
+
+introVideo?.addEventListener("error", (e) => {
+  console.warn("Intro video could not be played, skipping to title screen:", e);
+  dismissIntro();
+});
+
+window.addEventListener("keydown", (e) => {
+  if (introActive) {
+    if (e.key === "Escape" || e.code === "Space" || e.key === "Enter") {
+      e.preventDefault();
+      e.stopPropagation();
+      dismissIntro();
+    }
+  }
+}, true);
+
+$el("replay-intro-btn")?.addEventListener("click", () => {
+  playIntroAnimation();
+});
+
+$el("pause-intro-btn")?.addEventListener("click", () => {
+  togglePause();
+  playIntroAnimation();
+});
+
 updateCareerRecap();
 game.start();
+playIntroAnimation();
 
 </script>
 </body>

@@ -11575,5 +11575,115 @@ const bindTouchPedal = (id, property) => {
 bindTouchPedal("pedal-l", "touchLeft");
 bindTouchPedal("pedal-r", "touchRight");
 
+// ----------------------------------------------------------------------------
+// Cinematic Intro Controller
+// ----------------------------------------------------------------------------
+const introOverlay = $el("intro-overlay");
+const introVideo = $el("intro-video");
+const introUnmute = $el("intro-unmute-prompt");
+const introSkip = $el("intro-skip-btn");
+let introActive = true;
+let introTimeout = null;
+
+function dismissIntro() {
+  if (!introActive) return;
+  introActive = false;
+  if (introTimeout) clearTimeout(introTimeout);
+  if (introVideo) {
+    try { introVideo.pause(); } catch(e) {}
+  }
+  if (introOverlay) {
+    introOverlay.classList.add("intro-hidden");
+    setTimeout(() => {
+      introOverlay.style.display = "none";
+    }, 600);
+  }
+}
+
+function playIntroAnimation() {
+  if (!introOverlay || !introVideo) return;
+  introActive = true;
+  introOverlay.style.display = "flex";
+  introOverlay.classList.remove("intro-hidden");
+  try {
+    introVideo.currentTime = 0;
+  } catch(e) {}
+
+  if (introTimeout) clearTimeout(introTimeout);
+  introTimeout = setTimeout(() => {
+    if (introActive) dismissIntro();
+  }, 11000);
+
+  introVideo.muted = false;
+  const playPromise = introVideo.play();
+  if (playPromise !== undefined) {
+    playPromise.then(() => {
+      if (introUnmute) introUnmute.classList.remove("visible");
+    }).catch((err) => {
+      console.log("Autoplay policy restricted unmuted playback; starting muted:", err);
+      introVideo.muted = true;
+      introVideo.play().then(() => {
+        if (introUnmute) introUnmute.classList.add("visible");
+      }).catch((e2) => {
+        console.warn("Muted autoplay also prevented; awaiting user tap:", e2);
+        if (introUnmute) {
+          introUnmute.innerHTML = "<span>&#9654; TAP SCREEN TO START INTRO</span>";
+          introUnmute.classList.add("visible");
+        }
+      });
+    });
+  }
+}
+
+introOverlay?.addEventListener("click", (e) => {
+  if (e.target === introSkip || introSkip?.contains(e.target)) {
+    dismissIntro();
+    return;
+  }
+  if (introVideo) {
+    if (introVideo.paused) {
+      introVideo.play().catch(()=>{});
+    }
+    if (introVideo.muted) {
+      introVideo.muted = false;
+      if (introUnmute) introUnmute.classList.remove("visible");
+    }
+  }
+});
+
+introSkip?.addEventListener("click", (e) => {
+  e.stopPropagation();
+  dismissIntro();
+});
+
+introVideo?.addEventListener("ended", () => {
+  dismissIntro();
+});
+
+introVideo?.addEventListener("error", (e) => {
+  console.warn("Intro video could not be played, skipping to title screen:", e);
+  dismissIntro();
+});
+
+window.addEventListener("keydown", (e) => {
+  if (introActive) {
+    if (e.key === "Escape" || e.code === "Space" || e.key === "Enter") {
+      e.preventDefault();
+      e.stopPropagation();
+      dismissIntro();
+    }
+  }
+}, true);
+
+$el("replay-intro-btn")?.addEventListener("click", () => {
+  playIntroAnimation();
+});
+
+$el("pause-intro-btn")?.addEventListener("click", () => {
+  togglePause();
+  playIntroAnimation();
+});
+
 updateCareerRecap();
 game.start();
+playIntroAnimation();
